@@ -9,6 +9,7 @@ import {
   Plus,
   Search,
   Settings,
+  Truck,
   UserPlus,
   Users,
   Warehouse
@@ -61,6 +62,12 @@ const SIDEBAR_ITEMS = [
     label: "Danh sách kho",
     icon: Warehouse,
     path: "/danh-sach-kho",
+  },
+  {
+    id: "shippers",
+    label: "Đơn vị vận chuyển",
+    icon: Truck,
+    path: "/danh-sach-dvvc",
   },
 ];
 
@@ -144,6 +151,22 @@ const DASHBOARD_FEATURES = [
     icon: Plus,
     color: "red",
     path: "/tao-kho-moi",
+  },
+  {
+    id: "shippers",
+    title: "Đơn vị vận chuyển",
+    description: "Quản lý danh sách các nhà xe nội bộ và đơn vị thuê ngoài.",
+    icon: Truck,
+    color: "cyan",
+    path: "/danh-sach-dvvc",
+  },
+  {
+    id: "add-shipper",
+    title: "Thêm ĐVVC mới",
+    description: "Tạo hồ sơ công ty và người quản lý vận chuyển mới.",
+    icon: Plus,
+    color: "rose",
+    path: "/tao-dvvc",
   },
 ];
 

@@ -11,12 +11,14 @@ import CreateCustomer from './pages/CreateCustomer';
 import CreateCylinder from './pages/CreateCylinder';
 import CreateMachine from './pages/CreateMachine';
 import CreateOrder from './pages/CreateOrder';
+import CreateShipper from './pages/CreateShipper';
 import CreateWarehouse from './pages/CreateWarehouse';
 import Customers from './pages/Customers';
 import Cylinders from './pages/Cylinders';
 import Home from './pages/Home';
 import Machines from './pages/Machines';
 import Orders from './pages/Orders';
+import Shippers from './pages/Shippers';
 import Warehouses from './pages/Warehouses';
 
 function App() {
@@ -89,6 +91,17 @@ function App() {
               <Route path="/tao-may-moi" element={
                 <ProtectedRoute>
                   <CreateMachine />
+                </ProtectedRoute>
+              } />
+
+              <Route path="/danh-sach-dvvc" element={
+                <ProtectedRoute>
+                  <Shippers />
+                </ProtectedRoute>
+              } />
+              <Route path="/tao-dvvc" element={
+                <ProtectedRoute>
+                  <CreateShipper />
                 </ProtectedRoute>
               } />
 
