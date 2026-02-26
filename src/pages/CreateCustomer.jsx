@@ -91,22 +91,22 @@ const CreateCustomer = () => {
     };
 
     return (
-        <div className="p-8 max-w-[1200px] mx-auto font-sans bg-gray-50 min-h-screen">
+        <div className="p-4 md:p-8 max-w-[1200px] mx-auto font-sans bg-gray-50 min-h-screen">
             {/* Main Content Card */}
-            <div className="bg-white rounded-[2rem] shadow-2xl shadow-gray-200/50 border border-pink-100 overflow-hidden">
-                <div className="p-8 border-b border-pink-50 bg-gradient-to-r from-pink-50 to-orange-50/30">
-                    <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+            <div className="bg-white rounded-[1.5rem] md:rounded-[2rem] shadow-2xl shadow-gray-200/50 border border-pink-100 overflow-hidden">
+                <div className="p-6 md:p-8 border-b border-pink-50 bg-gradient-to-r from-pink-50 to-orange-50/30">
+                    <h3 className="text-lg md:text-xl font-bold text-gray-900 flex items-center gap-2">
                         <div className="w-8 h-8 bg-pink-600 rounded-lg flex items-center justify-center text-white shadow-lg shadow-pink-200">
                             <UserPlus className="w-5 h-5" />
                         </div>
                         Thêm mới khách hàng đối tác
                     </h3>
-                    <p className="text-gray-500 text-sm mt-1 ml-10">Tạo hồ sơ khách hàng mới tham gia vào hệ thống. Điền đầy đủ các thông tin (*)</p>
+                    <p className="text-gray-500 text-xs md:text-sm mt-1 md:ml-10">Tạo hồ sơ khách hàng mới tham gia vào hệ thống. Điền đầy đủ các thông tin (*)</p>
                 </div>
 
-                <div className="p-10 space-y-10">
+                <div className="p-6 md:p-10 space-y-8 md:space-y-10">
                     {/* Section 1: Thông tin định danh */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
                         <div className="space-y-3">
                             <label className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">1. Mã KH (Hệ thống cấp)</label>
                             <input
@@ -137,8 +137,8 @@ const CreateCustomer = () => {
                     </div>
 
                     {/* Section 2: Liên hệ chi tiết */}
-                    <div className="p-8 bg-pink-50/40 rounded-[2.5rem] border border-pink-100 space-y-8">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="p-6 md:p-8 bg-pink-50/40 rounded-[1.5rem] md:rounded-[2.5rem] border border-pink-100 space-y-6 md:space-y-8">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
                             <div className="space-y-3">
                                 <label className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">4. Tên người đại diện *</label>
                                 <input
@@ -171,7 +171,7 @@ const CreateCustomer = () => {
                     </div>
 
                     {/* Section 3: Phân bổ */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-10">
                         <div className="space-y-3">
                             <label className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">7. Kho xuất hàng mặc định *</label>
                             <select
@@ -195,12 +195,12 @@ const CreateCustomer = () => {
                 </div>
 
                 {/* Footer */}
-                <div className="p-10 bg-gray-50 border-t border-gray-100 flex flex-col md:flex-row items-center justify-between gap-6">
-                    <p className="text-sm text-gray-400 font-medium italic">* Vui lòng kiểm tra kỹ thông tin liên hệ của đối tác.</p>
-                    <div className="flex gap-4 w-full md:w-auto">
+                <div className="p-6 md:p-10 bg-gray-50 border-t border-gray-100 flex flex-col items-center justify-between gap-6 md:flex-row">
+                    <p className="text-sm text-gray-400 font-medium italic w-full text-center md:text-left">* Vui lòng kiểm tra kỹ thông tin liên hệ của đối tác.</p>
+                    <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
                         <button
                             onClick={() => navigate('/khach-hang')}
-                            className="flex-1 md:flex-none px-10 py-5 bg-white border border-gray-200 text-gray-500 font-bold hover:bg-gray-100 rounded-2xl transition-all shadow-sm"
+                            className="w-full sm:w-auto px-6 md:px-10 py-4 md:py-5 bg-white border border-gray-200 text-gray-500 font-bold hover:bg-gray-100 rounded-2xl transition-all shadow-sm"
                         >
                             <span className="md:hidden">Theo dõi DS</span>
                             <span className="hidden md:inline">Xem danh sách</span>
@@ -208,7 +208,7 @@ const CreateCustomer = () => {
                         <button
                             onClick={handleCreateCustomer}
                             disabled={isSubmitting}
-                            className={`flex-1 md:flex-none px-16 py-5 text-white font-black text-lg rounded-2xl shadow-2xl transition-all ${isSubmitting
+                            className={`w-full sm:w-auto px-10 md:px-16 py-4 md:py-5 text-white font-black text-lg rounded-2xl shadow-2xl transition-all ${isSubmitting
                                 ? 'bg-gray-400 cursor-not-allowed shadow-none'
                                 : 'bg-gradient-to-r from-pink-600 to-rose-600 shadow-pink-200 hover:scale-[1.02] active:scale-95'
                                 }`}

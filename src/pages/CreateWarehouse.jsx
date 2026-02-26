@@ -60,29 +60,29 @@ const CreateWarehouse = () => {
     };
 
     return (
-        <div className="p-8 max-w-[1400px] mx-auto font-sans bg-gray-50 min-h-screen">
-            <div className="flex items-center gap-4 mb-8">
+        <div className="p-4 md:p-8 max-w-[1400px] mx-auto font-sans bg-gray-50 min-h-screen">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-6 md:mb-8">
                 <button
                     onClick={() => navigate('/danh-sach-kho')}
-                    className="p-2 bg-white border border-gray-200 rounded-xl hover:bg-gray-100 transition-all shadow-sm"
+                    className="p-2 bg-white border border-gray-200 rounded-xl hover:bg-gray-100 transition-all shadow-sm self-start sm:self-auto"
                 >
                     <ArrowLeft className="w-5 h-5 text-gray-500" />
                 </button>
-                <h1 className="text-3xl font-black text-gray-900 tracking-tight flex items-center gap-3">
+                <h1 className="text-2xl md:text-3xl font-black text-gray-900 tracking-tight flex items-center gap-3">
                     <Warehouse className="w-8 h-8 text-amber-600" />
                     Thêm kho hàng mới
                 </h1>
             </div>
 
-            <div className="bg-white rounded-[2.5rem] shadow-2xl shadow-gray-200/50 border border-gray-100 overflow-hidden">
-                <div className="p-10 space-y-12">
+            <div className="bg-white rounded-[1.5rem] md:rounded-[2.5rem] shadow-2xl shadow-gray-200/50 border border-gray-100 overflow-hidden">
+                <div className="p-6 md:p-10 space-y-10 md:space-y-12">
                     {/* Section 1: Thông tin cơ bản */}
-                    <div className="space-y-6">
-                        <div className="flex items-center gap-2 border-b border-gray-100 pb-4">
+                    <div className="space-y-4 md:space-y-6">
+                        <div className="flex items-center gap-2 border-b border-gray-100 pb-3 md:pb-4">
                             <span className="w-8 h-8 bg-amber-50 text-amber-600 rounded-lg flex items-center justify-center font-bold">1</span>
-                            <h3 className="text-lg font-bold text-gray-800 uppercase tracking-tight">Thông tin cơ sở Kho</h3>
+                            <h3 className="text-base md:text-lg font-bold text-gray-800 uppercase tracking-tight">Thông tin cơ sở Kho</h3>
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
                             <div className="space-y-2">
                                 <label className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Tên kho *</label>
                                 <select
@@ -116,12 +116,12 @@ const CreateWarehouse = () => {
                     </div>
 
                     {/* Section 2: Vị trí & Quy mô */}
-                    <div className="space-y-6">
-                        <div className="flex items-center gap-2 border-b border-gray-100 pb-4">
+                    <div className="space-y-4 md:space-y-6">
+                        <div className="flex items-center gap-2 border-b border-gray-100 pb-3 md:pb-4">
                             <span className="w-8 h-8 bg-amber-50 text-amber-600 rounded-lg flex items-center justify-center font-bold">2</span>
-                            <h3 className="text-lg font-bold text-gray-800 uppercase tracking-tight">Vị trí & Quy mô</h3>
+                            <h3 className="text-base md:text-lg font-bold text-gray-800 uppercase tracking-tight">Vị trí & Quy mô</h3>
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
                             <div className="space-y-2">
                                 <label className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Địa chỉ (Text) *</label>
                                 <input
@@ -147,19 +147,19 @@ const CreateWarehouse = () => {
                 </div>
 
                 {/* Footer Buttons */}
-                <div className="p-10 bg-gray-50 border-t border-gray-100 flex items-center justify-between">
+                <div className="p-6 md:p-10 bg-gray-50 border-t border-gray-100 flex flex-col md:flex-row items-center justify-between gap-6">
                     <p className="text-gray-400 text-sm font-medium italic">* Kiểm tra kỹ các thông tin trước khi lưu.</p>
-                    <div className="flex gap-4">
+                    <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
                         <button
                             onClick={() => navigate('/danh-sach-kho')}
-                            className="px-8 py-4 bg-white border border-gray-200 rounded-2xl font-bold text-gray-500 hover:bg-gray-100 transition-all shadow-sm"
+                            className="w-full sm:w-auto px-8 py-4 bg-white border border-gray-200 rounded-2xl font-bold text-gray-500 hover:bg-gray-100 transition-all shadow-sm text-center"
                         >
                             Hủy bỏ
                         </button>
                         <button
                             onClick={handleCreateWarehouse}
                             disabled={isSubmitting}
-                            className={`px-12 py-4 rounded-2xl font-black text-white text-lg shadow-xl shadow-amber-100 transition-all flex items-center gap-3 ${isSubmitting ? 'bg-gray-400 cursor-not-allowed' : 'bg-amber-600 hover:bg-amber-700 active:scale-95'}`}
+                            className={`w-full sm:w-auto px-12 py-4 rounded-2xl font-black text-white text-lg shadow-xl shadow-amber-100 transition-all flex justify-center items-center gap-3 ${isSubmitting ? 'bg-gray-400 cursor-not-allowed' : 'bg-amber-600 hover:bg-amber-700 active:scale-95'}`}
                         >
                             {isSubmitting ? 'Đang lưu...' : (
                                 <>

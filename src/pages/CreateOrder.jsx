@@ -132,22 +132,22 @@ const CreateOrder = () => {
     };
 
     return (
-        <div className="p-8 max-w-[1200px] mx-auto font-sans bg-gray-50 min-h-screen">
+        <div className="p-4 md:p-8 max-w-[1200px] mx-auto font-sans bg-gray-50 min-h-screen">
             {/* Main Content Card */}
-            <div className="bg-white rounded-[2rem] shadow-2xl shadow-gray-200/50 border border-gray-100 overflow-hidden">
-                <div className="p-8 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-indigo-50/30">
-                    <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+            <div className="bg-white rounded-[1.5rem] md:rounded-[2rem] shadow-2xl shadow-gray-200/50 border border-gray-100 overflow-hidden">
+                <div className="p-6 md:p-8 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-indigo-50/30">
+                    <h3 className="text-lg md:text-xl font-bold text-gray-900 flex items-center gap-2">
                         <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white shadow-lg">
                             <Plus className="w-5 h-5" />
                         </div>
                         Thông tin đơn hàng
                     </h3>
-                    <p className="text-gray-500 text-sm mt-1 ml-10">Vui lòng điền đầy đủ các thông tin bắt buộc được đánh dấu (*)</p>
+                    <p className="text-gray-500 text-xs md:text-sm mt-1 md:ml-10">Vui lòng điền đầy đủ các thông tin bắt buộc được đánh dấu (*)</p>
                 </div>
 
-                <div className="p-10 space-y-10">
+                <div className="p-6 md:p-10 space-y-8 md:space-y-10">
                     {/* Section 1: Thông tin định danh */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
                         <div className="space-y-3">
                             <label className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">1. Mã đơn hàng (Tự động)</label>
                             <input value={formData.orderCode} disabled className="w-full px-5 py-4 bg-gray-100 border border-gray-200 rounded-2xl font-black text-gray-500 text-base cursor-not-allowed shadow-inner" />
@@ -175,21 +175,21 @@ const CreateOrder = () => {
                     </div>
 
                     {/* Section 2: Thông tin khách hàng & Người nhận */}
-                    <div className="p-8 bg-blue-50/40 rounded-[2.5rem] border border-blue-100 space-y-8">
+                    <div className="p-6 md:p-8 bg-blue-50/40 rounded-[1.5rem] md:rounded-[2.5rem] border border-blue-100 space-y-6 md:space-y-8">
                         <div className="space-y-3">
                             <label className="text-[11px] font-black text-blue-600 uppercase tracking-[0.2em] flex items-center gap-2 ml-1">
                                 <Package className="w-4 h-4" /> 4. Chọn Khách hàng *
                             </label>
                             <select
                                 onChange={handleCustomerChange}
-                                className="w-full px-5 py-4 bg-white border border-blue-200 rounded-2xl outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 font-bold text-base shadow-md transition-all"
+                                className="w-full px-5 py-4 bg-white border border-blue-200 rounded-2xl outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 font-bold text-base shadow-md transition-all cursor-pointer"
                             >
                                 <option value="">-- Chọn khách hàng trong hệ thống --</option>
                                 {MOCK_CUSTOMERS.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                             </select>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
                             <div className="space-y-3">
                                 <label className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">5. Tên người nhận *</label>
                                 <input
@@ -221,8 +221,8 @@ const CreateOrder = () => {
                     </div>
 
                     {/* Section 3: Chi tiết đơn hàng & Hàng hóa */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-                        <div className="space-y-8">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-10">
+                        <div className="space-y-6 md:space-y-8">
                             <div className="space-y-3">
                                 <label className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">8. Loại đơn hàng *</label>
                                 <select
@@ -245,8 +245,8 @@ const CreateOrder = () => {
                             </div>
                         </div>
 
-                        <div className="space-y-8">
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+                        <div className="space-y-6 md:space-y-8">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 md:gap-8">
                                 <div className="space-y-3">
                                     <label className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">10. Hàng hóa *</label>
                                     <select
@@ -292,19 +292,19 @@ const CreateOrder = () => {
                     </div>
                 </div>
 
-                <div className="p-10 bg-gray-50 border-t border-gray-100 flex flex-col md:flex-row items-center justify-between gap-6">
-                    <p className="text-sm text-gray-400 font-medium italic">* Vui lòng kiểm tra kỹ thông tin trước khi nhấn Xác nhận.</p>
-                    <div className="flex gap-4 w-full md:w-auto">
+                <div className="p-6 md:p-10 bg-gray-50 border-t border-gray-100 flex flex-col md:flex-row items-center justify-between gap-6">
+                    <p className="text-sm text-gray-400 font-medium italic w-full text-center md:text-left">* Vui lòng kiểm tra kỹ thông tin trước khi nhấn Xác nhận.</p>
+                    <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
                         <button
                             onClick={resetForm}
-                            className="flex-1 md:flex-none px-10 py-5 bg-white border border-gray-200 text-gray-500 font-bold hover:bg-gray-100 rounded-2xl transition-all shadow-sm"
+                            className="w-full sm:w-auto px-6 md:px-10 py-4 md:py-5 bg-white border border-gray-200 text-gray-500 font-bold hover:bg-gray-100 rounded-2xl transition-all shadow-sm"
                         >
                             Hủy bỏ
                         </button>
                         <button
                             onClick={handleCreateOrder}
                             disabled={isSubmitting}
-                            className={`flex-1 md:flex-none px-16 py-5 text-white font-black text-lg rounded-2xl shadow-2xl transition-all ${isSubmitting
+                            className={`w-full sm:w-auto px-10 md:px-16 py-4 md:py-5 text-white font-black text-lg rounded-2xl shadow-2xl transition-all ${isSubmitting
                                 ? 'bg-gray-400 cursor-not-allowed shadow-none'
                                 : 'bg-gradient-to-r from-blue-600 to-indigo-700 shadow-blue-200 hover:scale-[1.02] active:scale-95'
                                 }`}

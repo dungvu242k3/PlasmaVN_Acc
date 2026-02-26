@@ -146,9 +146,9 @@ const Orders = () => {
     };
 
     return (
-        <div className="p-8 max-w-[1600px] mx-auto font-sans bg-gray-50 min-h-screen">
+        <div className="p-4 md:p-8 max-w-[1600px] mx-auto font-sans bg-gray-50 min-h-screen">
             {/* Header Section */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-6 mb-6 md:mb-8">
                 <div>
                     <h1 className="text-4xl font-black text-gray-900 flex items-center gap-4 tracking-tight">
                         <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-blue-200">
@@ -209,8 +209,8 @@ const Orders = () => {
                 </div>
 
                 {/* Table Section */}
-                <div className="overflow-x-auto">
-                    <table className="w-full border-collapse">
+                <div className="w-full overflow-x-auto">
+                    <table className="w-full border-collapse min-w-[1200px] md:min-w-full">
                         <thead>
                             <tr className="bg-gray-50/50">
                                 <th className="px-6 py-4 w-10">
