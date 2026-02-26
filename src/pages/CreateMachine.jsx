@@ -1,0 +1,246 @@
+import {
+    ArrowLeft,
+    CheckCircle2,
+    MonitorIcon
+} from 'lucide-react';
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import {
+    CYLINDER_VOLUMES,
+    EMISSION_HEAD_TYPES,
+    GAS_TYPES,
+    MACHINE_STATUSES,
+    MACHINE_TYPES,
+    VALVE_TYPES
+} from '../constants/machineConstants';
+import { supabase } from '../supabase/config';
+
+const CreateMachine = () => {
+    const navigate = useNavigate();
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const initialFormState = {
+        serial_number: '',
+        machine_account: '',
+        status: 'chưa xác định',
+        bluetooth_mac: '',
+        machine_type: 'BV',
+        version: '',
+        cylinder_volume: 'không',
+        gas_type: 'Air',
+        valve_type: 'không',
+        emission_head_type: 'không'
+    };
+
+    const [formData, setFormData] = useState(initialFormState);
+
+    const handleSerialChange = (e) => {
+        const val = e.target.value;
+        setFormData(prev => ({
+            ...prev,
+            serial_number: val,
+            machine_account: val // Auto-fill Account with Serial
+        }));
+    };
+
+    const handleCreateMachine = async () => {
+        if (!formData.serial_number || !formData.machine_type) {
+            alert('Vui lòng điền các trường bắt buộc (*)');
+            return;
+        }
+
+        setIsSubmitting(true);
+        try {
+            const { error } = await supabase
+                .from('machines')
+                .insert([formData]);
+
+            if (error) throw error;
+
+            alert('🎉 Đã thêm máy mới thành công!');
+            navigate('/danh-sach-may');
+        } catch (error) {
+            console.error('Error creating machine:', error);
+            if (error.code === '23505') {
+                alert(`❌ Lỗi: Serial "${formData.serial_number}" đã tồn tại.`);
+            } else {
+                alert('❌ Lỗi: ' + error.message);
+            }
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    return (
+        <div className="p-8 max-w-[1400px] mx-auto font-sans bg-gray-50 min-h-screen">
+            {/* Header */}
+            <div className="flex items-center gap-4 mb-8">
+                <button
+                    onClick={() => navigate('/danh-sach-may')}
+                    className="p-2 bg-white border border-gray-200 rounded-xl hover:bg-gray-100 transition-all shadow-sm"
+                >
+                    <ArrowLeft className="w-5 h-5 text-gray-500" />
+                </button>
+                <h1 className="text-3xl font-black text-gray-900 tracking-tight flex items-center gap-3">
+                    <MonitorIcon className="w-8 h-8 text-indigo-600" />
+                    Thêm máy mới vào hệ thống
+                </h1>
+            </div>
+
+            <div className="bg-white rounded-[2.5rem] shadow-2xl shadow-gray-200/50 border border-gray-100 overflow-hidden">
+                <div className="p-10 space-y-12">
+                    {/* Section 1: Định danh máy */}
+                    <div className="space-y-6">
+                        <div className="flex items-center gap-2 border-b border-gray-100 pb-4">
+                            <span className="w-8 h-8 bg-indigo-50 text-indigo-600 rounded-lg flex items-center justify-center font-bold">1</span>
+                            <h3 className="text-lg font-bold text-gray-800 uppercase tracking-tight">Định danh thiết bị</h3>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                            <div className="space-y-2">
+                                <label className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Serial (Mã máy) *</label>
+                                <input
+                                    value={formData.serial_number}
+                                    onChange={handleSerialChange}
+                                    placeholder="PLT-25D1-50-TM"
+                                    className="w-full px-5 py-4 bg-white border border-gray-200 rounded-2xl outline-none focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 font-bold text-base shadow-sm transition-all"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Tài khoản máy</label>
+                                <input
+                                    value={formData.machine_account}
+                                    disabled
+                                    placeholder="Tự động theo Serial..."
+                                    className="w-full px-5 py-4 bg-gray-50 border border-gray-200 rounded-2xl font-bold text-gray-500 text-base cursor-not-allowed shadow-inner"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Trạng thái *</label>
+                                <select
+                                    value={formData.status}
+                                    onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                                    className="w-full px-5 py-4 bg-white border border-gray-200 rounded-2xl outline-none focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 font-bold text-base shadow-sm cursor-pointer"
+                                >
+                                    {MACHINE_STATUSES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Section 2: Cấu hình kỹ thuật */}
+                    <div className="space-y-6">
+                        <div className="flex items-center gap-2 border-b border-gray-100 pb-4">
+                            <span className="w-8 h-8 bg-indigo-50 text-indigo-600 rounded-lg flex items-center justify-center font-bold">2</span>
+                            <h3 className="text-lg font-bold text-gray-800 uppercase tracking-tight">Thông tin kỹ thuật</h3>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                            <div className="space-y-2">
+                                <label className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">BluetoothMAC</label>
+                                <input
+                                    value={formData.bluetooth_mac}
+                                    onChange={(e) => setFormData({ ...formData, bluetooth_mac: e.target.value })}
+                                    className="w-full px-5 py-4 bg-white border border-gray-200 rounded-2xl outline-none focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 font-bold"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Loại máy *</label>
+                                <select
+                                    value={formData.machine_type}
+                                    onChange={(e) => setFormData({ ...formData, machine_type: e.target.value })}
+                                    className="w-full px-5 py-4 bg-white border border-gray-200 rounded-2xl outline-none focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 font-bold cursor-pointer"
+                                >
+                                    {MACHINE_TYPES.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
+                                </select>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Phiên bản</label>
+                                <input
+                                    value={formData.version}
+                                    onChange={(e) => setFormData({ ...formData, version: e.target.value })}
+                                    className="w-full px-5 py-4 bg-white border border-gray-200 rounded-2xl outline-none focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 font-bold"
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Section 3: Phụ kiện & Bình khí */}
+                    <div className="space-y-6">
+                        <div className="flex items-center gap-2 border-b border-gray-100 pb-4">
+                            <span className="w-8 h-8 bg-indigo-50 text-indigo-600 rounded-lg flex items-center justify-center font-bold">3</span>
+                            <h3 className="text-lg font-bold text-gray-800 uppercase tracking-tight">Phụ kiện & Bình khí</h3>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                            <div className="space-y-2">
+                                <label className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Thể tích bình</label>
+                                <select
+                                    value={formData.cylinder_volume}
+                                    onChange={(e) => setFormData({ ...formData, cylinder_volume: e.target.value })}
+                                    className="w-full px-5 py-3.5 bg-white border border-gray-200 rounded-xl outline-none focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 font-medium text-sm cursor-pointer"
+                                >
+                                    {CYLINDER_VOLUMES.map(v => <option key={v.id} value={v.id}>{v.label}</option>)}
+                                </select>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Loại khí</label>
+                                <select
+                                    value={formData.gas_type}
+                                    onChange={(e) => setFormData({ ...formData, gas_type: e.target.value })}
+                                    className="w-full px-5 py-3.5 bg-white border border-gray-200 rounded-xl outline-none focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 font-medium text-sm cursor-pointer"
+                                >
+                                    {GAS_TYPES.map(g => <option key={g.id} value={g.id}>{g.label}</option>)}
+                                </select>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Loại van</label>
+                                <select
+                                    value={formData.valve_type}
+                                    onChange={(e) => setFormData({ ...formData, valve_type: e.target.value })}
+                                    className="w-full px-5 py-3.5 bg-white border border-gray-200 rounded-xl outline-none focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 font-medium text-sm cursor-pointer"
+                                >
+                                    {VALVE_TYPES.map(v => <option key={v.id} value={v.id}>{v.label}</option>)}
+                                </select>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Loại đầu phát</label>
+                                <select
+                                    value={formData.emission_head_type}
+                                    onChange={(e) => setFormData({ ...formData, emission_head_type: e.target.value })}
+                                    className="w-full px-5 py-3.5 bg-white border border-gray-200 rounded-xl outline-none focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 font-medium text-sm cursor-pointer"
+                                >
+                                    {EMISSION_HEAD_TYPES.map(h => <option key={h.id} value={h.id}>{h.label}</option>)}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Footer Buttons */}
+                <div className="p-10 bg-gray-50 border-t border-gray-100 flex items-center justify-between">
+                    <p className="text-gray-400 text-sm font-medium italic">* Vui lòng kiểm tra mã Serial trước khi lưu.</p>
+                    <div className="flex gap-4">
+                        <button
+                            onClick={() => navigate('/danh-sach-may')}
+                            className="px-8 py-4 bg-white border border-gray-200 rounded-2xl font-bold text-gray-500 hover:bg-gray-100 transition-all shadow-sm"
+                        >
+                            Hủy bỏ
+                        </button>
+                        <button
+                            onClick={handleCreateMachine}
+                            disabled={isSubmitting}
+                            className={`px-12 py-4 rounded-2xl font-black text-white text-lg shadow-xl shadow-indigo-100 transition-all flex items-center gap-3 ${isSubmitting ? 'bg-gray-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700 active:scale-95'}`}
+                        >
+                            {isSubmitting ? 'Đang lưu...' : (
+                                <>
+                                    <CheckCircle2 className="w-5 h-5" />
+                                    Lưu hồ sơ máy
+                                </>
+                            )}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+export default CreateMachine;

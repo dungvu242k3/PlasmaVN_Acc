@@ -1,0 +1,215 @@
+import {
+    ActivitySquare,
+    ArrowLeft,
+    CheckCircle2
+} from 'lucide-react';
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import {
+    CYLINDER_STATUSES,
+    CYLINDER_VOLUMES,
+    GAS_TYPES,
+    HANDLE_TYPES,
+    MACHINE_TYPES,
+    VALVE_TYPES
+} from '../constants/machineConstants';
+import { supabase } from '../supabase/config';
+
+const CreateCylinder = () => {
+    const navigate = useNavigate();
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const initialFormState = {
+        serial_number: '',
+        status: 'sẵn sàng',
+        net_weight: '',
+        category: 'BV',
+        volume: 'bình 4L/ CGA870',
+        gas_type: 'AirMAC',
+        valve_type: 'Van Messer/Phi 6/ CB Trắng',
+        handle_type: 'Có quai'
+    };
+
+    const [formData, setFormData] = useState(initialFormState);
+
+    const handleCreateCylinder = async () => {
+        if (!formData.serial_number) {
+            alert('Vui lòng điền mã Serial (*) bắt buộc');
+            return;
+        }
+
+        setIsSubmitting(true);
+        try {
+            // Transform net_weight string to numeric implicitly or null if empty
+            const payload = { ...formData };
+            if (!payload.net_weight) delete payload.net_weight;
+
+            const { error } = await supabase
+                .from('cylinders')
+                .insert([payload]);
+
+            if (error) throw error;
+
+            alert('🎉 Đã thêm vỏ bình mới thành công!');
+            navigate('/danh-sach-binh');
+        } catch (error) {
+            console.error('Error creating cylinder:', error);
+            if (error.code === '23505') {
+                alert(`❌ Lỗi: RFID Serial "${formData.serial_number}" đã tồn tại trên hệ thống.`);
+            } else {
+                alert('❌ Có lỗi xảy ra: ' + error.message);
+            }
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    return (
+        <div className="p-8 max-w-[1400px] mx-auto font-sans bg-gray-50 min-h-screen">
+            <div className="flex items-center gap-4 mb-8">
+                <button
+                    onClick={() => navigate('/danh-sach-binh')}
+                    className="p-2 bg-white border border-gray-200 rounded-xl hover:bg-gray-100 transition-all shadow-sm"
+                >
+                    <ArrowLeft className="w-5 h-5 text-gray-500" />
+                </button>
+                <h1 className="text-3xl font-black text-gray-900 tracking-tight flex items-center gap-3">
+                    <ActivitySquare className="w-8 h-8 text-teal-600" />
+                    Thêm vỏ bình / bình khí mới
+                </h1>
+            </div>
+
+            <div className="bg-white rounded-[2.5rem] shadow-2xl shadow-gray-200/50 border border-gray-100 overflow-hidden">
+                <div className="p-10 space-y-12">
+                    {/* Section 1: Thông tin cơ sở */}
+                    <div className="space-y-6">
+                        <div className="flex items-center gap-2 border-b border-gray-100 pb-4">
+                            <span className="w-8 h-8 bg-teal-50 text-teal-600 rounded-lg flex items-center justify-center font-bold">1</span>
+                            <h3 className="text-lg font-bold text-gray-800 uppercase tracking-tight">Thông tin cơ sở vỏ bình</h3>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                            <div className="space-y-2 lg:col-span-2">
+                                <label className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Serial RFID *</label>
+                                <input
+                                    value={formData.serial_number}
+                                    onChange={(e) => setFormData({ ...formData, serial_number: e.target.value })}
+                                    placeholder="QR04116"
+                                    className="w-full px-5 py-4 bg-white border border-gray-200 rounded-2xl outline-none focus:ring-4 focus:ring-teal-100 focus:border-teal-500 font-bold text-base shadow-sm transition-all"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Trạng thái *</label>
+                                <select
+                                    value={formData.status}
+                                    onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                                    className="w-full px-5 py-4 bg-white border border-gray-200 rounded-2xl outline-none focus:ring-4 focus:ring-teal-100 focus:border-teal-500 font-bold text-base shadow-sm cursor-pointer text-gray-900"
+                                >
+                                    {CYLINDER_STATUSES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
+                                </select>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Thể loại *</label>
+                                <select
+                                    value={formData.category}
+                                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                                    className="w-full px-5 py-4 bg-white border border-gray-200 rounded-2xl outline-none focus:ring-4 focus:ring-teal-100 focus:border-teal-500 font-bold text-base shadow-sm cursor-pointer text-gray-900"
+                                >
+                                    {MACHINE_TYPES.filter(t => t.id === 'BV' || t.id === 'TM').map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Section 2: Thông số kỹ thuật */}
+                    <div className="space-y-6">
+                        <div className="flex items-center gap-2 border-b border-gray-100 pb-4">
+                            <span className="w-8 h-8 bg-teal-50 text-teal-600 rounded-lg flex items-center justify-center font-bold">2</span>
+                            <h3 className="text-lg font-bold text-gray-800 uppercase tracking-tight">Cấu hình & Thông số</h3>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8">
+                            <div className="space-y-2">
+                                <label className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Khối lượng tịnh (kg)</label>
+                                <input
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
+                                    value={formData.net_weight}
+                                    onChange={(e) => setFormData({ ...formData, net_weight: e.target.value })}
+                                    placeholder="Ví dụ: 12.5"
+                                    className="w-full px-5 py-4 bg-white border border-gray-200 rounded-2xl outline-none focus:ring-4 focus:ring-teal-100 focus:border-teal-500 font-bold shadow-sm"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Thể tích</label>
+                                <select
+                                    value={formData.volume}
+                                    onChange={(e) => setFormData({ ...formData, volume: e.target.value })}
+                                    className="w-full px-4 py-4 bg-white border border-gray-200 rounded-2xl outline-none focus:ring-4 focus:ring-teal-100 focus:border-teal-500 font-bold shadow-sm cursor-pointer text-sm"
+                                >
+                                    {CYLINDER_VOLUMES.map(v => <option key={v.id} value={v.id}>{v.label}</option>)}
+                                </select>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Loại khí</label>
+                                <select
+                                    value={formData.gas_type}
+                                    onChange={(e) => setFormData({ ...formData, gas_type: e.target.value })}
+                                    className="w-full px-4 py-4 bg-white border border-gray-200 rounded-2xl outline-none focus:ring-4 focus:ring-teal-100 focus:border-teal-500 font-bold shadow-sm cursor-pointer text-sm"
+                                >
+                                    {GAS_TYPES.map(g => <option key={g.id} value={g.id}>{g.label}</option>)}
+                                </select>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Loại van</label>
+                                <select
+                                    value={formData.valve_type}
+                                    onChange={(e) => setFormData({ ...formData, valve_type: e.target.value })}
+                                    className="w-full px-4 py-4 bg-white border border-gray-200 rounded-2xl outline-none focus:ring-4 focus:ring-teal-100 focus:border-teal-500 font-bold shadow-sm cursor-pointer text-sm"
+                                >
+                                    {VALVE_TYPES.map(v => <option key={v.id} value={v.id}>{v.label}</option>)}
+                                </select>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Loại quai</label>
+                                <select
+                                    value={formData.handle_type}
+                                    onChange={(e) => setFormData({ ...formData, handle_type: e.target.value })}
+                                    className="w-full px-4 py-4 bg-white border border-gray-200 rounded-2xl outline-none focus:ring-4 focus:ring-teal-100 focus:border-teal-500 font-bold shadow-sm cursor-pointer text-sm"
+                                >
+                                    {HANDLE_TYPES.map(h => <option key={h.id} value={h.id}>{h.label}</option>)}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Footer Buttons */}
+                <div className="p-10 bg-gray-50 border-t border-gray-100 flex items-center justify-between">
+                    <p className="text-gray-400 text-sm font-medium italic">* Kiểm tra kỹ mã QR RFID trên vỏ bình trước khi lưu.</p>
+                    <div className="flex gap-4">
+                        <button
+                            onClick={() => navigate('/danh-sach-binh')}
+                            className="px-8 py-4 bg-white border border-gray-200 rounded-2xl font-bold text-gray-500 hover:bg-gray-100 transition-all shadow-sm"
+                        >
+                            Hủy bỏ
+                        </button>
+                        <button
+                            onClick={handleCreateCylinder}
+                            disabled={isSubmitting}
+                            className={`px-12 py-4 rounded-2xl font-black text-white text-lg shadow-xl shadow-teal-100 transition-all flex items-center gap-3 ${isSubmitting ? 'bg-gray-400 cursor-not-allowed' : 'bg-teal-600 hover:bg-teal-700 active:scale-95'}`}
+                        >
+                            {isSubmitting ? 'Đang lưu...' : (
+                                <>
+                                    <CheckCircle2 className="w-5 h-5" />
+                                    Lưu hồ sơ Bình
+                                </>
+                            )}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+export default CreateCylinder;
