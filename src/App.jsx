@@ -12,6 +12,7 @@ import CreateCylinder from './pages/CreateCylinder';
 import CreateMachine from './pages/CreateMachine';
 import CreateOrder from './pages/CreateOrder';
 import CreateShipper from './pages/CreateShipper';
+import CreateSupplier from './pages/CreateSupplier';
 import CreateWarehouse from './pages/CreateWarehouse';
 import Customers from './pages/Customers';
 import Cylinders from './pages/Cylinders';
@@ -19,6 +20,7 @@ import Home from './pages/Home';
 import Machines from './pages/Machines';
 import Orders from './pages/Orders';
 import Shippers from './pages/Shippers';
+import Suppliers from './pages/Suppliers';
 import Warehouses from './pages/Warehouses';
 
 function App() {
@@ -102,6 +104,16 @@ function App() {
               <Route path="/tao-dvvc" element={
                 <ProtectedRoute>
                   <CreateShipper />
+                </ProtectedRoute>
+              } />
+              <Route path="/nha-cung-cap" element={
+                <ProtectedRoute>
+                  <Suppliers />
+                </ProtectedRoute>
+              } />
+              <Route path="/tao-nha-cung-cap" element={
+                <ProtectedRoute>
+                  <CreateSupplier />
                 </ProtectedRoute>
               } />
 

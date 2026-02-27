@@ -1,5 +1,6 @@
 import {
   ActivitySquare,
+  Building2,
   ChevronLeft,
   ChevronRight,
   Layout,
@@ -62,6 +63,12 @@ const SIDEBAR_ITEMS = [
     label: "Danh sách kho",
     icon: Warehouse,
     path: "/danh-sach-kho",
+  },
+  {
+    id: "suppliers",
+    label: "Danh sách nhà cung cấp",
+    icon: Building2,
+    path: "/nha-cung-cap",
   },
   {
     id: "shippers",
@@ -167,6 +174,22 @@ const DASHBOARD_FEATURES = [
     icon: Plus,
     color: "rose",
     path: "/tao-dvvc",
+  },
+  {
+    id: "suppliers",
+    title: "Danh sách nhà cung cấp",
+    description: "Quản lý danh sách các đối tác cung cấp vật tư và vỏ bình.",
+    icon: Building2,
+    color: "teal",
+    path: "/nha-cung-cap",
+  },
+  {
+    id: "add-supplier",
+    title: "Thêm nhà cung cấp",
+    description: "Khai báo thông tin đối tác cung cấp mới vào hệ thống.",
+    icon: Plus,
+    color: "cyan",
+    path: "/tao-nha-cung-cap",
   },
 ];
 
