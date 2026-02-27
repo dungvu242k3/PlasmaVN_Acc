@@ -1,15 +1,16 @@
 // Constants for Permission Matrix
 
 export const MODULE_PERMISSIONS = [
-    { id: 'dashboard', label: 'Dashboard / Báo cáo' },
-    { id: 'users', label: 'Quản lý Người dùng' },
-    { id: 'roles', label: 'Quản lý Phân quyền' },
-    { id: 'materials', label: 'Từ điển Nguồn Vật tư' },
-    { id: 'suppliers', label: 'Nhà cung cấp vật tư' },
-    { id: 'shippers', label: 'Đơn vị vận chuyển (Nhà xe)' },
-    { id: 'warehouses', label: 'Danh sách Kho' },
-    { id: 'cylinders', label: 'Bình khí (RFID)' },
-    { id: 'orders', label: 'Vận đơn & Đơn hàng' }
+    { id: 'orders', label: 'Danh sách đơn hàng' },
+    { id: 'customers', label: 'Danh sách khách hàng' },
+    { id: 'machines', label: 'Danh sách máy' },
+    { id: 'cylinders', label: 'Danh sách bình' },
+    { id: 'warehouses', label: 'Danh sách kho' },
+    { id: 'suppliers', label: 'Danh sách nhà cung cấp' },
+    { id: 'shippers', label: 'Đơn vị vận chuyển' },
+    { id: 'materials', label: 'Danh sách nguồn vật tư' },
+    { id: 'users', label: 'Quản lý người dùng' },
+    { id: 'permissions', label: 'Phân quyền chi tiết' }
 ];
 
 export const ACTION_TYPES = [

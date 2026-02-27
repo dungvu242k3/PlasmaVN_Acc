@@ -128,9 +128,17 @@ const Users = () => {
                                             </div>
                                         </td>
                                         <td className="px-6 py-5 whitespace-nowrap">
-                                            <div className="flex items-center gap-2 text-blue-700 font-semibold bg-blue-50 border border-blue-100 px-3 py-1.5 rounded-lg w-max">
-                                                {user.role === 'Admin' ? <ShieldCheck className="w-4 h-4" /> : <Briefcase className="w-4 h-4" />}
-                                                {user.role}
+                                            <div className="flex flex-col gap-2">
+                                                <div className="flex items-center gap-2 text-blue-700 font-semibold bg-blue-50 border border-blue-100 px-3 py-1.5 rounded-lg w-max">
+                                                    {user.role === 'Admin' ? <ShieldCheck className="w-4 h-4" /> : <Briefcase className="w-4 h-4" />}
+                                                    {user.role}
+                                                </div>
+                                                {user.permissions && Object.keys(user.permissions).length > 0 && (
+                                                    <div className="flex items-center gap-1 text-xs font-bold text-orange-600 bg-orange-50 border border-orange-100 px-2.5 py-1 rounded-md w-max">
+                                                        <ShieldCheck className="w-3 h-3" />
+                                                        + Quyền cá nhân (Ghi đè)
+                                                    </div>
+                                                )}
                                             </div>
                                         </td>
                                         <td className="px-6 py-5 whitespace-nowrap">

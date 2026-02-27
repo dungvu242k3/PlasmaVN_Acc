@@ -279,14 +279,14 @@ const CreatePermission = () => {
                                                         <input
                                                             type="checkbox"
                                                             className="sr-only peer"
-                                                            checked={permissions[module.id][action.id]}
+                                                            checked={permissions[module.id]?.[action.id] || false}
                                                             onChange={() => handleCheckboxChange(module.id, action.id)}
                                                         />
-                                                        <div className={`w-6 h-6 rounded border-2 flex items-center justify-center transition-all ${permissions[module.id][action.id]
+                                                        <div className={`w-6 h-6 rounded border-2 flex items-center justify-center transition-all ${permissions[module.id]?.[action.id]
                                                             ? 'bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-200'
                                                             : 'bg-white border-gray-300 text-transparent group-hover:border-blue-400'
                                                             }`}>
-                                                            <CheckCircle2 className={`w-4 h-4 transition-transform ${permissions[module.id][action.id] ? 'scale-100' : 'scale-0'}`} />
+                                                            <CheckCircle2 className={`w-4 h-4 transition-transform ${permissions[module.id]?.[action.id] ? 'scale-100' : 'scale-0'}`} />
                                                         </div>
                                                     </label>
                                                 </td>
