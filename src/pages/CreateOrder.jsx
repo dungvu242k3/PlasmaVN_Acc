@@ -123,17 +123,21 @@ const CreateOrder = () => {
     };
 
     return (
-        <div className="p-4 md:p-8 max-w-[1200px] mx-auto font-sans bg-gray-50 min-h-screen">
+        <div className="p-4 md:p-8 max-w-[1200px] mx-auto font-sans min-h-screen noise-bg">
+            {/* Animated Blobs */}
+            <div className="blob blob-blue w-[400px] h-[400px] -top-20 -left-20 opacity-20"></div>
+            <div className="blob blob-indigo w-[300px] h-[300px] top-1/2 -right-20 opacity-20"></div>
+
             {/* Main Content Card */}
-            <div className="bg-white rounded-[1.5rem] md:rounded-[2rem] shadow-2xl shadow-gray-200/50 border border-gray-100 overflow-hidden">
-                <div className="p-6 md:p-8 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-indigo-50/30">
-                    <h3 className="text-lg md:text-xl font-bold text-gray-900 flex items-center gap-2">
-                        <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white shadow-lg">
+            <div className="bg-white/80 backdrop-blur-xl rounded-[1.5rem] md:rounded-[2rem] shadow-2xl shadow-blue-900/10 border border-white overflow-hidden relative z-10">
+                <div className="p-6 md:p-8 border-b border-blue-50 bg-gradient-to-r from-blue-600 to-indigo-700 text-white">
+                    <h3 className="text-lg md:text-xl font-bold flex items-center gap-2">
+                        <div className="w-8 h-8 bg-white/20 backdrop-blur-md rounded-lg flex items-center justify-center text-white shadow-inner">
                             <Plus className="w-5 h-5" />
                         </div>
                         Thông tin đơn hàng
                     </h3>
-                    <p className="text-gray-500 text-xs md:text-sm mt-1 md:ml-10">Vui lòng điền đầy đủ các thông tin bắt buộc được đánh dấu (*)</p>
+                    <p className="text-blue-100 text-xs md:text-sm mt-1 md:ml-10">Vui lòng điền đầy đủ các thông tin bắt buộc được đánh dấu (*)</p>
                 </div>
 
                 <div className="p-6 md:p-10 space-y-8 md:space-y-10">

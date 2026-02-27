@@ -91,17 +91,21 @@ const CreateCustomer = () => {
     };
 
     return (
-        <div className="p-4 md:p-8 max-w-[1200px] mx-auto font-sans bg-gray-50 min-h-screen">
+        <div className="p-4 md:p-8 max-w-[1200px] mx-auto font-sans min-h-screen noise-bg">
+            {/* Animated Blobs */}
+            <div className="blob blob-rose w-[450px] h-[450px] -top-20 -right-20 opacity-20"></div>
+            <div className="blob blob-pink w-[350px] h-[350px] bottom-1/4 -left-20 opacity-15"></div>
+
             {/* Main Content Card */}
-            <div className="bg-white rounded-[1.5rem] md:rounded-[2rem] shadow-2xl shadow-gray-200/50 border border-pink-100 overflow-hidden">
-                <div className="p-6 md:p-8 border-b border-pink-50 bg-gradient-to-r from-pink-50 to-orange-50/30">
-                    <h3 className="text-lg md:text-xl font-bold text-gray-900 flex items-center gap-2">
-                        <div className="w-8 h-8 bg-pink-600 rounded-lg flex items-center justify-center text-white shadow-lg shadow-pink-200">
+            <div className="bg-white/80 backdrop-blur-xl rounded-[1.5rem] md:rounded-[2rem] shadow-2xl shadow-rose-900/10 border border-white overflow-hidden relative z-10">
+                <div className="p-6 md:p-8 border-b border-rose-50 bg-gradient-to-r from-rose-600 to-pink-600 text-white">
+                    <h3 className="text-lg md:text-xl font-bold flex items-center gap-2">
+                        <div className="w-8 h-8 bg-white/20 backdrop-blur-md rounded-lg flex items-center justify-center text-white shadow-inner">
                             <UserPlus className="w-5 h-5" />
                         </div>
                         Thêm mới khách hàng đối tác
                     </h3>
-                    <p className="text-gray-500 text-xs md:text-sm mt-1 md:ml-10">Tạo hồ sơ khách hàng mới tham gia vào hệ thống. Điền đầy đủ các thông tin (*)</p>
+                    <p className="text-rose-100 text-xs md:text-sm mt-1 md:ml-10">Tạo hồ sơ khách hàng mới tham gia vào hệ thống. Điền đầy đủ các thông tin (*)</p>
                 </div>
 
                 <div className="p-6 md:p-10 space-y-8 md:space-y-10">

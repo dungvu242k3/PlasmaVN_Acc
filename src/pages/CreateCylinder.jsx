@@ -87,16 +87,19 @@ const CreateCylinder = () => {
     };
 
     return (
-        <div className="p-4 md:p-8 max-w-[1400px] mx-auto font-sans bg-gray-50 min-h-screen">
-            <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-6 md:mb-8">
+        <div className="p-4 md:p-8 max-w-[1400px] mx-auto font-sans min-h-screen noise-bg">
+            {/* Animated Blobs */}
+            <div className="blob blob-emerald w-[400px] h-[400px] -top-20 -right-20 opacity-20"></div>
+            <div className="blob blob-blue w-[300px] h-[300px] bottom-1/3 -left-20 opacity-15"></div>
 
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-6 md:mb-8 relative z-10">
                 <h1 className="text-2xl md:text-3xl font-black text-gray-900 tracking-tight flex items-center gap-3">
                     <ActivitySquare className="w-8 h-8 text-teal-600" />
                     Thêm vỏ bình / bình khí mới
                 </h1>
             </div>
 
-            <div className="bg-white rounded-[1.5rem] md:rounded-[2.5rem] shadow-2xl shadow-gray-200/50 border border-gray-100 overflow-hidden">
+            <div className="bg-white/80 backdrop-blur-xl rounded-[1.5rem] md:rounded-[2.5rem] shadow-2xl shadow-teal-900/10 border border-white overflow-hidden relative z-10">
                 <div className="p-6 md:p-10 space-y-10 md:space-y-12">
                     {/* Section 1: Thông tin cơ sở */}
                     <div className="space-y-4 md:space-y-6">

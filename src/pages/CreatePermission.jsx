@@ -194,7 +194,7 @@ const CreatePermission = () => {
 
                 const userRoleName = `@user:${user.username}`;
 
-                // Upsert vào app_roles với type='user'
+                // Upsert vào app_roles với type='user' (lưu trữ backup)
                 const { error: roleError } = await supabase
                     .from('app_roles')
                     .upsert({
@@ -205,10 +205,11 @@ const CreatePermission = () => {
 
                 if (roleError) throw roleError;
 
-                // Cập nhật role của user trong bảng app_users hướng về role mới này
+                // Cập nhật permissions tùy chỉnh trực tiếp trên app_users
+                // KHÔNG ghi đè trường role — giữ nguyên vai trò gốc (Admin, Thủ kho...)
                 const { error: userUpdateError } = await supabase
                     .from('app_users')
-                    .update({ role: userRoleName })
+                    .update({ permissions: permissions })
                     .eq('id', selectedUserId);
 
                 if (userUpdateError) throw userUpdateError;
@@ -235,16 +236,19 @@ const CreatePermission = () => {
     };
 
     return (
-        <div className="p-4 md:p-8 max-w-[1400px] mx-auto font-sans bg-gray-50 min-h-screen">
-            <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-6 md:mb-8">
+        <div className="p-4 md:p-8 max-w-[1400px] mx-auto font-sans min-h-screen noise-bg">
+            {/* Animated Blobs */}
+            <div className="blob blob-indigo w-[400px] h-[400px] -top-20 -right-20 opacity-20"></div>
+            <div className="blob blob-violet w-[350px] h-[350px] bottom-1/4 -left-20 opacity-15"></div>
 
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-6 md:mb-8 relative z-10">
                 <h1 className="text-2xl md:text-3xl font-black text-gray-900 tracking-tight flex items-center gap-3">
-                    <ShieldPlus className="w-8 h-8 text-blue-600" />
+                    <ShieldPlus className="w-8 h-8 text-indigo-600" />
                     Thêm quyền / Nhóm người dùng
                 </h1>
             </div>
 
-            <div className="bg-white rounded-[1.5rem] md:rounded-[2.5rem] shadow-2xl shadow-gray-200/50 border border-gray-100 overflow-hidden">
+            <div className="bg-white/80 backdrop-blur-xl rounded-[1.5rem] md:rounded-[2.5rem] shadow-2xl shadow-indigo-900/10 border border-white overflow-hidden relative z-10">
                 <div className="p-6 md:p-10 space-y-10">
 
                     {/* Section 1: Đối tượng Phân quyền */}
