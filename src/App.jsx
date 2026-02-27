@@ -13,6 +13,7 @@ import CreateMachine from './pages/CreateMachine';
 import CreateMaterial from './pages/CreateMaterial';
 import CreateOrder from './pages/CreateOrder';
 import CreatePermission from './pages/CreatePermission';
+import CreatePromotion from './pages/CreatePromotion';
 import CreateShipper from './pages/CreateShipper';
 import CreateSupplier from './pages/CreateSupplier';
 import CreateUser from './pages/CreateUser';
@@ -24,6 +25,7 @@ import Machines from './pages/Machines';
 import Materials from './pages/Materials';
 import Orders from './pages/Orders';
 import Permissions from './pages/Permissions';
+import Promotions from './pages/Promotions';
 import Shippers from './pages/Shippers';
 import Suppliers from './pages/Suppliers';
 import Users from './pages/Users';
@@ -150,6 +152,16 @@ function App() {
               <Route path="/tao-phan-quyen" element={
                 <ProtectedRoute>
                   <CreatePermission />
+                </ProtectedRoute>
+              } />
+              <Route path="/danh-sach-khuyen-mai" element={
+                <ProtectedRoute>
+                  <Promotions />
+                </ProtectedRoute>
+              } />
+              <Route path="/tao-khuyen-mai" element={
+                <ProtectedRoute>
+                  <CreatePromotion />
                 </ProtectedRoute>
               } />
 

@@ -3,6 +3,7 @@ import {
   Building2,
   ChevronLeft,
   ChevronRight,
+  Gift,
   Layers,
   Layout,
   Menu,
@@ -83,6 +84,12 @@ const SIDEBAR_ITEMS = [
     label: "Danh sách nguồn vật tư",
     icon: Layers,
     path: "/thong-tin-vat-tu",
+  },
+  {
+    id: "promotions",
+    label: "Khuyến mãi bình",
+    icon: Gift,
+    path: "/danh-sach-khuyen-mai",
   },
   {
     id: "users",
@@ -250,6 +257,22 @@ const DASHBOARD_FEATURES = [
     icon: ShieldCheck,
     color: "slate",
     path: "/phan-quyen"
+  },
+  {
+    id: "promotions",
+    title: "Danh sách Khuyến mãi",
+    description: "Quản lý mã khuyến mãi, khấu trừ bình cho khách hàng và đại lý.",
+    icon: Gift,
+    color: "amber",
+    path: "/danh-sach-khuyen-mai"
+  },
+  {
+    id: "add-promotion",
+    title: "Tạo mã khuyến mãi",
+    description: "Thiết lập chương trình khuyến mãi bình mới cho khách hàng.",
+    icon: Plus,
+    color: "orange",
+    path: "/tao-khuyen-mai"
   }
 ];
 
