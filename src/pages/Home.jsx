@@ -424,7 +424,6 @@ function Home() {
                   Chào buổi sáng 👋
                 </h1>
                 <p className="text-slate-400 font-medium text-lg leading-relaxed max-w-2xl">
-                  Hôm nay là một ngày tuyệt vời để quản lý hệ thống của bạn.
                 </p>
               </div>
 

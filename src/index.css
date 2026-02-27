@@ -11,7 +11,7 @@ body {
   line-height: 1.6;
   letter-spacing: 0.01em;
   background-color: #F8FAFC;
-  color: #1E293B;
+  color: #000000;
   font-size: 14px;
 }
 
@@ -28,24 +28,29 @@ body {
    Enforces consistent text sizes across all pages.
    ============================================ */
 
-/* Table headers - consistent 12px uppercase labels */
+/* Table headers - consistent 12px labels, no uppercase, single line */
 th {
   font-size: 12px !important;
+  text-transform: none !important;
+  white-space: nowrap !important;
 }
 
-/* Table data cells - consistent 14px readable text, not bold */
+/* Table data cells - consistent 14px readable text, not bold, single line */
 td {
   font-size: 14px !important;
   font-weight: normal !important;
+  color: #000000 !important;
+  white-space: nowrap !important;
 }
 
-/* Nested elements inside table cells inherit the cell size */
+/* Nested elements inside table cells inherit the cell size and single line */
 td span,
 td div,
 td p,
 td a {
   font-size: inherit !important;
   font-weight: normal !important;
+  white-space: nowrap !important;
 }
 
 /* Small labels/badges inside cells - slightly smaller but still readable */
@@ -63,9 +68,25 @@ textarea {
   font-size: 14px !important;
 }
 
-/* Buttons - consistent 14px */
+/* Buttons - consistent 14px, compact and single line */
 button {
   font-size: 14px !important;
+  white-space: nowrap !important;
+  height: 40px !important;
+  /* Standard height */
+  padding: 0 20px !important;
+  /* Standard side padding */
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 8px !important;
+}
+
+/* Icon-only or small buttons can be smaller */
+button.p-2,
+button.p-1 {
+  height: auto !important;
+  padding: 4px 8px !important;
 }
 
 /* Small descriptive text / subtitles */
@@ -85,9 +106,31 @@ nav span {
   font-size: 14px !important;
 }
 
-/* Consistent label and status badge sizes */
-span[class*="uppercase"][class*="tracking"] {
+/* Optimized status badges - compact and professional */
+span[class*="uppercase"][class*="tracking"],
+td span[class*="border"][class*="rounded"] {
   font-size: 11px !important;
+  text-transform: none !important;
+  padding: 4px 10px !important;
+  /* Compact padding */
+  border-radius: 9999px !important;
+  /* Capsule shape */
+  font-weight: 500 !important;
+  letter-spacing: 0.3px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  white-space: nowrap !important;
+  box-shadow: none !important;
+  border-width: 1px !important;
+}
+
+/* Internal dot indicator for status badges */
+td span div[class*="rounded-full"] {
+  width: 6px !important;
+  height: 6px !important;
+  margin-right: 6px !important;
+  flex-shrink: 0;
 }
 
 /* Global Weight Normalization */
@@ -109,22 +152,44 @@ h6 {
   /* Force all to normal weight */
 }
 
-/* Specific target for Dashboard cards elements to ensure they are NOT bold */
-h3,
-[class*="tracking-tight"],
-[class*="tracking-widest"],
-[class*="tracking-["] {
-  font-weight: 400 !important;
-}
-
-/* Ensure body text is never too heavy */
+/* Ensure body text is never too heavy and always black */
 body,
 p,
-span,
-div,
-a {
+span:not(.text-white),
+div:not(.text-white),
+th,
+td,
+a:not(.text-white) {
   font-weight: 400 !important;
+  color: #000000 !important;
 }
+
+/* Specific Legibility for "Create/Add" forms - Labels and Headers */
+label,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+[class*="tracking-"],
+[class*="uppercase"],
+.text-blue-600,
+.text-indigo-600,
+.text-blue-700,
+.text-slate-500,
+.text-slate-400,
+.text-gray-500,
+.text-gray-400 {
+  font-weight: 600 !important;
+  /* Bold for form headers and labels */
+  color: #000000 !important;
+  opacity: 1 !important;
+  letter-spacing: 0.05em !important;
+  /* Reduce excessive spacing for clarity */
+}
+
+
 
 
 @layer utilities {
