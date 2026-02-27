@@ -10,17 +10,21 @@ import ScrollToTop from './components/ScrollToTop';
 import CreateCustomer from './pages/CreateCustomer';
 import CreateCylinder from './pages/CreateCylinder';
 import CreateMachine from './pages/CreateMachine';
+import CreateMaterial from './pages/CreateMaterial';
 import CreateOrder from './pages/CreateOrder';
 import CreateShipper from './pages/CreateShipper';
 import CreateSupplier from './pages/CreateSupplier';
+import CreateUser from './pages/CreateUser';
 import CreateWarehouse from './pages/CreateWarehouse';
 import Customers from './pages/Customers';
 import Cylinders from './pages/Cylinders';
 import Home from './pages/Home';
 import Machines from './pages/Machines';
+import Materials from './pages/Materials';
 import Orders from './pages/Orders';
 import Shippers from './pages/Shippers';
 import Suppliers from './pages/Suppliers';
+import Users from './pages/Users';
 import Warehouses from './pages/Warehouses';
 
 function App() {
@@ -114,6 +118,26 @@ function App() {
               <Route path="/tao-nha-cung-cap" element={
                 <ProtectedRoute>
                   <CreateSupplier />
+                </ProtectedRoute>
+              } />
+              <Route path="/thong-tin-vat-tu" element={
+                <ProtectedRoute>
+                  <Materials />
+                </ProtectedRoute>
+              } />
+              <Route path="/tao-vat-tu" element={
+                <ProtectedRoute>
+                  <CreateMaterial />
+                </ProtectedRoute>
+              } />
+              <Route path="/nguoi-dung" element={
+                <ProtectedRoute>
+                  <Users />
+                </ProtectedRoute>
+              } />
+              <Route path="/tao-nguoi-dung" element={
+                <ProtectedRoute>
+                  <CreateUser />
                 </ProtectedRoute>
               } />
 

@@ -3,6 +3,7 @@ import {
   Building2,
   ChevronLeft,
   ChevronRight,
+  Layers,
   Layout,
   Menu,
   MonitorIcon,
@@ -75,6 +76,18 @@ const SIDEBAR_ITEMS = [
     label: "Đơn vị vận chuyển",
     icon: Truck,
     path: "/danh-sach-dvvc",
+  },
+  {
+    id: "materials",
+    label: "Danh sách nguồn vật tư",
+    icon: Layers,
+    path: "/thong-tin-vat-tu",
+  },
+  {
+    id: "users",
+    label: "Quản lý người dùng",
+    icon: Users,
+    path: "/nguoi-dung",
   },
 ];
 
@@ -191,6 +204,38 @@ const DASHBOARD_FEATURES = [
     color: "cyan",
     path: "/tao-nha-cung-cap",
   },
+  {
+    id: "materials",
+    title: "Danh sách nguồn vật tư",
+    description: "Lưu trữ các danh mục cấu kiện cơ bản phục vụ lắp ráp hệ thống (Bình khí, Máy Plasma).",
+    icon: Layers,
+    color: "sky",
+    path: "/thong-tin-vat-tu",
+  },
+  {
+    id: "add-material",
+    title: "Thêm mới vật tư",
+    description: "Khai báo thông số cấu kiện mới vào từ điển chung.",
+    icon: Plus,
+    color: "emerald",
+    path: "/tao-vat-tu",
+  },
+  {
+    id: "users",
+    title: "Quản lý người dùng",
+    description: "Quản lý tài khoản, phân quyền tự động và theo dõi lịch sử truy cập.",
+    icon: Users,
+    color: "indigo",
+    path: "/nguoi-dung",
+  },
+  {
+    id: "add-user",
+    title: "Thêm người dùng",
+    description: "Cấp tài khoản mới cho nhân viên hoặc người quản lý trên hệ thống.",
+    icon: UserPlus,
+    color: "rose",
+    path: "/tao-nguoi-dung",
+  }
 ];
 
 function Home() {

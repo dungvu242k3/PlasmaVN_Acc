@@ -54,7 +54,7 @@ const Materials = () => {
                 <div>
                     <h1 className="text-2xl md:text-3xl font-black text-gray-900 tracking-tight flex items-center gap-3">
                         <Layers className="w-8 h-8 text-blue-600" />
-                        Từ điển Nguồn Vật tư
+                        Danh sách nguồn vật tư
                     </h1>
                     <p className="text-gray-500 mt-2 font-medium">Lưu trữ các danh mục cấu kiện cơ bản phục vụ lắp ráp hệ thống (Bình khí, Máy Plasma)</p>
                 </div>
