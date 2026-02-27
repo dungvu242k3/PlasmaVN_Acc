@@ -11,6 +11,7 @@ import {
   Plus,
   Search,
   Settings,
+  ShieldCheck,
   Truck,
   UserPlus,
   Users,
@@ -88,6 +89,12 @@ const SIDEBAR_ITEMS = [
     label: "Quản lý người dùng",
     icon: Users,
     path: "/nguoi-dung",
+  },
+  {
+    id: "permissions",
+    label: "Phân quyền chi tiết",
+    icon: ShieldCheck,
+    path: "/phan-quyen",
   },
 ];
 
@@ -235,6 +242,14 @@ const DASHBOARD_FEATURES = [
     icon: UserPlus,
     color: "rose",
     path: "/tao-nguoi-dung",
+  },
+  {
+    id: "permissions",
+    title: "Phân quyền chi tiết",
+    description: "Thiết lập quyền truy cập và chức năng cho từng nhóm người dùng.",
+    icon: ShieldCheck,
+    color: "slate",
+    path: "/phan-quyen"
   }
 ];
 
@@ -377,25 +392,49 @@ function Home() {
 
               {/* Dashboard Grid */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-8">
-                {DASHBOARD_FEATURES.map((feature) => (
-                  <Link
-                    key={feature.id}
-                    to={feature.path}
-                    className="group bg-white p-8 rounded-3xl border border-gray-100 shadow-sm hover:shadow-2xl hover:-translate-y-2 transition-all duration-500"
-                  >
-                    <div className={`w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-blue-600 transition-all duration-500 rotate-0 group-hover:rotate-6`}>
-                      <feature.icon className="w-8 h-8 text-blue-600 group-hover:text-white" />
+                {DASHBOARD_FEATURES.map((feature) => {
+                  const CardContent = (
+                    <>
+                      <div className={`w-16 h-16 bg-${feature.color || 'blue'}-50 rounded-2xl flex items-center justify-center mb-6 transition-all duration-500 rotate-0 ${feature.inactive ? '' : `group-hover:bg-${feature.color || 'blue'}-600 group-hover:rotate-6`}`}>
+                        <feature.icon className={`w-8 h-8 text-${feature.color || 'blue'}-600 ${feature.inactive ? 'opacity-50' : 'group-hover:text-white'}`} />
+                      </div>
+                      <h3 className={`text-2xl font-bold mb-3 ${feature.inactive ? 'text-gray-400' : 'text-gray-900'}`}>{feature.title}</h3>
+                      <p className={`leading-relaxed mb-6 text-sm flex-grow ${feature.inactive ? 'text-gray-400' : 'text-gray-500'}`}>
+                        {feature.description}
+                      </p>
+
+                      {feature.inactive ? (
+                        <div className="inline-flex mt-auto w-max">
+                          <span className="text-xs font-bold text-orange-600 bg-orange-50 border border-orange-100 px-3 py-1.5 rounded-lg">
+                            Chưa hoạt động
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="inline-flex items-center text-blue-600 font-extrabold text-sm mt-auto">
+                          Truy cập ngay
+                          <ChevronRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
+                        </div>
+                      )}
+                    </>
+                  );
+
+                  return feature.inactive ? (
+                    <div
+                      key={feature.id}
+                      className="group flex flex-col bg-gray-50 p-8 rounded-3xl border border-gray-200 shadow-sm transition-all duration-500 cursor-not-allowed opacity-80"
+                    >
+                      {CardContent}
                     </div>
-                    <h3 className="text-2xl font-bold text-gray-900 mb-3">{feature.title}</h3>
-                    <p className="text-gray-500 leading-relaxed mb-6 text-sm">
-                      {feature.description}
-                    </p>
-                    <div className="inline-flex items-center text-blue-600 font-extrabold text-sm">
-                      Truy cập ngay
-                      <ChevronRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
-                    </div>
-                  </Link>
-                ))}
+                  ) : (
+                    <Link
+                      key={feature.id}
+                      to={feature.path}
+                      className="group flex flex-col bg-white p-8 rounded-3xl border border-gray-100 shadow-sm hover:shadow-2xl hover:-translate-y-2 transition-all duration-500"
+                    >
+                      {CardContent}
+                    </Link>
+                  );
+                })}
 
                 {/* Placeholder empty state if no features */}
                 {DASHBOARD_FEATURES.length === 0 && (

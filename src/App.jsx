@@ -12,6 +12,7 @@ import CreateCylinder from './pages/CreateCylinder';
 import CreateMachine from './pages/CreateMachine';
 import CreateMaterial from './pages/CreateMaterial';
 import CreateOrder from './pages/CreateOrder';
+import CreatePermission from './pages/CreatePermission';
 import CreateShipper from './pages/CreateShipper';
 import CreateSupplier from './pages/CreateSupplier';
 import CreateUser from './pages/CreateUser';
@@ -22,6 +23,7 @@ import Home from './pages/Home';
 import Machines from './pages/Machines';
 import Materials from './pages/Materials';
 import Orders from './pages/Orders';
+import Permissions from './pages/Permissions';
 import Shippers from './pages/Shippers';
 import Suppliers from './pages/Suppliers';
 import Users from './pages/Users';
@@ -138,6 +140,16 @@ function App() {
               <Route path="/tao-nguoi-dung" element={
                 <ProtectedRoute>
                   <CreateUser />
+                </ProtectedRoute>
+              } />
+              <Route path="/phan-quyen" element={
+                <ProtectedRoute>
+                  <Permissions />
+                </ProtectedRoute>
+              } />
+              <Route path="/tao-phan-quyen" element={
+                <ProtectedRoute>
+                  <CreatePermission />
                 </ProtectedRoute>
               } />
 
