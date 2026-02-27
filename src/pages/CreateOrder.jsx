@@ -44,9 +44,11 @@ const CreateOrder = () => {
         });
     };
 
-    const formatNumber = (num) => {
-        if (!num) return '0';
-        return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    const formatNumber = (val) => {
+        if (val === null || val === undefined || val === '') return '0';
+        const parts = val.toString().split('.');
+        parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+        return parts.join(',');
     };
 
     const handleQuantityChange = (e) => {

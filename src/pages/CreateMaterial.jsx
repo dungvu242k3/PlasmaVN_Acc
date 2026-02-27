@@ -1,5 +1,4 @@
 import {
-    ArrowLeft,
     CheckCircle2,
     Layers,
     ListFilter
@@ -72,15 +71,34 @@ const CreateMaterial = () => {
         }
     };
 
+    const resetForm = () => {
+        setFormData({
+            category: 'vỏ bình',
+            name: '',
+            extra_number: '',
+            extra_text: ''
+        });
+    };
+
+    const formatNumber = (val) => {
+        if (val === null || val === undefined || val === '') return '';
+        const parts = val.toString().split('.');
+        parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+        return parts.join(',');
+    };
+
+    const handleNumericChange = (field, value) => {
+        let raw = value.replace(/\./g, '').replace(/,/g, '.');
+        raw = raw.replace(/[^0-9.]/g, '');
+        const dots = raw.split('.');
+        if (dots.length > 2) raw = dots[0] + '.' + dots.slice(1).join('');
+        setFormData(prev => ({ ...prev, [field]: raw }));
+    };
+
     return (
         <div className="p-4 md:p-8 max-w-[1400px] mx-auto font-sans bg-gray-50 min-h-screen">
             <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-6 md:mb-8">
-                <button
-                    onClick={() => navigate('/thong-tin-vat-tu')}
-                    className="p-2 bg-white border border-gray-200 rounded-xl hover:bg-gray-100 transition-all shadow-sm self-start sm:self-auto"
-                >
-                    <ArrowLeft className="w-5 h-5 text-gray-500" />
-                </button>
+
                 <h1 className="text-2xl md:text-3xl font-black text-gray-900 tracking-tight flex items-center gap-3">
                     <Layers className="w-8 h-8 text-blue-600" />
                     Thêm mới vật tư
@@ -144,10 +162,9 @@ const CreateMaterial = () => {
                                         {currentCategoryDef.numberFieldLabel}
                                     </label>
                                     <input
-                                        type="number"
-                                        step="any"
-                                        value={formData.extra_number}
-                                        onChange={(e) => setFormData({ ...formData, extra_number: e.target.value })}
+                                        type="text"
+                                        value={formatNumber(formData.extra_number)}
+                                        onChange={(e) => handleNumericChange('extra_number', e.target.value)}
                                         placeholder={currentCategoryDef.numberPlaceholder}
                                         className="w-full px-5 py-4 bg-white border border-gray-300 rounded-2xl outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 font-bold shadow-sm transition-all text-blue-700"
                                     />
@@ -179,7 +196,7 @@ const CreateMaterial = () => {
                     <p className="text-gray-400 text-sm font-medium italic">* Kiểm tra kỹ chính tả trước khi lưu vào từ điển chung.</p>
                     <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
                         <button
-                            onClick={() => navigate('/thong-tin-vat-tu')}
+                            onClick={resetForm}
                             className="w-full sm:w-auto px-8 py-4 bg-white border border-gray-200 rounded-2xl font-bold text-gray-500 hover:bg-gray-100 transition-all shadow-sm text-center"
                         >
                             Hủy bỏ

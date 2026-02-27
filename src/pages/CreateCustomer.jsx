@@ -199,11 +199,10 @@ const CreateCustomer = () => {
                     <p className="text-sm text-gray-400 font-medium italic w-full text-center md:text-left">* Vui lòng kiểm tra kỹ thông tin liên hệ của đối tác.</p>
                     <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
                         <button
-                            onClick={() => navigate('/khach-hang')}
+                            onClick={resetForm}
                             className="w-full sm:w-auto px-6 md:px-10 py-4 md:py-5 bg-white border border-gray-200 text-gray-500 font-bold hover:bg-gray-100 rounded-2xl transition-all shadow-sm"
                         >
-                            <span className="md:hidden">Theo dõi DS</span>
-                            <span className="hidden md:inline">Xem danh sách</span>
+                            Hủy bỏ
                         </button>
                         <button
                             onClick={handleCreateCustomer}

@@ -1,5 +1,4 @@
 import {
-    ArrowLeft,
     Building2,
     CheckCircle2
 } from 'lucide-react';
@@ -43,15 +42,14 @@ const CreateSupplier = () => {
         }
     };
 
+    const resetForm = () => {
+        setFormData(initialFormState);
+    };
+
     return (
         <div className="p-4 md:p-8 max-w-[1400px] mx-auto font-sans bg-gray-50 min-h-screen">
             <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-6 md:mb-8">
-                <button
-                    onClick={() => navigate('/nha-cung-cap')}
-                    className="p-2 bg-white border border-gray-200 rounded-xl hover:bg-gray-100 transition-all shadow-sm self-start sm:self-auto"
-                >
-                    <ArrowLeft className="w-5 h-5 text-gray-500" />
-                </button>
+
                 <h1 className="text-2xl md:text-3xl font-black text-gray-900 tracking-tight flex items-center gap-3">
                     <Building2 className="w-8 h-8 text-blue-600" />
                     Thêm nhà cung cấp mới
@@ -113,7 +111,7 @@ const CreateSupplier = () => {
                     <p className="text-gray-400 text-sm font-medium italic">* Vui lòng kiểm tra kỹ các thông tin nhà cung cấp trước khi lưu.</p>
                     <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
                         <button
-                            onClick={() => navigate('/nha-cung-cap')}
+                            onClick={resetForm}
                             className="w-full sm:w-auto px-8 py-4 bg-white border border-gray-200 rounded-2xl font-bold text-gray-500 hover:bg-gray-100 transition-all shadow-sm text-center"
                         >
                             Hủy bỏ

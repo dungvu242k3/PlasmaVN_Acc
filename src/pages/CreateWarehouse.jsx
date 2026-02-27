@@ -1,5 +1,4 @@
 import {
-    ArrowLeft,
     CheckCircle2,
     Warehouse
 } from 'lucide-react';
@@ -59,15 +58,30 @@ const CreateWarehouse = () => {
         }
     };
 
+    const resetForm = () => {
+        setFormData(initialFormState);
+    };
+
+    const formatNumber = (val) => {
+        if (val === null || val === undefined || val === '') return '';
+        const parts = val.toString().split('.');
+        parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+        return parts.join(',');
+    };
+
+    const handleCapacityChange = (e) => {
+        const value = e.target.value.replace(/\D/g, ''); // Remove non-numeric
+        if (value === '') {
+            setFormData({ ...formData, capacity: '' });
+            return;
+        }
+        setFormData({ ...formData, capacity: parseInt(value, 10) });
+    };
+
     return (
         <div className="p-4 md:p-8 max-w-[1400px] mx-auto font-sans bg-gray-50 min-h-screen">
             <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-6 md:mb-8">
-                <button
-                    onClick={() => navigate('/danh-sach-kho')}
-                    className="p-2 bg-white border border-gray-200 rounded-xl hover:bg-gray-100 transition-all shadow-sm self-start sm:self-auto"
-                >
-                    <ArrowLeft className="w-5 h-5 text-gray-500" />
-                </button>
+
                 <h1 className="text-2xl md:text-3xl font-black text-gray-900 tracking-tight flex items-center gap-3">
                     <Warehouse className="w-8 h-8 text-amber-600" />
                     Thêm kho hàng mới
@@ -134,11 +148,10 @@ const CreateWarehouse = () => {
                             <div className="space-y-2">
                                 <label className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Sức chứa (Số lượng vỏ bình) *</label>
                                 <input
-                                    type="number"
-                                    min="0"
-                                    value={formData.capacity}
-                                    onChange={(e) => setFormData({ ...formData, capacity: e.target.value })}
-                                    placeholder="5000"
+                                    type="text"
+                                    value={formatNumber(formData.capacity)}
+                                    onChange={handleCapacityChange}
+                                    placeholder="5.000"
                                     className="w-full px-5 py-4 bg-white border border-gray-200 rounded-2xl outline-none focus:ring-4 focus:ring-amber-100 focus:border-amber-500 font-bold shadow-sm"
                                 />
                             </div>
@@ -151,7 +164,7 @@ const CreateWarehouse = () => {
                     <p className="text-gray-400 text-sm font-medium italic">* Kiểm tra kỹ các thông tin trước khi lưu.</p>
                     <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
                         <button
-                            onClick={() => navigate('/danh-sach-kho')}
+                            onClick={resetForm}
                             className="w-full sm:w-auto px-8 py-4 bg-white border border-gray-200 rounded-2xl font-bold text-gray-500 hover:bg-gray-100 transition-all shadow-sm text-center"
                         >
                             Hủy bỏ

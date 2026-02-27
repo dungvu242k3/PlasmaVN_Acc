@@ -35,6 +35,22 @@ const CreatePromotion = () => {
         setFormData(prev => ({ ...prev, [field]: value }));
     };
 
+    const formatNumber = (val) => {
+        if (val === null || val === undefined || val === '') return '';
+        const parts = val.toString().split('.');
+        parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+        return parts.join(',');
+    };
+
+    const handleNumericChange = (field, value) => {
+        const rawValue = value.replace(/\D/g, '');
+        if (rawValue === '') {
+            setFormData(prev => ({ ...prev, [field]: '' }));
+            return;
+        }
+        setFormData(prev => ({ ...prev, [field]: parseInt(rawValue, 10) }));
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
 
@@ -110,11 +126,10 @@ const CreatePromotion = () => {
                                     Số lượng bình KM *
                                 </label>
                                 <input
-                                    type="number"
-                                    min="1"
-                                    value={formData.free_cylinders}
-                                    onChange={(e) => handleChange('free_cylinders', e.target.value)}
-                                    placeholder="VD: 2"
+                                    type="text"
+                                    value={formatNumber(formData.free_cylinders)}
+                                    onChange={(e) => handleNumericChange('free_cylinders', e.target.value)}
+                                    placeholder="VD: 2.000"
                                     className="w-full px-5 py-4 bg-white border border-gray-200 rounded-2xl outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 font-bold text-lg shadow-sm transition-all text-gray-900"
                                 />
                                 <p className="text-xs text-gray-400 ml-2 font-medium">Số bình khấu trừ cho khách khi áp dụng mã này</p>

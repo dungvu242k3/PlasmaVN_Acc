@@ -1,6 +1,5 @@
 import {
     ActivitySquare,
-    ArrowLeft,
     CheckCircle2
 } from 'lucide-react';
 import { useState } from 'react';
@@ -64,15 +63,33 @@ const CreateCylinder = () => {
         }
     };
 
+    const resetForm = () => {
+        setFormData(initialFormState);
+    };
+
+    const formatNumber = (val) => {
+        if (val === null || val === undefined || val === '') return '';
+        const parts = val.toString().split('.');
+        parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+        return parts.join(',');
+    };
+
+    const handleNumericChange = (field, value) => {
+        // Convert from Vietnamese display format (1.000,50) to standard float (1000.50)
+        let raw = value.replace(/\./g, '').replace(/,/g, '.');
+        raw = raw.replace(/[^0-9.]/g, '');
+
+        // Ensure only one decimal point
+        const dots = raw.split('.');
+        if (dots.length > 2) raw = dots[0] + '.' + dots.slice(1).join('');
+
+        setFormData(prev => ({ ...prev, [field]: raw }));
+    };
+
     return (
         <div className="p-4 md:p-8 max-w-[1400px] mx-auto font-sans bg-gray-50 min-h-screen">
             <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-6 md:mb-8">
-                <button
-                    onClick={() => navigate('/danh-sach-binh')}
-                    className="p-2 bg-white border border-gray-200 rounded-xl hover:bg-gray-100 transition-all shadow-sm self-start sm:self-auto"
-                >
-                    <ArrowLeft className="w-5 h-5 text-gray-500" />
-                </button>
+
                 <h1 className="text-2xl md:text-3xl font-black text-gray-900 tracking-tight flex items-center gap-3">
                     <ActivitySquare className="w-8 h-8 text-teal-600" />
                     Thêm vỏ bình / bình khí mới
@@ -130,12 +147,10 @@ const CreateCylinder = () => {
                             <div className="space-y-2">
                                 <label className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Khối lượng tịnh (kg)</label>
                                 <input
-                                    type="number"
-                                    step="0.01"
-                                    min="0"
-                                    value={formData.net_weight}
-                                    onChange={(e) => setFormData({ ...formData, net_weight: e.target.value })}
-                                    placeholder="Ví dụ: 12.5"
+                                    type="text"
+                                    value={formatNumber(formData.net_weight)}
+                                    onChange={(e) => handleNumericChange('net_weight', e.target.value)}
+                                    placeholder="Ví dụ: 12,5"
                                     className="w-full px-5 py-4 bg-white border border-gray-200 rounded-2xl outline-none focus:ring-4 focus:ring-teal-100 focus:border-teal-500 font-bold shadow-sm"
                                 />
                             </div>
@@ -188,7 +203,7 @@ const CreateCylinder = () => {
                     <p className="text-gray-400 text-sm font-medium italic">* Kiểm tra kỹ mã QR RFID trên vỏ bình trước khi lưu.</p>
                     <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
                         <button
-                            onClick={() => navigate('/danh-sach-binh')}
+                            onClick={resetForm}
                             className="w-full sm:w-auto px-8 py-4 bg-white border border-gray-200 rounded-2xl font-bold text-gray-500 hover:bg-gray-100 transition-all shadow-sm text-center"
                         >
                             Hủy bỏ
