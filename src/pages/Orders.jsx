@@ -146,25 +146,43 @@ const Orders = () => {
         setIsActionModalOpen(true);
     };
 
+    const getRowStyle = (category, isSelected) => {
+        let baseStyle = "group hover-lift transition-all duration-300 border-l-4 ";
+        if (isSelected) baseStyle += "bg-blue-50/40 border-l-blue-600 ";
+        else {
+            switch (category) {
+                case 'KH_SI': baseStyle += "border-l-indigo-500 hover:bg-indigo-50/10 "; break;
+                case 'KH_LE': baseStyle += "border-l-emerald-500 hover:bg-emerald-50/10 "; break;
+                default: baseStyle += "border-l-transparent hover:bg-blue-50/5 ";
+            }
+        }
+        return baseStyle;
+    };
+
     return (
-        <div className="p-4 md:p-8 max-w-[1600px] mx-auto font-sans bg-[#F8FAFC] min-h-screen">
+        <div className="p-4 md:p-8 max-w-[1600px] mx-auto font-sans bg-[#F8FAFC] min-h-screen noise-bg">
+            {/* Decorative Background Blobs */}
+            <div className="blob blob-blue w-[500px] h-[500px] -top-20 -left-20 opacity-20"></div>
+            <div className="blob blob-indigo w-[400px] h-[400px] top-1/2 -right-20 opacity-10"></div>
+            <div className="blob blob-emerald w-[300px] h-[300px] bottom-10 left-1/3 opacity-10"></div>
+
             {/* Header Section */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-6 mb-10">
-                <div>
+                <div className="hover-lift">
                     <h1 className="text-4xl font-black text-slate-800 flex items-center gap-4 tracking-tight">
-                        <div className="w-14 h-14 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-blue-100 transition-transform hover:scale-105 duration-300">
+                        <div className="w-14 h-14 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-blue-200 transition-transform hover:rotate-3 duration-300">
                             <Package className="w-8 h-8" />
                         </div>
-                        Danh sách đơn hàng
+                        Danh mục đơn hàng
                     </h1>
                 </div>
 
                 <div className="flex items-center gap-3">
                     <button
                         onClick={handleBulkPrint}
-                        className={`flex items-center gap-2 px-8 py-4 font-black text-sm uppercase tracking-widest rounded-2xl transition-all border shadow-sm ${selectedIds.length > 0
-                            ? 'bg-blue-600 text-white border-blue-700 hover:bg-blue-700 shadow-blue-200 hover:-translate-y-0.5'
-                            : 'bg-white text-slate-300 border-slate-100 cursor-not-allowed'
+                        className={`flex items-center gap-2 px-8 py-4 font-black text-sm uppercase tracking-widest rounded-2xl transition-all border shadow-lg ${selectedIds.length > 0
+                            ? 'bg-blue-600 text-white border-blue-700 hover:bg-blue-700 shadow-blue-200 hover-lift'
+                            : 'bg-white text-slate-300 border-slate-100 cursor-not-allowed opacity-50'
                             }`}
                     >
                         <Printer className="w-4 h-4" />
@@ -174,10 +192,10 @@ const Orders = () => {
             </div>
 
             {/* Main Content Card */}
-            <div className="bg-white rounded-[2.5rem] shadow-premium border border-slate-50 overflow-hidden">
+            <div className="bg-white rounded-[2.5rem] shadow-premium border border-slate-50 overflow-hidden glass">
 
                 {/* Filters Top Bar */}
-                <div className="p-8 bg-white flex flex-col lg:flex-row gap-6 items-center border-b border-slate-50">
+                <div className="p-8 flex flex-col lg:flex-row gap-6 items-center border-b border-slate-50">
                     <div className="relative flex-1 group w-full">
                         <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
                         <input
@@ -212,8 +230,8 @@ const Orders = () => {
                 {/* Table Section */}
                 <div className="w-full overflow-x-auto">
                     <table className="w-full border-collapse min-w-[1200px] md:min-w-full">
-                        <thead>
-                            <tr className="bg-slate-50/30">
+                        <thead className="glass-header">
+                            <tr>
                                 <th className="px-8 py-5 w-10">
                                     <div className="flex items-center justify-center">
                                         <input
@@ -229,7 +247,7 @@ const Orders = () => {
                                         {col.label}
                                     </th>
                                 ))}
-                                <th className="px-8 py-5 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] text-right">Thao tác</th>
+                                <th className="px-8 py-5 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] text-center">Thao tác</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-50/50">
@@ -256,7 +274,7 @@ const Orders = () => {
                             ) : filteredOrders.map((order) => {
                                 const status = getStatusConfig(order.status);
                                 return (
-                                    <tr key={order.id} className={`group hover:bg-blue-50/20 transition-all duration-300 ${selectedIds.includes(order.id) ? 'bg-blue-50/40' : ''}`}>
+                                    <tr key={order.id} className={getRowStyle(order.customer_category, selectedIds.includes(order.id))}>
                                         <td className="px-8 py-6">
                                             <div className="flex items-center justify-center">
                                                 <input
@@ -268,7 +286,7 @@ const Orders = () => {
                                             </div>
                                         </td>
                                         <td className="px-8 py-6 whitespace-nowrap">
-                                            <span className="text-sm font-black text-blue-700 bg-blue-50/50 px-3 py-1.5 rounded-xl border border-blue-100/50 group-hover:bg-white transition-colors duration-300">
+                                            <span className="text-sm font-black text-blue-700 bg-blue-50/50 px-3 py-1.5 rounded-xl border border-blue-100/50 group-hover:bg-white transition-all duration-300">
                                                 {order.order_code}
                                             </span>
                                         </td>
@@ -285,9 +303,9 @@ const Orders = () => {
                                             <span className="text-sm font-black text-slate-900 bg-slate-100/50 px-3 py-1 rounded-lg">{formatNumber(order.quantity)}</span>
                                         </td>
                                         <td className="px-8 py-6">
-                                            <span className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-[0.1em] border shadow-sm transition-all duration-300 ${status.color === 'blue' ? 'bg-blue-600 text-white border-blue-700' :
-                                                status.color === 'yellow' ? 'bg-amber-500 text-white border-amber-600' :
-                                                    status.color === 'orange' ? 'bg-orange-500 text-white border-orange-600' :
+                                            <span className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-[0.1em] border shadow-sm transition-all duration-300 ${status.color === 'blue' ? 'bg-blue-600 text-white border-blue-700 glow-blue' :
+                                                status.color === 'yellow' ? 'bg-amber-500 text-white border-amber-600 glow-amber' :
+                                                    status.color === 'orange' ? 'bg-orange-500 text-white border-orange-600 glow-amber' :
                                                         'bg-slate-500 text-white border-slate-600'
                                                 }`}>
                                                 <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></div>
@@ -297,8 +315,8 @@ const Orders = () => {
                                         <td className="px-8 py-6 text-sm font-black text-slate-400">
                                             {order.created_at ? new Date(order.created_at).toLocaleDateString('vi-VN') : '---'}
                                         </td>
-                                        <td className="px-8 py-6 text-right">
-                                            <div className="flex items-center justify-end gap-3">
+                                        <td className="px-8 py-6 text-center">
+                                            <div className="flex items-center justify-center gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
                                                 <button
                                                     onClick={() => handlePrint(order)}
                                                     className="p-3 text-slate-400 hover:text-blue-600 hover:bg-white hover:shadow-card group-hover:scale-110 rounded-2xl transition-all"
@@ -324,10 +342,11 @@ const Orders = () => {
                 {/* Total Count Footbar */}
                 <div className="p-8 bg-slate-50/30 flex items-center justify-between border-t border-slate-50">
                     <p className="text-sm text-slate-400 font-bold uppercase tracking-widest">
-                        Tổng số: <span className="text-slate-900 text-lg ml-2">{filteredOrders.length}</span> đơn hàng
+                        Tổng quy mô: <span className="text-slate-900 text-lg ml-2">{filteredOrders.length}</span> đơn hàng định danh
                     </p>
                 </div>
             </div>
+
 
             {/* ACTION MODAL */}
             {isActionModalOpen && (

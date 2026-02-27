@@ -64,12 +64,17 @@ const Warehouses = () => {
     });
 
     return (
-        <div className="p-4 md:p-8 max-w-[1600px] mx-auto font-sans bg-[#F8FAFC] min-h-screen">
+        <div className="p-4 md:p-8 max-w-[1600px] mx-auto font-sans bg-[#F8FAFC] min-h-screen noise-bg">
+            {/* Decorative Background Blobs */}
+            <div className="blob blob-amber w-[500px] h-[500px] -top-20 -left-20 opacity-20"></div>
+            <div className="blob blob-orange w-[400px] h-[400px] top-1/2 -right-20 opacity-10"></div>
+            <div className="blob blob-yellow w-[300px] h-[300px] bottom-10 left-1/4 opacity-10"></div>
+
             {/* Header Section */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-6 mb-10">
-                <div>
+                <div className="hover-lift">
                     <h1 className="text-4xl font-black text-slate-800 flex items-center gap-4 tracking-tight">
-                        <div className="w-14 h-14 bg-gradient-to-tr from-amber-500 to-orange-500 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-amber-100 transition-transform hover:scale-105 duration-300">
+                        <div className="w-14 h-14 bg-gradient-to-tr from-amber-500 to-orange-500 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-amber-100 transition-transform hover:rotate-3 duration-300">
                             <Warehouse className="w-8 h-8" />
                         </div>
                         Hệ thống Kho hàng
@@ -79,9 +84,9 @@ const Warehouses = () => {
             </div>
 
             {/* Main Content Card */}
-            <div className="bg-white rounded-[2.5rem] shadow-premium border border-slate-50 overflow-hidden">
+            <div className="bg-white rounded-[2.5rem] shadow-premium border border-slate-50 overflow-hidden glass">
                 {/* Filters Top Bar */}
-                <div className="p-8 bg-white flex flex-col lg:flex-row gap-6 items-center border-b border-slate-50">
+                <div className="p-8 bg-white flex flex-col lg:flex-row gap-6 items-center border-b border-slate-50 glass">
                     <div className="relative flex-1 group w-full">
                         <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 group-focus-within:text-amber-500 transition-colors" />
                         <input
@@ -114,8 +119,8 @@ const Warehouses = () => {
                 {/* Table Section */}
                 <div className="w-full overflow-x-auto custom-scrollbar">
                     <table className="w-full border-collapse min-w-[1000px]">
-                        <thead>
-                            <tr className="bg-slate-50/30 border-b border-slate-50">
+                        <thead className="glass-header">
+                            <tr>
                                 <th className="px-8 py-6 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] text-center w-24">STT</th>
                                 {TABLE_COLUMNS.map(col => (
                                     <th key={col.key} className="px-8 py-6 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] text-left whitespace-nowrap">

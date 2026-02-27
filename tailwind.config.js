@@ -9,6 +9,9 @@ export default {
       fontFamily: {
         sans: ['Arial', 'Helvetica', 'sans-serif'],
       },
+      screens: {
+        'xs': '480px',
+      },
       colors: {
         primary: '#2d7c2d',
         secondary: '#4CAF50',

@@ -2,6 +2,18 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --vibrant-blue: #2563eb;
+  --vibrant-indigo: #4f46e5;
+  --vibrant-emerald: #10b981;
+  --vibrant-amber: #f59e0b;
+  --vibrant-rose: #f43f5e;
+  --vibrant-violet: #8b5cf6;
+  --glass-bg: rgba(255, 255, 255, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.3);
+  --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+}
+
 body {
   margin: 0;
   -webkit-font-smoothing: antialiased;
@@ -275,7 +287,144 @@ h6,
   }
 }
 
+/* Premium UI Utilities */
+@layer components {
+  .glass {
+    background: var(--glass-bg) !important;
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+    border: 1px solid var(--glass-border) !important;
+    box-shadow: var(--glass-shadow) !important;
+  }
+
+  .glass-header {
+    background: rgba(255, 255, 255, 0.8) !important;
+    backdrop-filter: blur(8px) !important;
+    -webkit-backdrop-filter: blur(8px) !important;
+    border-bottom: 1px solid rgba(241, 245, 249, 0.5) !important;
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 40 !important;
+  }
+
+  /* Glowing status variants */
+  .glow-emerald {
+    box-shadow: 0 0 15px -3px rgba(16, 185, 129, 0.4) !important;
+  }
+
+  .glow-blue {
+    box-shadow: 0 0 15px -3px rgba(37, 99, 235, 0.4) !important;
+  }
+
+  .glow-amber {
+    box-shadow: 0 0 15px -3px rgba(245, 158, 11, 0.4) !important;
+  }
+
+  .glow-rose {
+    box-shadow: 0 0 15px -3px rgba(244, 63, 94, 0.4) !important;
+  }
+
+  /* Premium Hover lift effect */
+  .hover-lift {
+    transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.25s ease !important;
+  }
+
+  .hover-lift:hover {
+    transform: translateY(-4px) !important;
+    box-shadow: 0 12px 24px -10px rgba(0, 0, 0, 0.1) !important;
+  }
+
+  /* Initial Avatar placeholder */
+  .avatar-initials {
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 13px;
+    color: white;
+    text-transform: uppercase;
+    background: linear-gradient(135deg, var(--vibrant-blue), var(--vibrant-indigo));
+    box-shadow: 0 4px 12px -4px rgba(37, 99, 235, 0.3);
+    flex-shrink: 0;
+  }
+}
+
 /* Global hidden state for print content in normal view */
 .print-only-content {
   display: none;
+}
+
+/* Background Decoration Utilities */
+@layer components {
+  .noise-bg {
+    position: relative !important;
+    isolation: isolate !important;
+  }
+
+  .noise-bg::before {
+    content: "" !important;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    pointer-events: none !important;
+    opacity: 0.03 !important;
+    z-index: -1 !important;
+    background: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E") !important;
+  }
+
+  .blob {
+    position: fixed !important;
+    border-radius: 50% !important;
+    filter: blur(80px) !important;
+    z-index: -2 !important;
+    opacity: 0.45 !important;
+    animation: blob-float 20s infinite alternate cubic-bezier(0.45, 0.05, 0.55, 0.95) !important;
+  }
+
+  .blob-blue {
+    background: radial-gradient(circle, #3b82f6, transparent 70%) !important;
+  }
+
+  .blob-indigo {
+    background: radial-gradient(circle, #6366f1, transparent 70%) !important;
+  }
+
+  .blob-emerald {
+    background: radial-gradient(circle, #10b981, transparent 70%) !important;
+  }
+
+  .blob-amber {
+    background: radial-gradient(circle, #f59e0b, transparent 70%) !important;
+  }
+
+  .blob-rose {
+    background: radial-gradient(circle, #f43f5e, transparent 70%) !important;
+  }
+
+  .blob-violet {
+    background: radial-gradient(circle, #a855f7, transparent 70%) !important;
+  }
+
+  @keyframes blob-float {
+    0% {
+      transform: translate(0, 0) scale(1);
+    }
+
+    33% {
+      transform: translate(30px, -50px) scale(1.1);
+    }
+
+    66% {
+      transform: translate(-20px, 20px) scale(0.9);
+    }
+
+    100% {
+      transform: translate(0, 0) scale(1);
+    }
+  }
 }

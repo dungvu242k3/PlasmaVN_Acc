@@ -76,23 +76,35 @@ const Shippers = () => {
         shipper.phone.includes(searchTerm)
     );
 
+    const getInitials = (name) => {
+        if (!name) return '??';
+        const parts = name.split(' ');
+        if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+        return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    };
+
     return (
-        <div className="p-4 md:p-8 max-w-[1600px] mx-auto font-sans bg-[#F8FAFC] min-h-screen">
+        <div className="p-4 md:p-8 max-w-[1600px] mx-auto font-sans bg-[#F8FAFC] min-h-screen noise-bg">
+            {/* Decorative Background Blobs */}
+            <div className="blob blob-indigo w-[500px] h-[500px] -top-20 -left-20 opacity-20"></div>
+            <div className="blob blob-violet w-[400px] h-[400px] top-1/2 -right-20 opacity-10"></div>
+            <div className="blob blob-amber w-[300px] h-[300px] bottom-10 left-1/3 opacity-10"></div>
+
             {/* Header Section */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-4">
-                <div>
+                <div className="hover-lift">
                     <h1 className="text-4xl font-black text-slate-800 flex items-center gap-4 tracking-tight">
-                        <div className="w-14 h-14 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-blue-100 transition-transform hover:scale-105 duration-300">
+                        <div className="w-14 h-14 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-blue-200 transition-transform hover:rotate-3 duration-300">
                             <Truck className="w-8 h-8" />
                         </div>
-                        Đơn vị vận chuyển
+                        Đối tác vận chuyển
                     </h1>
                     <p className="text-slate-500 mt-2 font-bold uppercase tracking-widest text-[10px]">Quản lý đối tác vận tải nội bộ và thuê ngoài</p>
                 </div>
             </div>
 
             {/* Filters Section */}
-            <div className="bg-white p-8 rounded-[2.5rem] shadow-premium border border-slate-50 mb-8 flex flex-col md:flex-row gap-6 items-center">
+            <div className="bg-white p-8 rounded-[2.5rem] shadow-premium border border-slate-50 mb-8 flex flex-col md:flex-row gap-6 items-center glass">
                 <div className="flex-1 relative group w-full">
                     <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 group-focus-within:text-blue-500 transition-colors" />
                     <input
@@ -115,13 +127,13 @@ const Shippers = () => {
                         <option value="Ngừng hợp tác">Ngừng hợp tác</option>
                     </select>
                     <div className="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
-                        <Search className="w-4 h-4 rotate-90" />
+                        <ChevronDown className="w-4 h-4" />
                     </div>
                 </div>
             </div>
 
             {/* Table Section */}
-            <div className="bg-white rounded-[2.5rem] shadow-premium border border-slate-50 overflow-hidden">
+            <div className="bg-white rounded-[2.5rem] shadow-premium border border-slate-50 overflow-hidden glass">
                 {loading ? (
                     <div className="flex flex-col justify-center items-center py-28 space-y-6">
                         <div className="w-14 h-14 border-4 border-blue-50 border-t-blue-600 rounded-full animate-spin"></div>
@@ -138,8 +150,8 @@ const Shippers = () => {
                 ) : (
                     <div className="w-full overflow-x-auto custom-scrollbar">
                         <table className="w-full border-collapse min-w-[1000px] text-left">
-                            <thead>
-                                <tr className="bg-slate-50/30 border-b border-slate-50">
+                            <thead className="glass-header">
+                                <tr>
                                     <th className="px-8 py-6 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] text-center w-24">STT</th>
                                     <th className="px-8 py-6 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em]">Đơn vị vận chuyển</th>
                                     <th className="px-8 py-6 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em]">Người quản lý</th>
@@ -150,19 +162,26 @@ const Shippers = () => {
                             </thead>
                             <tbody className="divide-y divide-slate-50/50">
                                 {filteredShippers.map((shipper, index) => (
-                                    <tr key={shipper.id} className="hover:bg-blue-50/20 transition-all duration-300 group">
+                                    <tr key={shipper.id} className="group hover-lift transition-all duration-300 border-l-4 border-l-transparent hover:border-l-blue-500">
                                         <td className="px-8 py-7 whitespace-nowrap text-center">
                                             <span className="font-black text-slate-300 group-hover:text-blue-500 transition-colors text-lg">{index + 1}</span>
                                         </td>
                                         <td className="px-8 py-7">
-                                            <div className="font-black text-black text-base group-hover:text-blue-600 transition-colors">{shipper.name}</div>
-                                            <div className="text-[10px] text-slate-400 font-black uppercase tracking-widest mt-1.5 opacity-50">ID: {shipper.id.substring(0, 8)}</div>
+                                            <div className="flex items-center gap-4">
+                                                <div className="avatar-initials group-hover:scale-110 group-hover:rotate-6 transition-all duration-300 bg-gradient-to-tr from-slate-700 to-slate-900">
+                                                    {getInitials(shipper.name)}
+                                                </div>
+                                                <div>
+                                                    <div className="font-black text-black text-base group-hover:text-blue-600 transition-colors uppercase tracking-tight">{shipper.name}</div>
+                                                    <div className="text-[10px] text-slate-400 font-black uppercase tracking-widest mt-1.5 opacity-50">ID: {shipper.id.substring(0, 8)}</div>
+                                                </div>
+                                            </div>
                                         </td>
                                         <td className="px-8 py-7 whitespace-nowrap font-bold text-slate-900">
                                             {shipper.manager_name}
                                         </td>
                                         <td className="px-8 py-7 whitespace-nowrap">
-                                            <span className="font-black text-black bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100 group-hover:bg-white transition-all text-sm">
+                                            <span className="font-black text-blue-600 bg-blue-50/50 px-3 py-1.5 rounded-xl border border-blue-100 group-hover:bg-white transition-all text-sm">
                                                 {shipper.phone}
                                             </span>
                                         </td>
@@ -170,7 +189,7 @@ const Shippers = () => {
                                             {shipper.address}
                                         </td>
                                         <td className="px-8 py-7 whitespace-nowrap">
-                                            <span className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border inline-flex items-center transition-all ${getStatusStyle(shipper.status)}`}>
+                                            <span className={`px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest border inline-flex items-center transition-all shadow-sm ${getStatusStyle(shipper.status)} ${shipper.status === 'Đang hoạt động' ? 'glow-emerald' : 'glow-amber'}`}>
                                                 {getStatusIcon(shipper.status)}
                                                 {shipper.status}
                                             </span>
@@ -185,17 +204,17 @@ const Shippers = () => {
 
             {/* Stats Footer */}
             {!loading && filteredShippers.length > 0 && (
-                <div className="p-8 bg-slate-50/30 flex items-center justify-between border-t border-slate-50 mt-8 rounded-[2rem] border">
+                <div className="p-8 bg-white glass flex items-center justify-between border-t border-slate-50 mt-8 rounded-[2rem] border hover-lift">
                     <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">
                         Đang hiển thị <span className="text-indigo-600 mx-1">{filteredShippers.length}</span> / {shippers.length} đơn vị vận chuyển
                     </p>
                     <div className="flex items-center gap-6">
                         <span className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-500">
-                            <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                            <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 glow-emerald" />
                             Hoạt động: {shippers.filter(s => s.status === 'Đang hoạt động').length}
                         </span>
                         <span className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-500">
-                            <div className="w-2 h-2 rounded-full bg-slate-300" />
+                            <div className="w-2.5 h-2.5 rounded-full bg-amber-500 glow-amber" />
                             Tạm dừng: {shippers.filter(s => s.status === 'Tạm ngưng').length}
                         </span>
                     </div>
@@ -204,5 +223,6 @@ const Shippers = () => {
         </div>
     );
 };
+
 
 export default Shippers;

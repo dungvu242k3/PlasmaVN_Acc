@@ -93,12 +93,17 @@ const Permissions = () => {
     );
 
     return (
-        <div className="p-4 md:p-8 max-w-[1600px] mx-auto font-sans bg-[#F8FAFC] min-h-screen">
+        <div className="p-4 md:p-8 max-w-[1600px] mx-auto font-sans bg-[#F8FAFC] min-h-screen noise-bg">
+            {/* Decorative Background Blobs */}
+            <div className="blob blob-indigo w-[500px] h-[500px] -top-20 -left-20 opacity-20"></div>
+            <div className="blob blob-violet w-[400px] h-[400px] top-1/2 -right-20 opacity-10"></div>
+            <div className="blob blob-blue w-[300px] h-[300px] bottom-10 left-1/4 opacity-10"></div>
+
             {/* Header Section */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-4">
-                <div>
+                <div className="hover-lift">
                     <h1 className="text-4xl font-black text-slate-800 flex items-center gap-4 tracking-tight">
-                        <div className="w-14 h-14 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-blue-100 transition-transform hover:scale-105 duration-300">
+                        <div className="w-14 h-14 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-blue-100 transition-transform hover:rotate-3 duration-300">
                             <ShieldCheck className="w-8 h-8" />
                         </div>
                         Ma trận Phân quyền
@@ -115,7 +120,7 @@ const Permissions = () => {
             </div>
 
             {/* Filters Section */}
-            <div className="bg-white p-8 rounded-[2.5rem] shadow-premium border border-slate-50 mb-8 space-y-8">
+            <div className="bg-white p-8 rounded-[2.5rem] shadow-premium border border-slate-50 mb-8 space-y-8 glass">
                 {/* Tabs */}
                 <div className="flex items-center gap-2 bg-slate-50 p-1.5 rounded-2xl w-max shadow-inner">
                     <button
@@ -163,7 +168,7 @@ const Permissions = () => {
             ) : (
                 <div className="space-y-8 pb-10">
                     {(activeTab === 'roles' ? filteredRoles : filteredUsers).map((item) => (
-                        <div key={item.id} className="bg-white rounded-[2.5rem] shadow-premium border border-slate-50 overflow-hidden group transition-all duration-300 hover:shadow-2xl hover:shadow-indigo-100/50">
+                        <div key={item.id} className="bg-white rounded-[2.5rem] shadow-premium border border-slate-50 overflow-hidden group transition-all duration-300 hover:shadow-2xl hover:shadow-indigo-100/50 glass">
                             <div className="bg-slate-50/30 px-8 py-6 border-b border-slate-50 flex items-center justify-between group-hover:bg-white transition-colors duration-300">
                                 <div className="flex items-center gap-5">
                                     <div className="w-12 h-12 bg-white text-indigo-600 rounded-2xl flex items-center justify-center shadow-sm border border-slate-100 group-hover:scale-110 transition-transform duration-300">
