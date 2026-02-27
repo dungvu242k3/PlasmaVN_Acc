@@ -149,7 +149,7 @@ const CreateMaterial = () => {
                                         value={formData.extra_number}
                                         onChange={(e) => setFormData({ ...formData, extra_number: e.target.value })}
                                         placeholder={currentCategoryDef.numberPlaceholder}
-                                        className="w-full px-5 py-4 bg-white border border-gray-300 rounded-2xl outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 font-bold shadow-sm transition-all text-blue-700 font-mono"
+                                        className="w-full px-5 py-4 bg-white border border-gray-300 rounded-2xl outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 font-bold shadow-sm transition-all text-blue-700"
                                     />
                                 </div>
                             )}

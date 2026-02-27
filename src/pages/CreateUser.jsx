@@ -128,7 +128,7 @@ const CreateUser = () => {
                                     value={formData.username}
                                     onChange={(e) => setFormData({ ...formData, username: e.target.value })}
                                     placeholder="Ví dụ: nguyenva"
-                                    className="w-full px-5 py-4 bg-gray-50 border border-gray-200 rounded-2xl outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 font-bold text-lg shadow-sm transition-all text-blue-700 font-mono"
+                                    className="w-full px-5 py-4 bg-gray-50 border border-gray-200 rounded-2xl outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 font-bold text-lg shadow-sm transition-all text-blue-700"
                                 />
                                 <p className="text-xs text-gray-400 ml-2 font-medium">Viết liền không dấu, không chứa ký tự đặc biệt.</p>
                             </div>
