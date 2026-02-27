@@ -48,94 +48,101 @@ const Materials = () => {
     );
 
     return (
-        <div className="p-4 md:p-8 max-w-[1600px] mx-auto font-sans bg-gray-50 min-h-screen">
+        <div className="p-4 md:p-8 max-w-[1600px] mx-auto font-sans bg-[#F8FAFC] min-h-screen">
             {/* Header Section */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-4">
                 <div>
-                    <h1 className="text-2xl md:text-3xl font-black text-gray-900 tracking-tight flex items-center gap-3">
-                        <Layers className="w-8 h-8 text-blue-600" />
-                        Danh sách nguồn vật tư
+                    <h1 className="text-4xl font-black text-slate-800 flex items-center gap-4 tracking-tight">
+                        <div className="w-14 h-14 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-blue-100 transition-transform hover:scale-105 duration-300">
+                            <Layers className="w-8 h-8" />
+                        </div>
+                        Nguồn vật tư
                     </h1>
-                    <p className="text-gray-500 mt-2 font-medium">Lưu trữ các danh mục cấu kiện cơ bản phục vụ lắp ráp hệ thống (Bình khí, Máy Plasma)</p>
+                    <p className="text-slate-500 mt-2 font-bold uppercase tracking-widest text-[10px]">Lưu trữ danh mục cấu kiện cơ bản phục vụ lắp ráp</p>
                 </div>
             </div>
 
             {/* Filters Section */}
-            <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 mb-8 flex flex-col md:flex-row gap-4">
-                <div className="flex-1 relative">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <div className="bg-white p-8 rounded-[2.5rem] shadow-premium border border-slate-50 mb-8 flex flex-col md:flex-row gap-6 items-center">
+                <div className="flex-1 relative group w-full">
+                    <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 group-focus-within:text-blue-500 transition-colors" />
                     <input
                         type="text"
                         placeholder="Tìm kiếm theo Tên..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full pl-12 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 font-medium transition-all"
+                        className="w-full pl-14 pr-6 py-4 bg-slate-50/50 border border-transparent focus:bg-white focus:border-blue-100 rounded-2xl focus:ring-4 focus:ring-blue-50 outline-none transition-all text-sm font-bold text-slate-600 shadow-inner"
                     />
                 </div>
-                <select
-                    value={categoryFilter}
-                    onChange={(e) => setCategoryFilter(e.target.value)}
-                    className="w-full md:w-64 px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 font-bold text-gray-700 transition-all cursor-pointer appearance-none"
-                >
-                    {MATERIAL_CATEGORIES.map(cat => (
-                        <option key={cat.id} value={cat.id}>{cat.label}</option>
-                    ))}
-                </select>
+                <div className="relative w-full md:w-64">
+                    <select
+                        value={categoryFilter}
+                        onChange={(e) => setCategoryFilter(e.target.value)}
+                        className="w-full pl-6 pr-12 py-4 bg-slate-50/50 border border-transparent focus:bg-white focus:border-blue-100 rounded-2xl outline-none focus:ring-4 focus:ring-blue-50 font-black text-slate-600 text-sm transition-all cursor-pointer appearance-none shadow-inner"
+                    >
+                        {MATERIAL_CATEGORIES.map(cat => (
+                            <option key={cat.id} value={cat.id}>{cat.label}</option>
+                        ))}
+                    </select>
+                    <div className="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                        <Search className="w-4 h-4 rotate-90" />
+                    </div>
+                </div>
             </div>
 
             {/* Table Section */}
-            <div className="bg-white rounded-[2rem] shadow-sm border border-gray-100 overflow-hidden">
+            <div className="bg-white rounded-[2.5rem] shadow-premium border border-slate-50 overflow-hidden">
                 {loading ? (
-                    <div className="flex flex-col justify-center items-center h-64 space-y-4">
-                        <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
-                        <p className="text-gray-500 font-medium animate-pulse">Đang tải danh sách {currentCategoryDef.label.toLowerCase()}...</p>
+                    <div className="flex flex-col justify-center items-center py-28 space-y-6">
+                        <div className="w-14 h-14 border-4 border-blue-50 border-t-blue-600 rounded-full animate-spin"></div>
+                        <p className="text-slate-400 font-black animate-pulse tracking-[0.2em] text-[10px] uppercase">Đang tải danh sách {currentCategoryDef.label.toLowerCase()}...</p>
                     </div>
                 ) : filteredMaterials.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
-                        <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mb-6">
-                            <PackageOpen className="w-10 h-10 text-blue-300" />
+                    <div className="flex flex-col items-center justify-center py-32 px-4 text-center">
+                        <div className="w-24 h-24 bg-slate-50 rounded-[2.5rem] flex items-center justify-center mb-8">
+                            <PackageOpen className="w-12 h-12 text-slate-200" />
                         </div>
-                        <h3 className="text-xl font-bold text-gray-900 mb-2">Chưa có {currentCategoryDef.label.toLowerCase()} nào</h3>
-                        <p className="text-gray-500 max-w-sm">Hãy bấm "Thêm vật tư" để tạo hồ sơ từ điển mới cho danh mục này.</p>
+                        <h3 className="text-xl font-black text-slate-800 mb-2">Chưa có {currentCategoryDef.label.toLowerCase()} nào</h3>
+                        <p className="text-slate-400 font-bold max-w-sm text-sm">Hãy bổ sung thêm vật tư để xây dựng kho cơ sở dữ liệu.</p>
                     </div>
                 ) : (
-                    <div className="w-full overflow-x-auto">
+                    <div className="w-full overflow-x-auto custom-scrollbar">
                         <table className="w-full border-collapse min-w-[800px] text-left">
-                            <thead className="bg-gray-50/80 border-b border-gray-100">
-                                <tr>
-                                    <th className="px-6 py-5 text-xs font-black text-gray-500 uppercase tracking-widest text-center w-20">#</th>
-                                    <th className="px-6 py-5 text-xs font-black text-gray-500 uppercase tracking-widest">{currentCategoryDef.nameLabel || 'Tên vật tư'}</th>
+                            <thead>
+                                <tr className="bg-slate-50/30 border-b border-slate-50">
+                                    <th className="px-8 py-6 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] text-center w-24">STT</th>
+                                    <th className="px-8 py-6 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em]">{currentCategoryDef.nameLabel || 'Tên vật tư'}</th>
 
                                     {/* Hiển thị cột phụ nếu category có cấu hình */}
                                     {currentCategoryDef.hasNumberField && (
-                                        <th className="px-6 py-5 text-xs font-black text-gray-500 uppercase tracking-widest">{currentCategoryDef.numberFieldLabel}</th>
+                                        <th className="px-8 py-6 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] text-center">{currentCategoryDef.numberFieldLabel}</th>
                                     )}
                                     {currentCategoryDef.hasTextField && (
-                                        <th className="px-6 py-5 text-xs font-black text-gray-500 uppercase tracking-widest">{currentCategoryDef.textFieldLabel}</th>
+                                        <th className="px-8 py-6 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em]">{currentCategoryDef.textFieldLabel}</th>
                                     )}
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-gray-100">
+                            <tbody className="divide-y divide-slate-50/50">
                                 {filteredMaterials.map((material, index) => (
-                                    <tr key={material.id} className="hover:bg-blue-50/50 transition-colors group">
-                                        <td className="px-6 py-5 whitespace-nowrap text-center">
-                                            <span className="font-bold text-gray-400 group-hover:text-blue-500 transition-colors">{index + 1}</span>
+                                    <tr key={material.id} className="hover:bg-blue-50/20 transition-all duration-300 group">
+                                        <td className="px-8 py-7 whitespace-nowrap text-center">
+                                            <span className="font-black text-slate-300 group-hover:text-blue-500 transition-colors text-lg">{index + 1}</span>
                                         </td>
-                                        <td className="px-6 py-5">
-                                            <div className="font-bold text-gray-900">{material.name}</div>
-                                            <div className="text-xs text-gray-400 font-medium uppercase tracking-wider mt-1">ID: {material.id.substring(0, 8)}</div>
+                                        <td className="px-8 py-7">
+                                            <div className="font-black text-black text-base group-hover:text-blue-600 transition-colors">{material.name}</div>
+                                            <div className="text-[10px] text-slate-400 font-black uppercase tracking-widest mt-1.5 opacity-50">ID: {material.id.substring(0, 8)}</div>
                                         </td>
 
                                         {currentCategoryDef.hasNumberField && (
-                                            <td className="px-6 py-5 whitespace-nowrap">
-                                                <span className="font-semibold text-blue-700 bg-blue-50 border border-blue-100 px-3 py-1.5 rounded-lg">
+                                            <td className="px-8 py-7 whitespace-nowrap text-center">
+                                                <span className="font-black text-blue-600 bg-blue-50 px-4 py-2 rounded-xl border border-blue-100 group-hover:bg-white group-hover:shadow-sm transition-all text-sm">
                                                     {material.extra_number}
                                                 </span>
                                             </td>
                                         )}
                                         {currentCategoryDef.hasTextField && (
-                                            <td className="px-6 py-5 text-sm text-gray-600">
-                                                {material.extra_text || '-'}
+                                            <td className="px-8 py-7 text-slate-900 font-bold text-sm leading-relaxed">
+                                                {material.extra_text || <span className="text-slate-300 italic opacity-50">-</span>}
                                             </td>
                                         )}
                                     </tr>
@@ -148,9 +155,9 @@ const Materials = () => {
 
             {/* Stats Footer */}
             {!loading && filteredMaterials.length > 0 && (
-                <div className="mt-6 flex flex-wrap gap-4 items-center justify-between text-sm font-medium text-gray-500 px-4">
-                    <p>
-                        Đang rà soát <span className="font-black text-blue-600 mx-1">{filteredMaterials.length}</span> kết quả <span className="text-gray-400 mx-1">/</span> Tổng {materials.length} {currentCategoryDef.label.toLowerCase()}
+                <div className="p-8 bg-slate-50/30 flex items-center justify-between border-t border-slate-50 mt-8 rounded-[2rem] border">
+                    <p className="text-[10px] font-black text-slate-500 px-6 uppercase tracking-[0.15em]">
+                        Hiển thị <span className="text-indigo-600 mx-1">{filteredMaterials.length}</span> / {materials.length} vật tư
                     </p>
                 </div>
             )}

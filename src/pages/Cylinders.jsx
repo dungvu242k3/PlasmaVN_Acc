@@ -48,15 +48,15 @@ const Cylinders = () => {
 
     const getStatusStyle = (status) => {
         switch (status) {
-            case 'sẵn sàng': return "bg-green-50 text-green-700 border-green-200";
+            case 'sẵn sàng': return "bg-emerald-50 text-emerald-600 border-emerald-100 group-hover:bg-white";
             case 'đang sử dụng':
             case 'đã sử dụng':
-            case 'thuộc khách hàng': return "bg-blue-50 text-blue-700 border-blue-200";
-            case 'đang vận chuyển': return "bg-purple-50 text-purple-700 border-purple-200";
+            case 'thuộc khách hàng': return "bg-sky-50 text-sky-600 border-sky-100 group-hover:bg-white";
+            case 'đang vận chuyển': return "bg-indigo-50 text-indigo-600 border-indigo-100 group-hover:bg-white";
             case 'chờ nạp':
-            case 'bình rỗng': return "bg-yellow-50 text-yellow-700 border-yellow-200";
-            case 'hỏng': return "bg-red-50 text-red-700 border-red-200";
-            default: return "bg-gray-50 text-gray-700 border-gray-200";
+            case 'bình rỗng': return "bg-amber-50 text-amber-600 border-amber-100 group-hover:bg-white";
+            case 'hỏng': return "bg-rose-50 text-rose-500 border-rose-100 group-hover:bg-white";
+            default: return "bg-slate-50 text-slate-500 border-slate-100 group-hover:bg-white";
         }
     };
 
@@ -78,40 +78,39 @@ const Cylinders = () => {
     });
 
     return (
-        <div className="p-4 md:p-8 max-w-[1600px] mx-auto font-sans bg-gray-50 min-h-screen">
+        <div className="p-4 md:p-8 max-w-[1600px] mx-auto font-sans bg-[#F8FAFC] min-h-screen">
             {/* Header Section */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-6 mb-6 md:mb-8">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-6 mb-10">
                 <div>
-                    <h1 className="text-2xl md:text-4xl font-black text-gray-900 flex items-center gap-3 md:gap-4 tracking-tight">
-                        <div className="w-12 h-12 bg-teal-600 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-teal-200">
-                            <ActivitySquare className="w-7 h-7" />
+                    <h1 className="text-4xl font-black text-slate-800 flex items-center gap-4 tracking-tight">
+                        <div className="w-14 h-14 bg-gradient-to-tr from-teal-600 to-emerald-600 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-teal-100 transition-transform hover:scale-105 duration-300">
+                            <ActivitySquare className="w-8 h-8" />
                         </div>
-                        <span className="bg-clip-text text-transparent bg-gradient-to-r from-gray-900 to-gray-600">
-                            Danh sách bình khí
-                        </span>
+                        Quản lý Bình khí
                     </h1>
+                    <p className="text-slate-500 mt-2 font-bold uppercase tracking-widest text-[10px]">Số hóa và quản lý vòng đời bình khí Plasma</p>
                 </div>
             </div>
 
             {/* Main Content Card */}
-            <div className="bg-white rounded-[2rem] shadow-2xl shadow-gray-200/50 border border-gray-100 overflow-hidden">
+            <div className="bg-white rounded-[2.5rem] shadow-premium border border-slate-50 overflow-hidden">
                 {/* Filters Top Bar */}
-                <div className="p-6 bg-white flex flex-col lg:flex-row gap-4 items-center border-b border-gray-100">
+                <div className="p-8 bg-white flex flex-col lg:flex-row gap-6 items-center border-b border-slate-50">
                     <div className="relative flex-1 group w-full">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-teal-500 transition-colors" />
+                        <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 group-focus-within:text-teal-500 transition-colors" />
                         <input
                             type="text"
                             placeholder="Tìm mã RFID, loại bình, khách hàng..."
-                            className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-[1rem] focus:ring-4 focus:ring-teal-100 focus:border-teal-500 outline-none transition-all text-sm font-medium hover:bg-white"
+                            className="w-full pl-14 pr-6 py-4 bg-slate-50/50 border border-transparent focus:bg-white focus:border-teal-100 rounded-2xl focus:ring-4 focus:ring-teal-50 outline-none transition-all text-sm font-bold text-slate-600 shadow-inner"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
                     </div>
-                    <div className="flex items-center gap-3 w-full lg:w-auto">
+                    <div className="flex items-center gap-4 w-full lg:w-auto">
                         <div className="relative flex-1 lg:flex-none">
-                            <Filter className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                            <Filter className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
                             <select
-                                className="w-full lg:w-60 pl-11 pr-10 py-3 bg-white border border-gray-200 rounded-[1rem] text-sm font-bold text-gray-700 outline-none focus:ring-4 focus:ring-teal-100 focus:border-teal-500 appearance-none transition-all cursor-pointer hover:bg-gray-50"
+                                className="w-full lg:w-64 pl-12 pr-10 py-4 bg-slate-50/50 border border-transparent focus:bg-white focus:border-teal-100 rounded-2xl text-sm font-black text-slate-600 outline-none focus:ring-4 focus:ring-teal-50 appearance-none transition-all cursor-pointer shadow-inner"
                                 value={activeStatus}
                                 onChange={(e) => setActiveStatus(e.target.value)}
                             >
@@ -122,66 +121,78 @@ const Cylinders = () => {
                                     </option>
                                 ))}
                             </select>
+                            <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                                <Search className="w-4 h-4 rotate-90" />
+                            </div>
                         </div>
                     </div>
                 </div>
 
                 {/* Table Section */}
-                <div className="w-full overflow-x-auto">
-                    <table className="w-full border-collapse min-w-[1000px] md:min-w-full">
+                <div className="w-full overflow-x-auto custom-scrollbar">
+                    <table className="w-full border-collapse min-w-[1000px]">
                         <thead>
-                            <tr className="bg-gray-50 border-b border-gray-100">
+                            <tr className="bg-slate-50/30 border-b border-slate-50">
+                                <th className="px-8 py-6 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] text-center w-24">STT</th>
                                 {TABLE_COLUMNS.map(col => (
-                                    <th key={col.key} className="px-6 py-4 text-xs font-black text-gray-500 uppercase tracking-wider text-left whitespace-nowrap">
+                                    <th key={col.key} className={`px-8 py-6 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] text-left whitespace-nowrap ${col.key === 'serial_number' ? 'w-[300px]' : ''}`}>
                                         {col.label}
                                     </th>
                                 ))}
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-gray-50">
+                        <tbody className="divide-y divide-slate-50/50">
                             {isLoading ? (
                                 <tr>
-                                    <td colSpan={TABLE_COLUMNS.length} className="px-6 py-20 text-center">
-                                        <div className="flex flex-col items-center gap-4">
-                                            <div className="w-12 h-12 border-4 border-teal-600 border-t-transparent rounded-full animate-spin"></div>
-                                            <p className="text-gray-500 font-bold animate-pulse tracking-widest text-xs uppercase">Đang tải danh sách bình...</p>
+                                    <td colSpan={TABLE_COLUMNS.length + 1} className="px-8 py-28 text-center">
+                                        <div className="flex flex-col items-center gap-6">
+                                            <div className="w-14 h-14 border-4 border-teal-50 border-t-teal-600 rounded-full animate-spin"></div>
+                                            <p className="text-slate-400 font-black animate-pulse tracking-[0.2em] text-[10px] uppercase">Đang rà soát danh sách bình khí...</p>
                                         </div>
                                     </td>
                                 </tr>
                             ) : filteredCylinders.length === 0 ? (
                                 <tr>
-                                    <td colSpan={TABLE_COLUMNS.length} className="px-6 py-24 text-center">
-                                        <div className="flex flex-col items-center gap-4 text-gray-400">
-                                            <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center">
-                                                <ActivitySquare className="w-10 h-10 text-gray-300" />
+                                    <td colSpan={TABLE_COLUMNS.length + 1} className="px-8 py-32 text-center">
+                                        <div className="flex flex-col items-center gap-8 text-slate-400">
+                                            <div className="w-24 h-24 bg-slate-50 rounded-[2.5rem] flex items-center justify-center">
+                                                <ActivitySquare className="w-12 h-12 text-slate-200" />
                                             </div>
-                                            <p className="font-bold tracking-widest text-sm text-gray-500">
-                                                {searchTerm ? `Không có bình nào khớp với "${searchTerm}"` : 'Kho bình đang trống'}
+                                            <p className="font-black tracking-tight text-xl text-slate-800">
+                                                {searchTerm ? `Không có bình nào khớp với "${searchTerm}"` : 'Kho bình hiện đang trống'}
                                             </p>
                                         </div>
                                     </td>
                                 </tr>
-                            ) : filteredCylinders.map((c) => (
-                                <tr key={c.id} className="group hover:bg-teal-50/40 transition-all text-sm">
-                                    <td className="px-6 py-4 whitespace-nowrap">
+                            ) : filteredCylinders.map((c, idx) => (
+                                <tr key={c.id} className="group hover:bg-teal-50/20 transition-all duration-300">
+                                    <td className="px-8 py-7 whitespace-nowrap text-center">
+                                        <span className="font-black text-slate-300 group-hover:text-teal-500 transition-colors text-lg">{idx + 1}</span>
+                                    </td>
+                                    <td className="px-8 py-7 whitespace-nowrap">
                                         <div className="flex flex-col">
-                                            <span className="font-black text-teal-700 bg-teal-50 px-2.5 py-1 rounded border border-teal-100 uppercase tracking-wider w-max">
+                                            <span className="font-black text-teal-600 bg-teal-50 px-3 py-1.5 rounded-xl border border-teal-100 uppercase tracking-widest text-[11px] group-hover:bg-white group-hover:shadow-sm transition-all w-max">
                                                 {c.serial_number}
                                             </span>
-                                            {c.category && <span className="text-xs text-gray-400 font-bold mt-1 ml-1">{c.category}</span>}
+                                            {c.category && <span className="text-[10px] text-slate-400 font-black uppercase mt-1.5 ml-1 tracking-widest opacity-60">Phân loại: {c.category}</span>}
                                         </div>
                                     </td>
-                                    <td className="px-6 py-4 whitespace-nowrap font-bold text-gray-900">
+                                    <td className="px-8 py-7 whitespace-nowrap font-black text-black text-base group-hover:text-teal-600 transition-colors">
                                         <div className="flex flex-col">
                                             <span>{c.volume || '-'}</span>
-                                            {c.net_weight && <span className="text-xs text-gray-500 font-medium">{c.net_weight} kg</span>}
+                                            {c.net_weight && <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Trọng lượng nạp: {c.net_weight} kg</span>}
                                         </div>
                                     </td>
-                                    <td className="px-6 py-4 font-bold text-gray-800 whitespace-nowrap">
-                                        {c.customer_name || <span className="text-gray-400 italic font-normal">Tại kho Plasma</span>}
+                                    <td className="px-8 py-7 font-black text-black whitespace-nowrap">
+                                        {c.customer_name ? (
+                                            <span className="bg-slate-50 px-4 py-2 rounded-xl border border-slate-100 group-hover:bg-white transition-all">{c.customer_name}</span>
+                                        ) : (
+                                            <span className="text-slate-300 font-bold italic text-sm">Vỏ bình tại kho</span>
+                                        )}
                                     </td>
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold border ${getStatusStyle(c.status)}`}>
+                                    <td className="px-8 py-7 whitespace-nowrap">
+                                        <span className={`inline-flex items-center px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${getStatusStyle(c.status)}`}>
+                                            <div className={`w-1.5 h-1.5 rounded-full mr-2 ${getStatusStyle(c.status).includes('emerald') ? 'bg-emerald-500' : getStatusStyle(c.status).includes('sky') ? 'bg-sky-500' : getStatusStyle(c.status).includes('indigo') ? 'bg-indigo-500' : getStatusStyle(c.status).includes('amber') ? 'bg-amber-500' : 'bg-rose-500'}`} />
                                             {getStatusLabel(c.status)}
                                         </span>
                                     </td>
@@ -192,9 +203,9 @@ const Cylinders = () => {
                 </div>
 
                 {/* Total Count Footbar */}
-                <div className="p-6 bg-gray-50/50 flex items-center justify-between border-t border-gray-100">
-                    <p className="text-sm text-gray-500 font-medium">
-                        Tổng số bình quản lý: <span className="text-gray-900 font-black text-lg">{filteredCylinders.length}</span>
+                <div className="p-8 bg-slate-50/30 flex items-center justify-between border-t border-slate-50">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
+                        Tổng số bình khí quản lý: <span className="text-teal-600 mx-2 text-lg">{filteredCylinders.length}</span> đơn vị
                     </p>
                 </div>
             </div>

@@ -75,22 +75,24 @@ const Promotions = () => {
     };
 
     return (
-        <div className="p-4 md:p-8 max-w-[1600px] mx-auto font-sans bg-gray-50 min-h-screen">
+        <div className="p-4 md:p-8 max-w-[1600px] mx-auto font-sans bg-[#F8FAFC] min-h-screen">
             {/* Header Section */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-4">
                 <div>
-                    <h1 className="text-2xl md:text-3xl font-black text-gray-900 tracking-tight flex items-center gap-3">
-                        <Gift className="w-8 h-8 text-blue-600" />
-                        Danh sách Khuyến mãi
+                    <h1 className="text-4xl font-black text-slate-800 flex items-center gap-4 tracking-tight">
+                        <div className="w-14 h-14 bg-gradient-to-tr from-rose-500 to-pink-500 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-rose-100 transition-transform hover:scale-105 duration-300">
+                            <Gift className="w-8 h-8" />
+                        </div>
+                        Chương trình Khuyến mãi
                     </h1>
-                    <p className="text-gray-500 mt-2 font-medium">Quản lý mã khuyến mãi, khấu trừ bình cho khách hàng và đại lý</p>
+                    <p className="text-slate-500 mt-2 font-bold uppercase tracking-widest text-[10px]">Quản lý mã KM, khấu trừ bình khí và ưu đãi khách hàng</p>
                 </div>
             </div>
 
             {/* Filters Section */}
-            <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 mb-8 space-y-4">
+            <div className="bg-white p-8 rounded-[2.5rem] shadow-premium border border-slate-50 mb-8 space-y-6">
                 {/* Status Filter Tabs */}
-                <div className="flex items-center gap-2 bg-gray-100 p-1.5 rounded-2xl w-max">
+                <div className="flex items-center gap-2 bg-slate-50 p-1.5 rounded-2xl w-max shadow-inner">
                     {[
                         { id: 'all', label: 'Tất cả' },
                         { id: 'active', label: 'Đang hoạt động' },
@@ -99,90 +101,92 @@ const Promotions = () => {
                         <button
                             key={tab.id}
                             onClick={() => setFilterStatus(tab.id)}
-                            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all ${filterStatus === tab.id ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                            className={`flex items-center gap-2 px-6 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all duration-300 ${filterStatus === tab.id ? 'bg-white text-rose-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
                         >
                             {tab.label}
                         </button>
                     ))}
                 </div>
 
-                <div className="relative">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <div className="relative group w-full">
+                    <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 group-focus-within:text-rose-500 transition-colors" />
                     <input
                         type="text"
                         placeholder="Tìm kiếm theo Mã KM hoặc Loại khách hàng..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full pl-12 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 font-medium transition-all"
+                        className="w-full pl-14 pr-6 py-4 bg-slate-50/50 border border-transparent focus:bg-white focus:border-rose-100 rounded-2xl focus:ring-4 focus:ring-rose-50 outline-none transition-all text-sm font-bold text-slate-600 shadow-inner"
                     />
                 </div>
             </div>
 
             {/* Table Section */}
-            <div className="bg-white rounded-[2rem] shadow-sm border border-gray-100 overflow-hidden">
+            <div className="bg-white rounded-[2.5rem] shadow-premium border border-slate-50 overflow-hidden">
                 {loading ? (
-                    <div className="flex flex-col justify-center items-center h-64 space-y-4">
-                        <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
-                        <p className="text-gray-500 font-medium animate-pulse">Đang tải danh sách khuyến mãi...</p>
+                    <div className="flex flex-col justify-center items-center py-28 space-y-6">
+                        <div className="w-14 h-14 border-4 border-rose-50 border-t-rose-500 rounded-full animate-spin"></div>
+                        <p className="text-slate-400 font-black animate-pulse tracking-[0.2em] text-[10px] uppercase">Đang rà soát danh sách khuyến mãi...</p>
                     </div>
                 ) : filteredPromotions.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
-                        <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mb-6">
-                            <Gift className="w-10 h-10 text-blue-300" />
+                    <div className="flex flex-col items-center justify-center py-32 px-4 text-center">
+                        <div className="w-24 h-24 bg-slate-50 rounded-[2.5rem] flex items-center justify-center mb-8">
+                            <Gift className="w-12 h-12 text-slate-200" />
                         </div>
-                        <h3 className="text-xl font-bold text-gray-900 mb-2">Chưa có mã Khuyến mãi nào</h3>
-                        <p className="text-gray-500 max-w-sm">Hệ thống hiện chưa ghi nhận chương trình khuyến mãi nào.</p>
+                        <h3 className="text-xl font-black text-slate-800 mb-2">Chưa ghi nhận mã Khuyến mãi</h3>
+                        <p className="text-slate-400 font-bold max-w-sm text-sm">Hệ thống hiện tại chưa có chương trình ưu đãi nào được thiết lập.</p>
                     </div>
                 ) : (
-                    <div className="w-full overflow-x-auto">
-                        <table className="w-full border-collapse min-w-[900px] text-left">
-                            <thead className="bg-gray-50/80 border-b border-gray-100">
-                                <tr>
-                                    <th className="px-6 py-5 text-xs font-black text-gray-500 uppercase tracking-widest text-center w-16">#</th>
-                                    <th className="px-6 py-5 text-xs font-black text-gray-500 uppercase tracking-widest">Mã KM</th>
-                                    <th className="px-6 py-5 text-xs font-black text-gray-500 uppercase tracking-widest text-center">Số bình KM</th>
-                                    <th className="px-6 py-5 text-xs font-black text-gray-500 uppercase tracking-widest">Hạn sử dụng</th>
-                                    <th className="px-6 py-5 text-xs font-black text-gray-500 uppercase tracking-widest">Loại KH</th>
-                                    <th className="px-6 py-5 text-xs font-black text-gray-500 uppercase tracking-widest text-center">Trạng thái</th>
-                                    <th className="px-6 py-5 text-xs font-black text-gray-500 uppercase tracking-widest text-center">Kích hoạt</th>
+                    <div className="w-full overflow-x-auto custom-scrollbar">
+                        <table className="w-full border-collapse min-w-[1000px] text-left">
+                            <thead>
+                                <tr className="bg-slate-50/30 border-b border-slate-50">
+                                    <th className="px-8 py-6 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] text-center w-24">STT</th>
+                                    <th className="px-8 py-6 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em]">Mã Khuyến mãi</th>
+                                    <th className="px-8 py-6 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] text-center">Nội dung ưu đãi</th>
+                                    <th className="px-8 py-6 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em]">Thời hạn áp dụng</th>
+                                    <th className="px-8 py-6 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em]">Đối tượng</th>
+                                    <th className="px-8 py-6 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] text-center">Tình trạng</th>
+                                    <th className="px-8 py-6 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] text-center">Kích hoạt</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-gray-100">
+                            <tbody className="divide-y divide-slate-50/50">
                                 {filteredPromotions.map((promo, index) => {
                                     const status = getPromoStatus(promo);
                                     return (
-                                        <tr key={promo.id} className="hover:bg-blue-50/50 transition-colors group">
-                                            <td className="px-6 py-5 whitespace-nowrap text-center">
-                                                <span className="font-bold text-gray-400 group-hover:text-blue-500 transition-colors">{index + 1}</span>
+                                        <tr key={promo.id} className="hover:bg-rose-50/20 transition-all duration-300 group">
+                                            <td className="px-8 py-7 whitespace-nowrap text-center">
+                                                <span className="font-black text-slate-300 group-hover:text-rose-500 transition-colors text-lg">{index + 1}</span>
                                             </td>
-                                            <td className="px-6 py-5">
-                                                <div className="flex items-center gap-2">
-                                                    <Tag className="w-4 h-4 text-blue-500" />
-                                                    <span className="font-black text-gray-900 text-base">{promo.code}</span>
+                                            <td className="px-8 py-7">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="p-2 bg-rose-50 rounded-xl text-rose-500 group-hover:bg-white transition-all transform group-hover:rotate-12">
+                                                        <Tag className="w-4 h-4" />
+                                                    </div>
+                                                    <span className="font-black text-black text-base group-hover:text-rose-600 transition-colors">{promo.code}</span>
                                                 </div>
                                             </td>
-                                            <td className="px-6 py-5 text-center">
-                                                <span className="font-black text-blue-600 bg-blue-50 px-4 py-1.5 rounded-xl text-lg border border-blue-100">
-                                                    {promo.free_cylinders}
+                                            <td className="px-8 py-7 text-center">
+                                                <span className="font-black text-rose-600 bg-rose-50 px-4 py-2 rounded-xl border border-rose-100 group-hover:bg-white group-hover:shadow-sm transition-all text-sm">
+                                                    + {promo.free_cylinders} bình khí
                                                 </span>
                                             </td>
-                                            <td className="px-6 py-5">
-                                                <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
-                                                    <CalendarDays className="w-4 h-4 text-gray-400" />
-                                                    {formatDate(promo.start_date)} — {formatDate(promo.end_date)}
+                                            <td className="px-8 py-7">
+                                                <div className="flex items-center gap-3 text-sm font-bold text-slate-900">
+                                                    <CalendarDays className="w-4 h-4 text-slate-300" />
+                                                    <span className="whitespace-nowrap">{formatDate(promo.start_date)} — {formatDate(promo.end_date)}</span>
                                                 </div>
                                             </td>
-                                            <td className="px-6 py-5">
-                                                <span className="font-bold text-gray-800 bg-gray-100 px-3 py-1.5 rounded-lg border border-gray-200">
+                                            <td className="px-8 py-7">
+                                                <span className="font-black text-[10px] uppercase tracking-widest text-slate-900 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100 group-hover:bg-white transition-all">
                                                     {promo.customer_type}
                                                 </span>
                                             </td>
-                                            <td className="px-6 py-5 text-center">
-                                                <span className={`px-4 py-1.5 rounded-xl text-xs font-bold border inline-flex items-center shadow-sm ${status.color}`}>
+                                            <td className="px-8 py-7 text-center">
+                                                <span className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all shadow-sm ${status.color.replace('bg-', 'bg-').replace('text-', 'text-')} group-hover:bg-white`}>
                                                     {status.label}
                                                 </span>
                                             </td>
-                                            <td className="px-6 py-5 text-center">
+                                            <td className="px-8 py-7 text-center">
                                                 <label className="relative inline-flex items-center cursor-pointer">
                                                     <input
                                                         type="checkbox"
@@ -190,7 +194,7 @@ const Promotions = () => {
                                                         checked={promo.is_active}
                                                         onChange={() => handleToggleActive(promo.id, promo.is_active)}
                                                     />
-                                                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-100 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                                    <div className="w-12 h-6.5 bg-slate-100 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:border-slate-200 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-rose-500 shadow-inner"></div>
                                                 </label>
                                             </td>
                                         </tr>
@@ -201,12 +205,11 @@ const Promotions = () => {
                     </div>
                 )}
             </div>
-
             {/* Stats Footer */}
             {!loading && filteredPromotions.length > 0 && (
                 <div className="mt-6 flex flex-wrap gap-4 items-center justify-between text-sm font-medium text-gray-500 px-4">
                     <p>
-                        Đang rà soát <span className="font-black text-blue-600 mx-1">{filteredPromotions.length}</span> mã khuyến mãi <span className="text-gray-400 mx-1">/</span> Tổng {promotions.length} mã
+                        Đang rà soát <span className="font-black text-rose-600 mx-1">{filteredPromotions.length}</span> mã khuyến mãi <span className="text-slate-300 mx-1">/</span> Tổng {promotions.length} mã
                     </p>
                 </div>
             )}

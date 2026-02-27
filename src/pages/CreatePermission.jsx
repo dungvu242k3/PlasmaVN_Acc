@@ -21,12 +21,27 @@ const CreatePermission = () => {
     const [usersList, setUsersList] = useState([]);
     const [selectedUserId, setSelectedUserId] = useState('');
 
+    const [rolesList, setRolesList] = useState([]);
+
+    const fetchRoles = async () => {
+        try {
+            const { data, error } = await supabase
+                .from('app_roles')
+                .select('name, permissions')
+                .eq('type', 'group')
+                .order('name');
+            if (!error && data) setRolesList(data);
+        } catch (err) {
+            console.error('Error fetching roles:', err);
+        }
+    };
+
     useEffect(() => {
         const fetchUsers = async () => {
             try {
                 const { data, error } = await supabase
                     .from('app_users')
-                    .select('id, name, username')
+                    .select('id, name, username, role')
                     .order('name');
                 if (!error && data) {
                     setUsersList(data);
@@ -37,6 +52,7 @@ const CreatePermission = () => {
             }
         };
         fetchUsers();
+        fetchRoles();
     }, []);
 
     // Khởi tạo ma trận phân quyền: mặc định tất cả là false
@@ -49,6 +65,47 @@ const CreatePermission = () => {
     }, {});
 
     const [permissions, setPermissions] = useState(initialPermissions);
+
+    // Fetch existing permissions when User or Role is selected
+    useEffect(() => {
+        const loadExisting = async () => {
+            if (permissionType === 'user' && selectedUserId) {
+                const user = usersList.find(u => u.id === selectedUserId);
+                if (user && user.role) {
+                    // Fetch permissions for this specific user role (@user:username)
+                    // or their group role if they don't have a custom one yet?
+                    // User said: "phân quyền người dùng ... lưu vào app_role"
+                    // We check if @user:username exists first.
+                    const userRoleName = `@user:${user.username}`;
+                    const { data: roleData } = await supabase
+                        .from('app_roles')
+                        .select('permissions')
+                        .eq('name', userRoleName)
+                        .single();
+
+                    if (roleData) {
+                        setPermissions(roleData.permissions);
+                    } else {
+                        // If no custom user role, maybe load their current group role perms as starting point?
+                        const { data: groupRoleData } = await supabase
+                            .from('app_roles')
+                            .select('permissions')
+                            .eq('name', user.role)
+                            .single();
+                        setPermissions(groupRoleData?.permissions || initialPermissions);
+                    }
+                }
+            } else if (permissionType === 'role' && roleName) {
+                const existing = rolesList.find(r => r.name === roleName);
+                if (existing) {
+                    setPermissions(existing.permissions);
+                } else {
+                    setPermissions(initialPermissions);
+                }
+            }
+        };
+        loadExisting();
+    }, [permissionType, selectedUserId, roleName, usersList, rolesList]);
 
     const handleCheckboxChange = (moduleId, actionId) => {
         setPermissions(prev => ({
@@ -160,8 +217,8 @@ const CreatePermission = () => {
                 alert(`🎉 Đã cấp quyền riêng cho Người dùng "${user.name}" thành công!`);
             }
 
-            // Xoá form ma trận sau khi thành công
-            setPermissions(initialPermissions);
+            // Refresh lists to reflect new roles
+            fetchRoles();
 
         } catch (error) {
             console.error('Error creating permissions:', error);

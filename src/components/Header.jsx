@@ -1,52 +1,63 @@
+import { Home as HomeIcon, Layout, LogOut } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 
 export default function Header() {
     const navigate = useNavigate();
     const location = useLocation();
     const isAuthenticated = true;
-    const username = "Quản trị viên";
+    const username = "Lê Minh Công";
 
     const handleLogout = () => {
-        // Logout disabled for UI Template
         navigate("/trang-chu");
     };
 
-    // Don't show header on home page (which has its own sidebar/topbar)
+    // Don't show header on pages that have their own custom layouts or on login
+    // Home has its own sidebar/topbar
     if (location.pathname === "/dang-nhap" || location.pathname === "/" || location.pathname === "/trang-chu") {
         return null;
     }
 
     return (
-        <nav className="bg-blue-600 shadow-lg sticky top-0 z-50">
-            <div className="mx-auto px-4 md:px-8">
-                <div className="flex items-center justify-between h-16 gap-2">
-                    <div className="flex items-center space-x-2 md:space-x-4 shrink-0">
-                        <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center text-blue-600 font-bold shrink-0">
-                            L
+        <nav className="bg-white/80 backdrop-blur-md border-b border-slate-100 sticky top-0 z-50 shadow-sm">
+            <div className="mx-auto px-6 md:px-12">
+                <div className="flex items-center justify-between h-20 gap-4">
+                    {/* Brand/Logo */}
+                    <div className="flex items-center gap-3 shrink-0">
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white font-black shadow-lg shadow-blue-100">
+                            <Layout className="w-6 h-6" />
                         </div>
-                        <span className="text-white text-lg md:text-xl font-bold whitespace-nowrap hidden sm:inline-block">
+                        <span className="text-xl font-black text-slate-800 tracking-tight hidden sm:inline-block">
                             PlasmaVN
                         </span>
                     </div>
-                    <div className="flex items-center space-x-2 md:space-x-4 overflow-x-auto custom-scrollbar no-scrollbar">
+
+                    {/* Navigation */}
+                    <div className="flex items-center gap-6">
                         <Link
                             to="/trang-chu"
-                            className="text-white hover:bg-blue-700 px-2 md:px-3 py-2 rounded-md text-xs sm:text-sm font-medium transition whitespace-nowrap shrink-0"
+                            className="flex items-center gap-2 text-slate-500 hover:text-blue-600 px-4 py-2 rounded-xl text-sm font-bold transition-all hover:bg-blue-50/50 group"
                         >
-                            Trang chủ
+                            <HomeIcon className="w-4 h-4 transition-transform group-hover:-translate-y-0.5" />
+                            <span className="hidden md:inline">Trang chủ</span>
                         </Link>
 
                         {isAuthenticated && (
-                            <div className="flex items-center space-x-2 md:space-x-3 ml-2 md:ml-4 pl-2 md:pl-4 border-l border-blue-500 shrink-0">
-                                <span className="text-white px-2 md:px-3 py-2 text-xs sm:text-sm font-medium whitespace-nowrap shrink-0">
-                                    <span className="hidden sm:inline">👤 {username}</span>
-                                    <span className="sm:hidden" title={username}>👤 Quản trị</span>
-                                </span>
+                            <div className="flex items-center gap-6 pl-6 border-l border-slate-100">
+                                <div className="flex items-center gap-3 overflow-hidden">
+                                    <div className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center text-slate-600 font-black text-xs">
+                                        AD
+                                    </div>
+                                    <div className="flex flex-col items-start leading-tight hidden xs:flex">
+                                        <span className="text-sm font-black text-slate-800 tracking-tight">{username}</span>
+                                        <span className="text-[10px] text-slate-400 font-bold tracking-wider uppercase">Quản trị viên</span>
+                                    </div>
+                                </div>
                                 <button
                                     onClick={handleLogout}
-                                    className="text-white hover:bg-red-600 bg-red-500 px-3 py-2 rounded-md text-xs sm:text-sm font-medium transition whitespace-nowrap shrink-0 shadow-sm"
+                                    className="flex items-center gap-2 text-slate-400 hover:text-red-500 bg-slate-50 hover:bg-red-50 px-4 py-2.5 rounded-xl text-sm font-bold transition-all shadow-sm border border-transparent hover:border-red-100 outline-none"
                                 >
-                                    Đăng xuất
+                                    <LogOut className="w-4 h-4" />
+                                    <span className="hidden sm:inline">Đăng xuất</span>
                                 </button>
                             </div>
                         )}

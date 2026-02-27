@@ -93,115 +93,121 @@ const Permissions = () => {
     );
 
     return (
-        <div className="p-4 md:p-8 max-w-[1600px] mx-auto font-sans bg-gray-50 min-h-screen">
+        <div className="p-4 md:p-8 max-w-[1600px] mx-auto font-sans bg-[#F8FAFC] min-h-screen">
             {/* Header Section */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-4">
                 <div>
-                    <h1 className="text-2xl md:text-3xl font-black text-gray-900 tracking-tight flex items-center gap-3">
-                        <ShieldCheck className="w-8 h-8 text-blue-600" />
-                        Quản lý Phân quyền
+                    <h1 className="text-4xl font-black text-slate-800 flex items-center gap-4 tracking-tight">
+                        <div className="w-14 h-14 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-blue-100 transition-transform hover:scale-105 duration-300">
+                            <ShieldCheck className="w-8 h-8" />
+                        </div>
+                        Ma trận Phân quyền
                     </h1>
-                    <p className="text-gray-500 mt-2 font-medium">Thiết lập luồng truy cập (Xem, Thêm, Sửa, Xóa) cho từng nhóm người dùng</p>
+                    <p className="text-slate-500 mt-2 font-bold uppercase tracking-widest text-[10px]">Thiết lập luồng truy cập (Xem, Thêm, Sửa, Xóa) cho từng nhóm tài khoản</p>
                 </div>
                 <button
                     onClick={() => navigate('/tao-phan-quyen')}
-                    className="flex items-center gap-2 px-6 py-3.5 bg-blue-600 text-white font-bold rounded-2xl hover:bg-blue-700 hover:shadow-lg hover:-translate-y-0.5 transition-all w-full md:w-auto justify-center shadow-blue-200 shadow-md"
+                    className="group flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-black text-xs uppercase tracking-[0.2em] rounded-2xl hover:shadow-2xl hover:shadow-blue-200 hover:-translate-y-1 transition-all duration-300 w-full md:w-auto justify-center"
                 >
-                    <Plus className="w-5 h-5" />
-                    Thêm Quyền mới
+                    <Plus className="w-5 h-5 group-hover:rotate-90 transition-transform" />
+                    Thiết lập quyền mới
                 </button>
             </div>
 
             {/* Filters Section */}
-            <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 mb-8 space-y-6">
-
+            <div className="bg-white p-8 rounded-[2.5rem] shadow-premium border border-slate-50 mb-8 space-y-8">
                 {/* Tabs */}
-                <div className="flex items-center gap-2 bg-gray-100 p-1.5 rounded-2xl w-max">
+                <div className="flex items-center gap-2 bg-slate-50 p-1.5 rounded-2xl w-max shadow-inner">
                     <button
                         onClick={() => setActiveTab('roles')}
-                        className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-sm transition-all ${activeTab === 'roles' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                        className={`flex items-center gap-3 px-8 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all duration-300 ${activeTab === 'roles' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
                     >
                         <Users className="w-4 h-4" />
-                        Nhóm quyền ({roles.length})
+                        Phân cấp Nhóm ({roles.length})
                     </button>
                     <button
                         onClick={() => setActiveTab('users')}
-                        className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-sm transition-all ${activeTab === 'users' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                        className={`flex items-center gap-3 px-8 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all duration-300 ${activeTab === 'users' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
                     >
                         <UserCircle className="w-4 h-4" />
-                        Quyền cá nhân ({usersList.length})
+                        Định danh Cá nhân ({usersList.length})
                     </button>
                 </div>
 
-                <div className="relative">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <div className="relative group w-full">
+                    <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
                     <input
                         type="text"
-                        placeholder={activeTab === 'roles' ? "Tìm kiếm theo Tên nhóm quyền..." : "Tìm kiếm theo Tên nhân viên..."}
+                        placeholder={activeTab === 'roles' ? "Truy tìm nhóm quyền..." : "Truy tìm hồ sơ nhân sự..."}
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full pl-12 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 font-medium transition-all"
+                        className="w-full pl-14 pr-6 py-4 bg-slate-50/50 border border-transparent focus:bg-white focus:border-blue-100 rounded-2xl focus:ring-4 focus:ring-blue-50 outline-none transition-all text-sm font-bold text-slate-600 shadow-inner"
                     />
                 </div>
             </div>
 
             {/* List Section */}
             {loading ? (
-                <div className="bg-white rounded-[2rem] shadow-sm border border-gray-100 overflow-hidden flex flex-col justify-center items-center h-64 space-y-4">
-                    <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
-                    <p className="text-gray-500 font-medium animate-pulse">Đang tải biểu đồ quyền...</p>
+                <div className="bg-white rounded-[2.5rem] shadow-premium border border-slate-50 overflow-hidden flex flex-col justify-center items-center py-32 space-y-6">
+                    <div className="w-14 h-14 border-4 border-blue-50 border-t-blue-600 rounded-full animate-spin"></div>
+                    <p className="text-slate-400 font-black animate-pulse tracking-[0.2em] text-[10px] uppercase">Đang đồng bộ ma trận quyền...</p>
                 </div>
             ) : (activeTab === 'roles' && filteredRoles.length === 0) || (activeTab === 'users' && filteredUsers.length === 0) ? (
-                <div className="bg-white rounded-[2rem] shadow-sm border border-gray-100 flex flex-col items-center justify-center py-20 px-4 text-center">
-                    <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mb-6">
-                        <ShieldCheck className="w-10 h-10 text-blue-300" />
+                <div className="bg-white rounded-[2.5rem] shadow-premium border border-slate-50 flex flex-col items-center justify-center py-32 px-4 text-center">
+                    <div className="w-24 h-24 bg-slate-50 rounded-[2.5rem] flex items-center justify-center mb-8">
+                        <ShieldCheck className="w-12 h-12 text-slate-200" />
                     </div>
-                    <h3 className="text-xl font-bold text-gray-900 mb-2">Chưa có dữ liệu phân quyền nào</h3>
-                    <p className="text-gray-500 max-w-sm">Hệ thống hiện chưa ghi nhận cấu hình ma trận quyền nào trong mục này.</p>
+                    <h3 className="text-xl font-black text-slate-800 mb-2">Dữ liệu phân quyền trống</h3>
+                    <p className="text-slate-400 font-bold max-w-sm text-sm">Hiện chưa có cấu hình ma trận quyền nào trong mục này.</p>
                 </div>
             ) : (
-                <div className="space-y-6">
+                <div className="space-y-8 pb-10">
                     {(activeTab === 'roles' ? filteredRoles : filteredUsers).map((item) => (
-                        <div key={item.id} className="bg-white rounded-[2rem] shadow-sm border border-gray-200 overflow-hidden transition-all hover:shadow-md">
-                            <div className="bg-gradient-to-r from-gray-50 to-white px-6 md:px-8 py-5 border-b border-gray-100 flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center">
-                                        {activeTab === 'roles' ? <ShieldCheck className="w-5 h-5" /> : <UserCircle className="w-5 h-5" />}
+                        <div key={item.id} className="bg-white rounded-[2.5rem] shadow-premium border border-slate-50 overflow-hidden group transition-all duration-300 hover:shadow-2xl hover:shadow-indigo-100/50">
+                            <div className="bg-slate-50/30 px-8 py-6 border-b border-slate-50 flex items-center justify-between group-hover:bg-white transition-colors duration-300">
+                                <div className="flex items-center gap-5">
+                                    <div className="w-12 h-12 bg-white text-indigo-600 rounded-2xl flex items-center justify-center shadow-sm border border-slate-100 group-hover:scale-110 transition-transform duration-300">
+                                        {activeTab === 'roles' ? <ShieldCheck className="w-6 h-6" /> : <UserCircle className="w-6 h-6" />}
                                     </div>
                                     <div>
-                                        <h3 className="text-xl font-black text-gray-900">{item.name}</h3>
-                                        {activeTab === 'users' && <p className="text-sm font-bold text-gray-400">@{item.username}</p>}
+                                        <h3 className="text-2xl font-black text-black group-hover:text-indigo-600 transition-colors uppercase tracking-tight">{item.name}</h3>
+                                        {activeTab === 'users' && <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mt-1 ml-0.5 opacity-60">ID định danh: @{item.username}</p>}
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-3">
                                     {activeTab === 'users' && (
-                                        <span className="text-xs font-bold bg-orange-50 text-orange-600 px-3 py-1 rounded-lg border border-orange-100">
-                                            Quyền Ghi đè
+                                        <span className="text-[9px] font-black bg-amber-50 text-amber-600 px-4 py-2 rounded-xl border border-amber-100 uppercase tracking-widest">
+                                            Quyền Ưu tiên (Ghi đè)
                                         </span>
                                     )}
-                                    <ActivitySquare className="w-5 h-5 text-gray-400" />
+                                    <div className="p-2 bg-slate-100/50 rounded-lg text-slate-300">
+                                        <ActivitySquare className="w-5 h-5" />
+                                    </div>
                                 </div>
                             </div>
 
                             {/* Khung hiển thị tóm tắt quyền */}
-                            <div className="px-6 md:px-8 py-6 w-full overflow-x-auto">
-                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                            <div className="p-8 w-full overflow-x-auto custom-scrollbar">
+                                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                                     {MODULE_PERMISSIONS.map(module => {
                                         const modulePerms = item.permissions ? item.permissions[module.id] : {};
                                         return (
-                                            <div key={module.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100">
-                                                <span className="font-bold text-gray-700 text-sm mb-3 sm:mb-0 w-1/3">{module.label}</span>
-                                                <div className="flex items-center gap-2 flex-wrap">
+                                            <div key={module.id} className="flex flex-col p-6 bg-slate-50/50 rounded-3xl border border-transparent hover:bg-white hover:border-slate-100 hover:shadow-sm transition-all duration-300">
+                                                <div className="flex items-center justify-between mb-5">
+                                                    <span className="font-black text-slate-500 text-[10px] uppercase tracking-widest opacity-60">Phân hệ:</span>
+                                                    <div className="w-1.5 h-1.5 rounded-full bg-slate-300" />
+                                                </div>
+                                                <span className="font-black text-black text-lg mb-6 leading-tight group-hover:text-indigo-600 transition-colors">{module.label}</span>
+                                                <div className="flex items-center gap-2 flex-wrap mt-auto pt-4 border-t border-slate-100/50">
                                                     {ACTION_TYPES.map(action => (
                                                         <div
                                                             key={action.id}
-                                                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border transition-all
+                                                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest border transition-all
                                                             ${modulePerms?.[action.id]
-                                                                    ? `${action.colorClass} border-transparent shadow-sm`
-                                                                    : 'text-gray-400 bg-white border-gray-200'
-                                                                }`}
+                                                                    ? `${action.colorClass.replace('bg-', 'bg-').replace('text-', 'text-')} border-transparent shadow-sm translate-y-0 opacity-100`
+                                                                    : 'bg-slate-100/30 text-slate-300 border-slate-100 opacity-40 line-through'}`}
                                                         >
-                                                            {modulePerms?.[action.id] ? <CheckCircle2 className="w-3.5 h-3.5" /> : <XCircle className="w-3.5 h-3.5" />}
+                                                            {modulePerms?.[action.id] ? <CheckCircle2 className="w-3 h-3" /> : <XCircle className="w-3 h-3 grayscale" />}
                                                             {action.label}
                                                         </div>
                                                     ))}
@@ -213,15 +219,6 @@ const Permissions = () => {
                             </div>
                         </div>
                     ))}
-                </div>
-            )}
-
-            {/* Stats Footer */}
-            {!loading && (
-                <div className="mt-6 flex flex-wrap gap-4 items-center justify-between text-sm font-medium text-gray-500 px-4">
-                    <p>
-                        Đang rà soát <span className="font-black text-blue-600 mx-1">{activeTab === 'roles' ? filteredRoles.length : filteredUsers.length}</span> biểu đồ <span className="text-gray-400 mx-1">/</span> Tổng {activeTab === 'roles' ? roles.length : usersList.length} bản ghi
-                    </p>
                 </div>
             )}
         </div>

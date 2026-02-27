@@ -51,98 +51,100 @@ const Users = () => {
     );
 
     return (
-        <div className="p-4 md:p-8 max-w-[1600px] mx-auto font-sans bg-gray-50 min-h-screen">
+        <div className="p-4 md:p-8 max-w-[1600px] mx-auto font-sans bg-[#F8FAFC] min-h-screen">
             {/* Header Section */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-4">
                 <div>
-                    <h1 className="text-2xl md:text-3xl font-black text-gray-900 tracking-tight flex items-center gap-3">
-                        <UsersIcon className="w-8 h-8 text-blue-600" />
-                        Danh sách Người dùng
+                    <h1 className="text-4xl font-black text-slate-800 flex items-center gap-4 tracking-tight">
+                        <div className="w-14 h-14 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-blue-100 transition-transform hover:scale-105 duration-300">
+                            <UsersIcon className="w-8 h-8" />
+                        </div>
+                        Nhân sự hệ thống
                     </h1>
-                    <p className="text-gray-500 mt-2 font-medium">Quản lý tài khoản, phân quyền tự động và theo dõi lịch sử truy cập</p>
+                    <p className="text-slate-500 mt-2 font-bold uppercase tracking-widest text-[10px]">Quản lý tài khoản, phân quyền và theo dõi truy cập</p>
                 </div>
             </div>
 
-            {/* Filters Section */}
-            <div className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 mb-8">
-                <div className="relative">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            {/* Content Bar */}
+            <div className="bg-white p-8 rounded-[2.5rem] shadow-premium border border-slate-50 mb-8">
+                <div className="relative group w-full">
+                    <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 group-focus-within:text-indigo-500 transition-colors" />
                     <input
                         type="text"
-                        placeholder="Tìm kiếm theo Tên, Username, SĐT hoặc Vai trò..."
+                        placeholder="Tìm kiếm nhân viên, username, SĐT hoặc bộ phận..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full pl-12 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-2xl outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 font-medium transition-all"
+                        className="w-full pl-14 pr-6 py-4 bg-slate-50/50 border border-transparent focus:bg-white focus:border-indigo-100 rounded-2xl focus:ring-4 focus:ring-indigo-50 outline-none transition-all text-sm font-bold text-slate-600 shadow-inner"
                     />
                 </div>
             </div>
 
             {/* Table Section */}
-            <div className="bg-white rounded-[2rem] shadow-sm border border-gray-100 overflow-hidden">
+            <div className="bg-white rounded-[2.5rem] shadow-premium border border-slate-50 overflow-hidden">
                 {loading ? (
-                    <div className="flex flex-col justify-center items-center h-64 space-y-4">
-                        <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
-                        <p className="text-gray-500 font-medium animate-pulse">Đang tải danh sách người dùng...</p>
+                    <div className="flex flex-col justify-center items-center py-28 space-y-6">
+                        <div className="w-14 h-14 border-4 border-blue-50 border-t-blue-600 rounded-full animate-spin"></div>
+                        <p className="text-slate-400 font-black animate-pulse tracking-[0.2em] text-[10px] uppercase">Đang rà soát danh sách nhân sự...</p>
                     </div>
                 ) : filteredUsers.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
-                        <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mb-6">
-                            <UserCircle className="w-10 h-10 text-blue-300" />
+                    <div className="flex flex-col items-center justify-center py-32 px-4 text-center">
+                        <div className="w-24 h-24 bg-slate-50 rounded-[2.5rem] flex items-center justify-center mb-8">
+                            <UserCircle className="w-12 h-12 text-slate-200" />
                         </div>
-                        <h3 className="text-xl font-bold text-gray-900 mb-2">Không tìm thấy người dùng nào</h3>
-                        <p className="text-gray-500 max-w-sm">Danh sách tài khoản nhân sự hiện đang trống hoặc không có kết quả phù hợp với từ khóa.</p>
+                        <h3 className="text-xl font-black text-slate-800 mb-2">Không tìm thấy nhân sự</h3>
+                        <p className="text-slate-400 font-bold max-w-sm text-sm">Hiện chưa có tài khoản nào khớp với bộ lọc của bạn.</p>
                     </div>
                 ) : (
-                    <div className="w-full overflow-x-auto">
-                        <table className="w-full border-collapse text-left">
-                            <thead className="bg-gray-50/80 border-b border-gray-100">
-                                <tr>
-                                    <th className="px-6 py-5 text-xs font-black text-gray-500 uppercase tracking-widest text-center w-20">#</th>
-                                    <th className="px-6 py-5 text-xs font-black text-gray-500 uppercase tracking-widest">Tài khoản & Cá nhân</th>
-                                    <th className="px-6 py-5 text-xs font-black text-gray-500 uppercase tracking-widest">Liên hệ</th>
-                                    <th className="px-6 py-5 text-xs font-black text-gray-500 uppercase tracking-widest">Vai trò</th>
-                                    <th className="px-6 py-5 text-xs font-black text-gray-500 uppercase tracking-widest">Trạng thái</th>
+                    <div className="w-full overflow-x-auto custom-scrollbar">
+                        <table className="w-full border-collapse text-left min-w-[1000px]">
+                            <thead>
+                                <tr className="bg-slate-50/30 border-b border-slate-50">
+                                    <th className="px-8 py-6 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] text-center w-24">STT</th>
+                                    <th className="px-8 py-6 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em]">Thông tin cá nhân</th>
+                                    <th className="px-8 py-6 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em]">Phương thức liên lạc</th>
+                                    <th className="px-8 py-6 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em]">Vai trò truy cập</th>
+                                    <th className="px-8 py-6 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em]">Trạng thái</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-gray-100">
+                            <tbody className="divide-y divide-slate-50/50">
                                 {filteredUsers.map((user, index) => (
-                                    <tr key={user.id} className="hover:bg-blue-50/50 transition-colors group">
-                                        <td className="px-6 py-5 whitespace-nowrap text-center">
-                                            <span className="font-bold text-gray-400 group-hover:text-blue-500 transition-colors">{index + 1}</span>
+                                    <tr key={user.id} className="hover:bg-indigo-50/20 transition-all duration-300 group">
+                                        <td className="px-8 py-7 whitespace-nowrap text-center">
+                                            <span className="font-black text-slate-300 group-hover:text-indigo-500 transition-colors text-lg">{index + 1}</span>
                                         </td>
-                                        <td className="px-6 py-5">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center text-gray-500">
-                                                    <UserCircle className="w-6 h-6" />
+                                        <td className="px-8 py-7">
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-12 h-12 bg-slate-100 rounded-2xl flex items-center justify-center text-slate-400 group-hover:bg-white group-hover:text-indigo-600 group-hover:shadow-sm transition-all duration-300">
+                                                    <UserCircle className="w-7 h-7" />
                                                 </div>
                                                 <div>
-                                                    <div className="font-bold text-gray-900 text-base">{user.name}</div>
-                                                    <div className="text-sm font-medium text-gray-500">@{user.username}</div>
+                                                    <div className="font-black text-black text-base group-hover:text-indigo-600 transition-colors">{user.name}</div>
+                                                    <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1 opacity-60">@{user.username}</div>
                                                 </div>
                                             </div>
                                         </td>
-                                        <td className="px-6 py-5 whitespace-nowrap">
-                                            <div className="flex items-center gap-2 text-gray-600 font-medium">
-                                                <Phone className="w-4 h-4 text-gray-400" />
+                                        <td className="px-8 py-7 whitespace-nowrap">
+                                            <div className="flex items-center gap-2.5 font-bold text-slate-900 bg-slate-50 px-4 py-2 rounded-xl border border-slate-100 group-hover:bg-white group-hover:shadow-sm transition-all duration-300 w-max">
+                                                <Phone className="w-4 h-4 text-slate-300" />
                                                 {user.phone}
                                             </div>
                                         </td>
-                                        <td className="px-6 py-5 whitespace-nowrap">
+                                        <td className="px-8 py-7 whitespace-nowrap">
                                             <div className="flex flex-col gap-2">
-                                                <div className="flex items-center gap-2 text-blue-700 font-semibold bg-blue-50 border border-blue-100 px-3 py-1.5 rounded-lg w-max">
-                                                    {user.role === 'Admin' ? <ShieldCheck className="w-4 h-4" /> : <Briefcase className="w-4 h-4" />}
+                                                <div className="flex items-center gap-2 text-indigo-600 font-black bg-indigo-50 border border-indigo-100 px-4 py-2 rounded-xl w-max group-hover:bg-white transition-all text-[11px] uppercase tracking-widest">
+                                                    {user.role === 'Admin' ? <ShieldCheck className="w-4 h-4 text-indigo-500" /> : <Briefcase className="w-4 h-4 text-indigo-400" />}
                                                     {user.role}
                                                 </div>
                                                 {user.permissions && Object.keys(user.permissions).length > 0 && (
-                                                    <div className="flex items-center gap-1 text-xs font-bold text-orange-600 bg-orange-50 border border-orange-100 px-2.5 py-1 rounded-md w-max">
+                                                    <div className="flex items-center gap-1.5 text-[9px] font-black text-amber-600 bg-amber-50 border border-amber-100 px-3 py-1 rounded-lg w-max uppercase tracking-widest">
                                                         <ShieldCheck className="w-3 h-3" />
-                                                        + Quyền cá nhân (Ghi đè)
+                                                        + Phân quyền tùy chỉnh
                                                     </div>
                                                 )}
                                             </div>
                                         </td>
-                                        <td className="px-6 py-5 whitespace-nowrap">
-                                            <span className={`px-4 py-1.5 rounded-xl text-sm font-bold border inline-flex items-center shadow-sm ${getStatusConfig(user.status).colorClass}`}>
+                                        <td className="px-8 py-7 whitespace-nowrap text-sm">
+                                            <span className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border border-transparent transition-all shadow-sm ${getStatusConfig(user.status).colorClass.replace('bg-', 'bg-').replace('text-', 'text-')} group-hover:bg-white`}>
                                                 {user.status}
                                             </span>
                                         </td>
@@ -156,9 +158,9 @@ const Users = () => {
 
             {/* Stats Footer */}
             {!loading && filteredUsers.length > 0 && (
-                <div className="mt-6 flex flex-wrap gap-4 items-center justify-between text-sm font-medium text-gray-500 px-4">
-                    <p>
-                        Đang rà soát <span className="font-black text-blue-600 mx-1">{filteredUsers.length}</span> kết quả <span className="text-gray-400 mx-1">/</span> Tổng {users.length} người dùng
+                <div className="p-8 bg-slate-50/30 flex items-center justify-between border-t border-slate-50 mt-8 rounded-[2rem] border">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
+                        Tổng quy mô nhân sự: <span className="text-indigo-600 mx-2 text-lg">{filteredUsers.length}</span> tài khoản định danh
                     </p>
                 </div>
             )}

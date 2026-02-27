@@ -94,40 +94,39 @@ const Customers = () => {
     };
 
     return (
-        <div className="p-4 md:p-8 max-w-[1600px] mx-auto font-sans bg-gray-50 min-h-screen">
+        <div className="p-4 md:p-8 max-w-[1600px] mx-auto font-sans bg-[#F8FAFC] min-h-screen">
             {/* Header Section */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-6 mb-6 md:mb-8">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-6 mb-10">
                 <div>
-                    <h1 className="text-2xl md:text-4xl font-black text-gray-900 flex items-center gap-3 md:gap-4 tracking-tight">
-                        <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-blue-200">
-                            <Users className="w-7 h-7" />
+                    <h1 className="text-4xl font-black text-slate-800 flex items-center gap-4 tracking-tight">
+                        <div className="w-14 h-14 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-blue-100 transition-transform hover:scale-105 duration-300">
+                            <Users className="w-8 h-8" />
                         </div>
-                        <span className="bg-clip-text text-transparent bg-gradient-to-r from-gray-900 to-gray-600">
-                            Danh sách khách hàng
-                        </span>
+                        Khách hàng
                     </h1>
+                    <p className="text-slate-500 mt-2 font-bold uppercase tracking-widest text-[10px]">Lưu trữ và theo dõi hồ sơ khách hàng toàn hệ thống</p>
                 </div>
             </div>
 
             {/* Main Content Card */}
-            <div className="bg-white rounded-[2rem] shadow-2xl shadow-gray-200/50 border border-gray-100 overflow-hidden">
+            <div className="bg-white rounded-[2.5rem] shadow-premium border border-slate-50 overflow-hidden">
                 {/* Filters Top Bar */}
-                <div className="p-6 bg-white flex flex-col lg:flex-row gap-4 items-center border-b border-gray-100">
+                <div className="p-8 bg-white flex flex-col lg:flex-row gap-6 items-center border-b border-slate-50">
                     <div className="relative flex-1 group w-full">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
+                        <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 group-focus-within:text-blue-500 transition-colors" />
                         <input
                             type="text"
                             placeholder="Tìm kiếm mã KH, tên, sđt, địa chỉ..."
-                            className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-[1rem] focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all text-sm font-medium hover:bg-white"
+                            className="w-full pl-14 pr-6 py-4 bg-slate-50/50 border border-transparent focus:bg-white focus:border-blue-100 rounded-2xl focus:ring-4 focus:ring-blue-50 outline-none transition-all text-sm font-bold text-slate-600 shadow-inner"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
                     </div>
-                    <div className="flex items-center gap-3 w-full lg:w-auto">
+                    <div className="flex items-center gap-4 w-full lg:w-auto">
                         <div className="relative flex-1 lg:flex-none">
-                            <Filter className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                            <Filter className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
                             <select
-                                className="w-full lg:w-60 pl-11 pr-10 py-3 bg-white border border-gray-200 rounded-[1rem] text-sm font-bold text-gray-700 outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 appearance-none transition-all cursor-pointer hover:bg-gray-50"
+                                className="w-full lg:w-64 pl-12 pr-10 py-4 bg-slate-50/50 border border-transparent focus:bg-white focus:border-blue-100 rounded-2xl text-sm font-black text-slate-600 outline-none focus:ring-4 focus:ring-blue-50 appearance-none transition-all cursor-pointer shadow-inner"
                                 value={activeCategory}
                                 onChange={(e) => setActiveCategory(e.target.value)}
                             >
@@ -138,93 +137,98 @@ const Customers = () => {
                                     </option>
                                 ))}
                             </select>
+                            <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                                <Search className="w-4 h-4 rotate-90" />
+                            </div>
                         </div>
                     </div>
                 </div>
 
                 {/* Table Section */}
-                <div className="w-full overflow-x-auto">
-                    <table className="w-full border-collapse min-w-[2000px] md:min-w-full">
+                <div className="w-full overflow-x-auto custom-scrollbar">
+                    <table className="w-full border-collapse min-w-[2000px]">
                         <thead>
-                            <tr className="bg-gray-50 border-b border-gray-100">
+                            <tr className="bg-slate-50/30 border-b border-slate-50">
                                 {TABLE_COLUMNS.map(col => (
-                                    <th key={col.key} className="px-6 py-4 text-xs font-black text-gray-500 uppercase tracking-wider text-left whitespace-nowrap">
+                                    <th key={col.key} className="px-8 py-6 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] text-left whitespace-nowrap">
                                         {col.label}
                                     </th>
                                 ))}
-                                <th className="px-6 py-4 text-xs font-black text-gray-500 uppercase tracking-wider text-right whitespace-nowrap bg-gray-50 sticky right-0 z-10 border-l border-gray-100 shadow-sm">Thao tác</th>
+                                <th className="px-8 py-6 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] text-right whitespace-nowrap sticky right-0 z-10 bg-slate-50/80 backdrop-blur-md border-l border-slate-50 shadow-sm">Thao tác</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-gray-50">
+                        <tbody className="divide-y divide-slate-50/50">
                             {isLoading ? (
                                 <tr>
-                                    <td colSpan={TABLE_COLUMNS.length + 1} className="px-6 py-20 text-center">
-                                        <div className="flex flex-col items-center gap-4">
-                                            <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                                            <p className="text-gray-500 font-bold animate-pulse tracking-widest text-xs uppercase">Đang tải biểu ghi khách hàng...</p>
+                                    <td colSpan={TABLE_COLUMNS.length + 1} className="px-8 py-28 text-center">
+                                        <div className="flex flex-col items-center gap-6">
+                                            <div className="w-14 h-14 border-4 border-blue-50 border-t-blue-600 rounded-full animate-spin"></div>
+                                            <p className="text-slate-400 font-black animate-pulse tracking-[0.2em] text-[10px] uppercase">Đang tải hồ sơ khách hàng...</p>
                                         </div>
                                     </td>
                                 </tr>
                             ) : filteredCustomers.length === 0 ? (
                                 <tr>
-                                    <td colSpan={TABLE_COLUMNS.length + 1} className="px-6 py-24 text-center">
-                                        <div className="flex flex-col items-center gap-4 text-gray-400">
-                                            <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center">
-                                                <Users className="w-10 h-10 text-gray-300" />
+                                    <td colSpan={TABLE_COLUMNS.length + 1} className="px-8 py-32 text-center">
+                                        <div className="flex flex-col items-center gap-8 text-slate-400">
+                                            <div className="w-24 h-24 bg-slate-50 rounded-[2.5rem] flex items-center justify-center">
+                                                <Users className="w-12 h-12 text-slate-200" />
                                             </div>
-                                            <p className="font-bold tracking-widest text-sm text-gray-500">
-                                                {searchTerm ? `Không có khách hàng nào khớp với "${searchTerm}"` : 'Chưa có dữ liệu khách hàng'}
+                                            <p className="font-black tracking-tight text-xl text-slate-800">
+                                                {searchTerm ? `Không tìm thấy kết quả cho "${searchTerm}"` : 'Chưa có dữ liệu khách hàng'}
                                             </p>
                                         </div>
                                     </td>
                                 </tr>
                             ) : filteredCustomers.map((c) => (
-                                <tr key={c.id} className="group hover:bg-blue-50/40 transition-all text-sm">
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        <span className="font-black text-blue-700 bg-blue-50 px-2 py-1 rounded border border-blue-100 uppercase tracking-wider">
+                                <tr key={c.id} className="group hover:bg-blue-50/20 transition-all duration-300">
+                                    <td className="px-8 py-7 whitespace-nowrap">
+                                        <span className="font-black text-blue-600 bg-blue-50 px-3 py-1.5 rounded-xl border border-blue-100 uppercase tracking-widest text-[11px] group-hover:bg-white group-hover:shadow-sm transition-all">
                                             {c.code}
                                         </span>
                                     </td>
-                                    <td className="px-6 py-4 whitespace-nowrap font-bold text-gray-900">
+                                    <td className="px-8 py-7 whitespace-nowrap font-black text-slate-900 text-base group-hover:text-blue-600 transition-colors">
                                         {c.name}
                                     </td>
-                                    <td className="px-6 py-4 font-bold text-gray-800 whitespace-nowrap">
-                                        {c.phone || '-'}
+                                    <td className="px-8 py-7 font-black text-slate-900 whitespace-nowrap">
+                                        {c.phone ? (
+                                            <span className="bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100 group-hover:bg-white transition-all">{c.phone}</span>
+                                        ) : '-'}
                                     </td>
-                                    <td className="px-6 py-4 min-w-[200px]">
+                                    <td className="px-8 py-7 min-w-[250px] text-sm font-bold text-slate-900 leading-relaxed">
                                         {c.address || '-'}
                                     </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-gray-700">
+                                    <td className="px-8 py-7 whitespace-nowrap text-slate-900 font-bold">
                                         {c.legal_rep || '-'}
                                     </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-gray-700 font-medium">
+                                    <td className="px-8 py-7 whitespace-nowrap text-slate-900 font-black text-xs uppercase tracking-tight">
                                         {c.managed_by || '-'}
                                     </td>
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        <span className="inline-flex items-center px-2 py-1 rounded text-xs font-bold bg-gray-100 text-gray-600 border border-gray-200">
+                                    <td className="px-8 py-7 whitespace-nowrap">
+                                        <span className="inline-flex items-center px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest bg-slate-100 text-slate-500 border border-slate-200 group-hover:bg-white transition-all">
                                             {getLabel(CUSTOMER_CATEGORIES, c.category)}
                                         </span>
                                     </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-center font-bold text-cyan-700">
+                                    <td className="px-8 py-7 whitespace-nowrap text-center font-black text-cyan-600 text-lg">
                                         {c.current_cylinders || 0}
                                     </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-center font-bold text-indigo-700">
+                                    <td className="px-8 py-7 whitespace-nowrap text-center font-black text-indigo-600 text-lg">
                                         {c.current_machines || 0}
                                     </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-center font-bold text-orange-700">
+                                    <td className="px-8 py-7 whitespace-nowrap text-center font-black text-rose-500 text-lg">
                                         {c.borrowed_cylinders || 0}
                                     </td>
-                                    <td className="px-6 py-4 min-w-[150px] text-gray-700 font-medium">
+                                    <td className="px-8 py-7 min-w-[180px] text-slate-900 font-bold text-sm">
                                         {c.machines_in_use || '-'}
                                     </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-gray-700 font-medium">
+                                    <td className="px-8 py-7 whitespace-nowrap text-slate-900 font-black text-xs">
                                         {c.care_by || '-'}
                                     </td>
-                                    <td className="px-6 py-4 text-right whitespace-nowrap border-l border-gray-100 bg-white group-hover:bg-blue-50/40 sticky right-0 z-10 transition-all">
+                                    <td className="px-8 py-7 text-right whitespace-nowrap sticky right-0 z-10 bg-white/80 backdrop-blur-md border-l border-slate-50 group-hover:bg-blue-50/40 transition-all">
                                         <button
                                             onClick={() => handleEditCustomer(c)}
-                                            className="p-2 text-gray-400 hover:text-blue-600 rounded transition-all focus:outline-none focus:ring-2 focus:ring-blue-100"
-                                            title="Chỉnh sửa Khách Hàng"
+                                            className="w-10 h-10 flex items-center justify-center text-slate-300 hover:text-blue-600 hover:bg-white rounded-xl transition-all shadow-sm border border-transparent hover:border-blue-100 outline-none"
+                                            title="Chỉnh sửa"
                                         >
                                             <Edit className="w-5 h-5" />
                                         </button>
@@ -236,9 +240,9 @@ const Customers = () => {
                 </div>
 
                 {/* Total Count Footbar */}
-                <div className="p-6 bg-gray-50/50 flex items-center justify-between border-t border-gray-100">
-                    <p className="text-sm text-gray-500 font-medium">
-                        Tổng số: <span className="text-gray-900 font-black text-lg">{filteredCustomers.length}</span> khách hàng
+                <div className="p-8 bg-slate-50/30 flex items-center justify-between border-t border-slate-50">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
+                        Đang hiển thị <span className="text-blue-600 mx-2 text-lg">{filteredCustomers.length}</span> hồ sơ khách hàng
                     </p>
                 </div>
             </div>

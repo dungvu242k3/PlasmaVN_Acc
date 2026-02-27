@@ -297,154 +297,196 @@ function Home() {
   }));
 
   return (
-    <div className="flex h-screen bg-gray-50 overflow-hidden font-sans">
+    <div className="flex h-screen bg-[#F8FAFC] overflow-hidden font-sans">
       {/* Sidebar - Desktop & Mobile Offcanvas */}
       {/* Overlay for mobile */}
       {mobileMenuOpen && (
         <div
-          className="md:hidden fixed inset-0 bg-gray-900/50 z-40 transition-opacity"
+          className="md:hidden fixed inset-0 bg-slate-900/40 z-40 backdrop-blur-sm transition-opacity"
           onClick={() => setMobileMenuOpen(false)}
         />
       )}
 
       <aside
-        className={`bg-white border-r border-gray-200 transition-all duration-300 flex flex-col z-50 fixed md:relative h-full ${mobileMenuOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
+        className={`bg-white border-r border-slate-100 transition-all duration-300 flex flex-col z-50 fixed md:relative h-full ${mobileMenuOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
           } ${sidebarCollapsed ? "w-20" : "w-64"}`}
       >
-        <div className="h-16 flex items-center justify-between px-4 border-b border-gray-200">
+        <div className="h-20 flex items-center justify-between px-6 border-b border-slate-50">
           {!sidebarCollapsed && (
-            <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-              PlasmaVN
-            </span>
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white shadow-lg shadow-blue-100">
+                <Layout className="w-5 h-5" />
+              </div>
+              <span className="text-xl font-black text-slate-800 tracking-tight">
+                PlasmaVN
+              </span>
+            </div>
           )}
-          <button
-            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-            className="hidden md:flex p-2 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors"
-          >
-            {sidebarCollapsed ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
-          </button>
-
-          {/* Mobile close button inside sidebar */}
-          <button
-            onClick={() => setMobileMenuOpen(false)}
-            className="md:hidden p-2 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors"
-          >
-            <ChevronLeft className="w-5 h-5" />
-          </button>
+          {sidebarCollapsed && (
+            <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-blue-100 mx-auto">
+              <Layout className="w-6 h-6" />
+            </div>
+          )}
+          {!sidebarCollapsed && (
+            <button
+              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+              className="hidden md:flex p-2 rounded-xl hover:bg-slate-50 text-slate-400 hover:text-slate-600 transition-all"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+          )}
         </div>
 
-        <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-1 custom-scrollbar">
+        <nav className="flex-1 overflow-y-auto py-6 px-4 space-y-2 custom-scrollbar">
           {menuItems.map((item) => (
             <Link
               key={item.id}
               to={item.path}
               onClick={() => setMobileMenuOpen(false)}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 group ${item.active
-                ? "bg-blue-50 text-blue-600 shadow-sm"
-                : "text-gray-600 hover:bg-gray-50 hover:text-blue-600"
+              className={`flex items-center gap-4 px-4 py-3 rounded-2xl transition-all duration-200 group relative ${item.active
+                ? "bg-blue-50 text-blue-600 shadow-sm shadow-blue-50"
+                : "text-slate-500 hover:bg-slate-50 hover:text-slate-800"
                 }`}
             >
-              <span className={`${item.active ? "text-blue-600" : "text-gray-400 group-hover:text-blue-600 transition-colors"}`}>
-                <item.Icon className="w-5 h-5" />
+              <span className={`${item.active ? "text-blue-600" : "text-slate-400 group-hover:text-blue-600 transition-colors"}`}>
+                <item.Icon className="w-5 h-5 stroke-[2.5px]" />
               </span>
               {!sidebarCollapsed && (
-                <span className="font-medium whitespace-nowrap">{item.label}</span>
+                <span className="font-bold text-sm whitespace-nowrap tracking-tight">{item.label}</span>
+              )}
+              {item.active && !sidebarCollapsed && (
+                <div className="absolute right-2 w-1.5 h-1.5 rounded-full bg-blue-600" />
               )}
             </Link>
           ))}
         </nav>
 
-        <div className="p-4 border-t border-gray-200">
+        <div className="p-4 border-t border-slate-50">
           <button
             onClick={() => setIsChangePasswordOpen(true)}
-            className={`flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-gray-600 hover:bg-gray-50 transition-colors ${sidebarCollapsed ? "justify-center" : ""
+            className={`flex items-center gap-4 w-full px-4 py-3 rounded-2xl text-slate-400 hover:bg-slate-50 hover:text-slate-600 transition-all ${sidebarCollapsed ? "justify-center" : ""
               }`}
           >
-            <Settings className="w-5 h-5 text-gray-400" />
-            {!sidebarCollapsed && <span className="font-medium">Cài đặt</span>}
+            <Settings className="w-5 h-5" />
+            {!sidebarCollapsed && <span className="font-bold text-sm">Cài đặt</span>}
           </button>
+
+          {sidebarCollapsed && (
+            <button
+              onClick={() => setSidebarCollapsed(false)}
+              className="w-full flex justify-center p-3 text-slate-300 hover:text-blue-600 mt-2"
+            >
+              <ChevronRight className="w-5 h-5" />
+            </button>
+          )}
         </div>
       </aside>
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col overflow-hidden relative">
         {/* Top Navbar */}
-        <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-4 md:px-8 z-30 shadow-sm gap-4">
-          <div className="flex items-center gap-2 md:gap-4 flex-1">
-            {/* Hamburger Menu Toggle (Mobile Only) */}
+        <header className="h-20 bg-white/80 backdrop-blur-md border-b border-slate-100 flex items-center justify-between px-8 z-30 shadow-sm gap-4">
+          <div className="flex items-center gap-6 flex-1">
             <button
               onClick={() => setMobileMenuOpen(true)}
-              className="md:hidden p-2 rounded-lg hover:bg-gray-100 text-gray-600 transition-colors"
+              className="md:hidden p-2 rounded-xl hover:bg-slate-50 text-slate-600 transition-colors"
             >
               <Menu className="w-6 h-6" />
             </button>
 
-            <div className="relative max-w-md w-full hidden sm:block">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <div className="relative max-w-sm w-full hidden sm:block">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <input
                 type="text"
-                placeholder="Tìm kiếm nhanh..."
-                className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm"
+                placeholder="Tìm kiếm tác vụ..."
+                className="w-full pl-11 pr-4 py-2.5 bg-slate-50/50 border border-transparent focus:bg-white focus:border-blue-100 rounded-2xl focus:ring-4 focus:ring-blue-50 outline-none transition-all text-sm font-medium"
               />
             </div>
           </div>
 
           <div className="flex items-center gap-4">
-            <div className="flex flex-col items-end mr-2">
-              <span className="text-sm font-bold text-gray-900 leading-tight">Quản trị viên</span>
-              <span className="text-xs text-blue-600 font-medium tracking-wide uppercase">Admin Hub</span>
+            <div className="flex flex-col items-end mr-2 hidden xs:flex">
+              <span className="text-sm font-black text-slate-800 leading-tight tracking-tight">Lê Minh Công</span>
+              <span className="text-[10px] text-blue-500 font-black tracking-widest uppercase">Quản trị viên</span>
             </div>
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold shadow-md shadow-blue-200">
-              AD
+            <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white font-bold shadow-lg shadow-blue-100 cursor-pointer hover:scale-105 transition-transform">
+              LM
             </div>
           </div>
         </header>
 
         {/* Dynamic Content */}
-        <main className="flex-1 overflow-y-auto bg-gray-50">
-          <div className="p-4 md:p-8">
-            <div className="max-w-7xl mx-auto">
-              <div className="text-center py-6 md:py-10 mb-8 md:mb-12">
-                <h1 className="text-2xl md:text-4xl font-extrabold text-gray-900 mb-2 md:mb-4 tracking-tight px-2">
-                  Chào mừng trở lại với PlasmaVN
+        <main className="flex-1 overflow-y-auto bg-[#F8FAFC] custom-scrollbar">
+          <div className="p-4 md:p-12">
+            <div className="max-w-[1400px] mx-auto">
+              <div className="mb-12">
+                <h1 className="text-3xl md:text-4xl font-black text-slate-800 mb-3 tracking-tight">
+                  Chào buổi sáng 👋
                 </h1>
-                <p className="text-sm md:text-lg text-gray-500 max-w-2xl mx-auto leading-relaxed px-4">
-                  Hãy bắt đầu xây dựng dự án của bạn bằng cách truy cập các module bên dưới.
+                <p className="text-slate-400 font-medium text-lg leading-relaxed max-w-2xl">
+                  Hôm nay là một ngày tuyệt vời để quản lý hệ thống của bạn.
                 </p>
               </div>
 
               {/* Dashboard Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-8">
+              <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-6">
                 {DASHBOARD_FEATURES.map((feature) => {
+                  const cardStyles = {
+                    blue: "from-blue-600 to-blue-700 shadow-blue-100",
+                    green: "from-emerald-500 to-emerald-600 shadow-emerald-100",
+                    indigo: "from-indigo-500 to-indigo-600 shadow-indigo-100",
+                    pink: "from-rose-400 to-rose-500 shadow-rose-100",
+                    gray: "from-slate-600 to-slate-700 shadow-slate-100",
+                    purple: "from-purple-500 to-purple-600 shadow-purple-100",
+                    teal: "from-teal-500 to-teal-600 shadow-teal-100",
+                    orange: "from-orange-400 to-orange-500 shadow-orange-100",
+                    amber: "from-amber-400 to-amber-500 shadow-amber-100",
+                    red: "from-red-500 to-red-600 shadow-red-100",
+                    cyan: "from-cyan-400 to-cyan-500 shadow-cyan-100",
+                    rose: "from-rose-500 to-rose-600 shadow-rose-100",
+                    sky: "from-sky-400 to-sky-500 shadow-sky-100",
+                    emerald: "from-emerald-600 to-emerald-700 shadow-emerald-100",
+                    slate: "from-slate-700 to-slate-800 shadow-slate-100",
+                  };
+
+                  const currentStyle = cardStyles[feature.color] || cardStyles.blue;
+
                   const CardContent = (
-                    <>
-                      <div className={`w-16 h-16 bg-${feature.color || 'blue'}-50 rounded-2xl flex items-center justify-center mb-6 transition-all duration-500 rotate-0 ${feature.inactive ? '' : `group-hover:bg-${feature.color || 'blue'}-600 group-hover:rotate-6`}`}>
-                        <feature.icon className={`w-8 h-8 text-${feature.color || 'blue'}-600 ${feature.inactive ? 'opacity-50' : 'group-hover:text-white'}`} />
+                    <div className="relative group/card h-full flex flex-col">
+                      <div className={`w-10 h-10 md:w-12 md:h-12 bg-gradient-to-tr ${currentStyle} rounded-lg md:rounded-xl flex items-center justify-center mb-3 md:mb-5 shadow-lg transition-all duration-500 group-hover:scale-110 group-hover:rotate-3`}>
+                        <feature.icon className={`w-5 h-5 md:w-6 md:h-6 text-white ${feature.inactive ? 'opacity-50' : ''}`} />
                       </div>
-                      <h3 className={`text-2xl font-bold mb-3 ${feature.inactive ? 'text-gray-400' : 'text-gray-900'}`}>{feature.title}</h3>
-                      <p className={`leading-relaxed mb-6 text-sm flex-grow ${feature.inactive ? 'text-gray-400' : 'text-gray-500'}`}>
+
+                      <h3 className={`text-sm md:text-lg font-black mb-1 md:mb-2 tracking-tight ${feature.inactive ? 'text-slate-400' : 'text-slate-900'}`}>
+                        {feature.title}
+                      </h3>
+
+                      <p className={`text-[10px] md:text-[12px] font-medium leading-relaxed mb-3 md:mb-5 flex-grow ${feature.inactive ? 'text-slate-300' : 'text-slate-400'}`}>
                         {feature.description}
                       </p>
 
-                      {feature.inactive ? (
-                        <div className="inline-flex mt-auto w-max">
-                          <span className="text-xs font-bold text-orange-600 bg-orange-50 border border-orange-100 px-3 py-1.5 rounded-lg">
-                            Chưa hoạt động
+                      <div className="flex items-center justify-between mt-auto pt-4 border-t border-slate-50">
+                        {feature.inactive ? (
+                          <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 bg-slate-100 px-3 py-1.5 rounded-lg">
+                            Dự kiến ra mắt
                           </span>
-                        </div>
-                      ) : (
-                        <div className="inline-flex items-center text-blue-600 font-extrabold text-sm mt-auto">
-                          Truy cập ngay
-                          <ChevronRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
-                        </div>
-                      )}
-                    </>
+                        ) : (
+                          <div className="flex items-center gap-2 group/btn">
+                            <span className="text-xs font-black text-blue-700 uppercase tracking-widest">Khám phá</span>
+                            <ChevronRight className="w-4 h-4 text-blue-700 group-hover/btn:translate-x-1 transition-transform" />
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Hover effect background */}
+                      <div className="absolute -inset-3 bg-blue-50/0 group-hover:bg-blue-50/50 rounded-[2.5rem] -z-10 transition-colors duration-300" />
+                    </div>
                   );
 
                   return feature.inactive ? (
                     <div
                       key={feature.id}
-                      className="group flex flex-col bg-gray-50 p-8 rounded-3xl border border-gray-200 shadow-sm transition-all duration-500 cursor-not-allowed opacity-80"
+                      className="p-4 md:p-7 bg-white rounded-2xl md:rounded-[2rem] border border-slate-50 opacity-60 cursor-not-allowed transition-all"
                     >
                       {CardContent}
                     </div>
@@ -452,19 +494,12 @@ function Home() {
                     <Link
                       key={feature.id}
                       to={feature.path}
-                      className="group flex flex-col bg-white p-8 rounded-3xl border border-gray-100 shadow-sm hover:shadow-2xl hover:-translate-y-2 transition-all duration-500"
+                      className="group p-4 md:p-7 bg-white rounded-2xl md:rounded-[2rem] border border-slate-50 shadow-soft hover:shadow-premium hover:-translate-y-1.5 transition-all duration-500 relative"
                     >
                       {CardContent}
                     </Link>
                   );
                 })}
-
-                {/* Placeholder empty state if no features */}
-                {DASHBOARD_FEATURES.length === 0 && (
-                  <div className="col-span-full text-center py-20 bg-white rounded-3xl border-2 border-dashed border-gray-200 italic text-gray-400">
-                    Chưa có tính năng nào được cấu hình.
-                  </div>
-                )}
               </div>
             </div>
           </div>
