@@ -405,7 +405,7 @@ function Home() {
           </div>
 
           <div className="flex items-center gap-4">
-            <div className="flex flex-col items-end mr-2 hidden xs:flex">
+            <div className="hidden sm:flex flex-col items-end mr-2">
               <span className="text-sm font-black text-slate-800 leading-tight tracking-tight">Lê Minh Công</span>
               <span className="text-[10px] text-blue-500 font-black tracking-widest uppercase">Quản trị viên</span>
             </div>
