@@ -317,7 +317,7 @@ function Home() {
               <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white shadow-lg shadow-blue-100">
                 <Layout className="w-5 h-5" />
               </div>
-              <span className="text-xl font-black text-slate-800 tracking-tight">
+              <span className="text-xl font-semibold text-slate-800 tracking-tight">
                 PlasmaVN
               </span>
             </div>
@@ -352,7 +352,7 @@ function Home() {
                 <item.Icon className="w-5 h-5 stroke-[2.5px]" />
               </span>
               {!sidebarCollapsed && (
-                <span className="font-bold text-sm whitespace-nowrap tracking-tight">{item.label}</span>
+                <span className="font-semibold text-sm whitespace-nowrap tracking-tight">{item.label}</span>
               )}
               {item.active && !sidebarCollapsed && (
                 <div className="absolute right-2 w-1.5 h-1.5 rounded-full bg-blue-600" />
@@ -368,7 +368,7 @@ function Home() {
               }`}
           >
             <Settings className="w-5 h-5" />
-            {!sidebarCollapsed && <span className="font-bold text-sm">Cài đặt</span>}
+            {!sidebarCollapsed && <span className="font-semibold text-sm">Cài đặt</span>}
           </button>
 
           {sidebarCollapsed && (
@@ -406,8 +406,8 @@ function Home() {
 
           <div className="flex items-center gap-4">
             <div className="hidden sm:flex flex-col items-end mr-2">
-              <span className="text-sm font-black text-slate-800 leading-tight tracking-tight">Lê Minh Công</span>
-              <span className="text-[10px] text-blue-500 font-black tracking-widest uppercase">Quản trị viên</span>
+              <span className="text-sm font-semibold text-slate-800 leading-tight tracking-tight">Lê Minh Công</span>
+              <span className="text-[10px] text-blue-500 font-semibold tracking-widest uppercase">Quản trị viên</span>
             </div>
             <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white font-bold shadow-lg shadow-blue-100 cursor-pointer hover:scale-105 transition-transform">
               LM
@@ -420,7 +420,7 @@ function Home() {
           <div className="p-4 md:p-12">
             <div className="max-w-[1400px] mx-auto">
               <div className="mb-12">
-                <h1 className="text-3xl md:text-4xl font-black text-slate-800 mb-3 tracking-tight">
+                <h1 className="text-3xl md:text-4xl font-semibold text-slate-800 mb-3 tracking-tight">
                   Chào buổi sáng 👋
                 </h1>
                 <p className="text-slate-400 font-medium text-lg leading-relaxed max-w-2xl">
@@ -457,7 +457,7 @@ function Home() {
                         <feature.icon className={`w-5 h-5 md:w-6 md:h-6 text-white ${feature.inactive ? 'opacity-50' : ''}`} />
                       </div>
 
-                      <h3 className={`text-sm md:text-lg font-black mb-1 md:mb-2 tracking-tight ${feature.inactive ? 'text-slate-400' : 'text-slate-900'}`}>
+                      <h3 className={`text-sm md:text-lg mb-1 md:mb-2 tracking-tight ${feature.inactive ? 'text-slate-400' : 'text-slate-900'}`}>
                         {feature.title}
                       </h3>
 
@@ -467,12 +467,12 @@ function Home() {
 
                       <div className="flex items-center justify-between mt-auto pt-4 border-t border-slate-50">
                         {feature.inactive ? (
-                          <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 bg-slate-100 px-3 py-1.5 rounded-lg">
+                          <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 bg-slate-100 px-3 py-1.5 rounded-lg">
                             Dự kiến ra mắt
                           </span>
                         ) : (
                           <div className="flex items-center gap-2 group/btn">
-                            <span className="text-xs font-black text-blue-700 uppercase tracking-widest">Khám phá</span>
+                            <span className="text-xs font-semibold text-blue-700 uppercase tracking-widest">Khám phá</span>
                             <ChevronRight className="w-4 h-4 text-blue-700 group-hover/btn:translate-x-1 transition-transform" />
                           </div>
                         )}
