@@ -32,6 +32,7 @@ const Permissions = () => {
             const { data, error } = await supabase
                 .from('app_roles')
                 .select('*')
+                .eq('type', 'group')
                 .order('created_at', { ascending: false });
 
             if (error) throw error;
@@ -46,16 +47,34 @@ const Permissions = () => {
     const fetchUsers = async () => {
         setLoading(true);
         try {
-            // Fetch users that have custom permissions explicitly set
-            const { data, error } = await supabase
-                .from('app_users')
+            // 1. Lấy danh sách Role là type 'user'
+            const { data: userRoles, error: roleError } = await supabase
+                .from('app_roles')
                 .select('*')
-                .neq('permissions', '{}')
+                .eq('type', 'user')
                 .order('created_at', { ascending: false });
 
-            if (error) throw error;
-            // Filter users who actually have keys in their permissions object
-            const customPermUsers = (data || []).filter(u => u.permissions && Object.keys(u.permissions).length > 0);
+            if (roleError) throw roleError;
+
+            // 2. Lấy danh sách users để map tên
+            const { data: users, error: userError } = await supabase
+                .from('app_users')
+                .select('name, username');
+
+            if (userError) throw userError;
+
+            // 3. Map thông tin user vào Role-User
+            const customPermUsers = (userRoles || []).map(role => {
+                const username = role.name.replace('@user:', '');
+                const user = users.find(u => u.username === username);
+                return {
+                    id: role.id,
+                    name: user ? user.name : username,
+                    username: username,
+                    permissions: role.permissions
+                };
+            });
+
             setUsersList(customPermUsers);
         } catch (error) {
             console.error('Error fetching users permissions:', error);

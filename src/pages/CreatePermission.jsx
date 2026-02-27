@@ -98,10 +98,11 @@ const CreatePermission = () => {
                 }
 
                 // Check trùng tên quyền
-                const { data: existingRole, error: checkError } = await supabase
+                const { data: existingRole } = await supabase
                     .from('app_roles')
                     .select('id')
                     .eq('name', roleName.trim())
+                    .eq('type', 'group')
                     .single();
 
                 if (existingRole) {
@@ -112,7 +113,8 @@ const CreatePermission = () => {
 
                 const payload = {
                     name: roleName.trim(),
-                    permissions: permissions // Supabase tự parse sang JSONB
+                    type: 'group',
+                    permissions: permissions
                 };
 
                 const { error } = await supabase
@@ -130,14 +132,32 @@ const CreatePermission = () => {
                     return;
                 }
 
-                const { error } = await supabase
+                // Lấy thông tin username của user được chọn
+                const user = usersList.find(u => u.id === selectedUserId);
+                if (!user) throw new Error('Không tìm thấy thông tin người dùng.');
+
+                const userRoleName = `@user:${user.username}`;
+
+                // Upsert vào app_roles với type='user'
+                const { error: roleError } = await supabase
+                    .from('app_roles')
+                    .upsert({
+                        name: userRoleName,
+                        type: 'user',
+                        permissions: permissions
+                    }, { onConflict: 'name' });
+
+                if (roleError) throw roleError;
+
+                // Cập nhật role của user trong bảng app_users hướng về role mới này
+                const { error: userUpdateError } = await supabase
                     .from('app_users')
-                    .update({ permissions })
+                    .update({ role: userRoleName })
                     .eq('id', selectedUserId);
 
-                if (error) throw error;
+                if (userUpdateError) throw userUpdateError;
 
-                alert('🎉 Đã cấp quyền riêng cho Người dùng thành công!');
+                alert(`🎉 Đã cấp quyền riêng cho Người dùng "${user.name}" thành công!`);
             }
 
             // Xoá form ma trận sau khi thành công

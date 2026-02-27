@@ -9,6 +9,7 @@ export const MODULE_PERMISSIONS = [
     { id: 'suppliers', label: 'Danh sách nhà cung cấp' },
     { id: 'shippers', label: 'Đơn vị vận chuyển' },
     { id: 'materials', label: 'Danh sách nguồn vật tư' },
+    { id: 'promotions', label: 'Danh sách khuyến mãi' },
     { id: 'users', label: 'Quản lý người dùng' },
     { id: 'permissions', label: 'Phân quyền chi tiết' }
 ];
