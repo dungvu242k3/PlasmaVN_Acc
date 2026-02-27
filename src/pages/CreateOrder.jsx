@@ -30,7 +30,7 @@ const CreateOrder = () => {
         orderType: 'THUONG',
         note: '',
         productType: 'BINH',
-        quantity: 1,
+        quantity: 0,
         department: '',
         promotion: ''
     };
@@ -50,26 +50,15 @@ const CreateOrder = () => {
     };
 
     const handleQuantityChange = (e) => {
-        const rawValue = e.target.value.replace(/\./g, '');
-        // Allow empty string to let user delete the number
-        if (rawValue === '') {
-            setFormData({ ...formData, quantity: '' });
+        const value = e.target.value.replace(/\D/g, ''); // Remove non-numeric characters
+
+        if (value === '') {
+            setFormData({ ...formData, quantity: 0 });
             return;
         }
 
-        // If it was exactly 1 and a new valid number digit is entered, replace the 1 with the new digit.
-        // E.g., user types '5' when the input shows '1', new rawValue is '15'. We want it to be '5'.
-        if (formData.quantity === 1 && rawValue.length === 2 && rawValue.startsWith('1')) {
-            const digit = rawValue[1];
-            if (/^\d$/.test(digit)) {
-                setFormData({ ...formData, quantity: parseInt(digit) });
-                return;
-            }
-        }
-
-        if (/^\d*$/.test(rawValue)) {
-            setFormData({ ...formData, quantity: parseInt(rawValue) });
-        }
+        const parsedValue = parseInt(value, 10);
+        setFormData({ ...formData, quantity: parsedValue });
     };
 
     const handleCustomerChange = (e) => {
@@ -88,8 +77,8 @@ const CreateOrder = () => {
     };
 
     const handleCreateOrder = async () => {
-        if (!formData.customerId || !formData.recipientName || !formData.recipientAddress || !formData.recipientPhone || !formData.quantity) {
-            alert('Vui lòng điền đầy đủ thông tin bắt buộc (*)');
+        if (!formData.customerId || !formData.recipientName || !formData.recipientAddress || !formData.recipientPhone || formData.quantity <= 0) {
+            alert('Vui lòng điền đầy đủ thông tin bắt buộc và số lượng phải lớn hơn 0 (*)');
             return;
         }
 

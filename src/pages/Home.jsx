@@ -327,14 +327,12 @@ function Home() {
               <Layout className="w-6 h-6" />
             </div>
           )}
-          {!sidebarCollapsed && (
-            <button
-              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-              className="hidden md:flex p-2 rounded-xl hover:bg-slate-50 text-slate-400 hover:text-slate-600 transition-all"
-            >
-              <ChevronLeft className="w-5 h-5" />
-            </button>
-          )}
+          <button
+            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+            className="p-2 rounded-xl hover:bg-slate-50 text-slate-400 hover:text-slate-600 transition-all flex items-center justify-center"
+          >
+            {sidebarCollapsed ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
+          </button>
         </div>
 
         <nav className="flex-1 overflow-y-auto py-6 px-4 space-y-2 custom-scrollbar">
@@ -371,29 +369,21 @@ function Home() {
             {!sidebarCollapsed && <span className="font-semibold text-sm">Cài đặt</span>}
           </button>
 
-          {sidebarCollapsed && (
-            <button
-              onClick={() => setSidebarCollapsed(false)}
-              className="w-full flex justify-center p-3 text-slate-300 hover:text-blue-600 mt-2"
-            >
-              <ChevronRight className="w-5 h-5" />
-            </button>
-          )}
+
         </div>
       </aside>
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col overflow-hidden relative">
         {/* Top Navbar */}
-        <header className="h-20 bg-white/80 backdrop-blur-md border-b border-slate-100 flex items-center justify-between px-8 z-30 shadow-sm gap-4">
-          <div className="flex items-center gap-6 flex-1">
+        <header className="h-20 bg-white/80 backdrop-blur-md border-b border-slate-100 flex items-center justify-between px-4 md:px-8 z-30 shadow-sm gap-4">
+          <div className="flex items-center gap-4 md:gap-6 flex-1">
             <button
               onClick={() => setMobileMenuOpen(true)}
-              className="md:hidden p-2 rounded-xl hover:bg-slate-50 text-slate-600 transition-colors"
+              className="md:hidden p-2.5 rounded-2xl bg-slate-50 text-slate-500 hover:bg-blue-50 hover:text-blue-600 transition-all border border-slate-100/50 shadow-sm"
             >
               <Menu className="w-6 h-6" />
             </button>
-
             <div className="relative max-w-sm w-full hidden sm:block">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <input
