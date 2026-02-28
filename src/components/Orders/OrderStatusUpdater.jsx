@@ -14,8 +14,9 @@ export default function OrderStatusUpdater({ order, userRole, onClose, onUpdateS
     // Get transitions available for current status
     const transitions = ORDER_STATE_TRANSITIONS[order.status] || [];
 
-    // Filter by role
-    const availableActions = transitions.filter(t => t.allowedRoles.includes(userRole));
+    // Filter by role (normalize to lowercase for consistent matching)
+    const normalizedRole = userRole?.toLowerCase() || '';
+    const availableActions = transitions.filter(t => t.allowedRoles.includes(normalizedRole));
 
     const handleUpdateStatus = async (transition) => {
         try {
