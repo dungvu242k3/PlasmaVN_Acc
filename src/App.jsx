@@ -9,6 +9,7 @@ import ScrollToTop from './components/ScrollToTop';
 
 import CreateCustomer from './pages/CreateCustomer';
 import CreateCylinder from './pages/CreateCylinder';
+import CreateGoodsReceipt from './pages/CreateGoodsReceipt';
 import CreateMachine from './pages/CreateMachine';
 import CreateMaterial from './pages/CreateMaterial';
 import CreateOrder from './pages/CreateOrder';
@@ -20,6 +21,7 @@ import CreateUser from './pages/CreateUser';
 import CreateWarehouse from './pages/CreateWarehouse';
 import Customers from './pages/Customers';
 import Cylinders from './pages/Cylinders';
+import GoodsReceipts from './pages/GoodsReceipts';
 import Home from './pages/Home';
 import Machines from './pages/Machines';
 import Materials from './pages/Materials';
@@ -112,6 +114,16 @@ function App() {
               <Route path="/tao-dvvc" element={
                 <ProtectedRoute>
                   <CreateShipper />
+                </ProtectedRoute>
+              } />
+              <Route path="/nhap-hang" element={
+                <ProtectedRoute>
+                  <GoodsReceipts />
+                </ProtectedRoute>
+              } />
+              <Route path="/tao-phieu-nhap" element={
+                <ProtectedRoute>
+                  <CreateGoodsReceipt />
                 </ProtectedRoute>
               } />
               <Route path="/nha-cung-cap" element={

@@ -9,6 +9,7 @@ import {
   Menu,
   MonitorIcon,
   Package,
+  PackagePlus,
   Plus,
   Search,
   Settings,
@@ -72,6 +73,12 @@ const SIDEBAR_ITEMS = [
     label: "Danh sách nhà cung cấp",
     icon: Building2,
     path: "/nha-cung-cap",
+  },
+  {
+    id: "goods-receipts",
+    label: "Nhập hàng từ NCC",
+    icon: PackagePlus,
+    path: "/nhap-hang",
   },
   {
     id: "shippers",
@@ -217,6 +224,22 @@ const DASHBOARD_FEATURES = [
     icon: Plus,
     color: "cyan",
     path: "/tao-nha-cung-cap",
+  },
+  {
+    id: "goods-receipts",
+    title: "Nhập hàng từ NCC",
+    description: "Quản lý phiếu nhập hàng hóa từ nhà cung cấp vào kho công ty.",
+    icon: PackagePlus,
+    color: "emerald",
+    path: "/nhap-hang",
+  },
+  {
+    id: "create-goods-receipt",
+    title: "Tạo phiếu nhập kho",
+    description: "Lập phiếu nhập mới: chọn NCC, kho nhận, khai báo hàng hóa chi tiết.",
+    icon: Plus,
+    color: "green",
+    path: "/tao-phieu-nhap",
   },
   {
     id: "materials",
