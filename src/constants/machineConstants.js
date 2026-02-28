@@ -1,5 +1,5 @@
 export const MACHINE_STATUSES = [
-    { id: 'chưa xác định', label: 'Chưa xác định (thuộc kho nào)' },
+    { id: 'chưa xác định', label: 'Chưa xác định' },
     { id: 'sẵn sàng', label: 'Sẵn sàng' },
     { id: 'thuộc khách hàng', label: 'Thuộc khách hàng' },
     { id: 'kiểm tra', label: 'Kiểm tra' },

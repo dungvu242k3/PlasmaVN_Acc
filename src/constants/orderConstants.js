@@ -53,6 +53,7 @@ export const TABLE_COLUMNS = [
     { key: 'type', label: 'Loại đơn' },
     { key: 'product', label: 'Hàng hóa' },
     { key: 'quantity', label: 'Số lượng' },
+    { key: 'department', label: 'Mã máy' },
     { key: 'status', label: 'Trạng thái' },
     { key: 'date', label: 'Ngày đặt' },
 ];

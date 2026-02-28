@@ -302,6 +302,7 @@ const Orders = () => {
                                         <td className="px-8 py-6">
                                             <span className="text-sm font-black text-slate-900 bg-slate-100/50 px-3 py-1 rounded-lg">{formatNumber(order.quantity)}</span>
                                         </td>
+                                        <td className="px-8 py-6 text-sm font-bold text-slate-500">{order.department || '—'}</td>
                                         <td className="px-8 py-6">
                                             <span className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-[0.1em] border shadow-sm transition-all duration-300 ${status.color === 'blue' ? 'bg-blue-600 text-white border-blue-700 glow-blue' :
                                                 status.color === 'yellow' ? 'bg-amber-500 text-white border-amber-600 glow-amber' :

@@ -37,6 +37,9 @@ const OrderItem = ({ order }) => {
                         <p className="text-sm"><span className="font-bold text-gray-500">Đối tượng:</span> {getLabel(CUSTOMER_CATEGORIES, order.customer_category)}</p>
                         <p className="text-base font-bold">{order.customer_name}</p>
                         <p className="text-sm"><span className="font-bold text-gray-500">Kho xuất:</span> {getLabel(WAREHOUSES, order.warehouse)}</p>
+                        {order.department && (
+                            <p className="text-sm"><span className="font-bold text-gray-500">Mã máy:</span> {order.department}</p>
+                        )}
                     </div>
                 </div>
 

@@ -47,7 +47,7 @@ export default function Header() {
                                     <div className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center text-slate-600 font-black text-xs">
                                         AD
                                     </div>
-                                    <div className="flex flex-col items-start leading-tight hidden xs:flex">
+                                    <div className="hidden xs:flex flex-col items-start leading-tight">
                                         <span className="text-sm font-black text-slate-800 tracking-tight">{username}</span>
                                         <span className="text-[10px] text-slate-400 font-bold tracking-wider uppercase">Quản trị viên</span>
                                     </div>

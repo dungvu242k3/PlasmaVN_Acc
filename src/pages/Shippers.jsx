@@ -1,6 +1,7 @@
 import {
     ActivitySquare,
     CheckCircle2,
+    ChevronDown,
     Package,
     Search,
     Truck,
@@ -8,6 +9,7 @@ import {
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { SHIPPING_TYPES } from '../constants/shipperConstants';
 import { supabase } from '../supabase/config';
 
 const Shippers = () => {
@@ -154,6 +156,7 @@ const Shippers = () => {
                                 <tr>
                                     <th className="px-8 py-6 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] text-center w-24">STT</th>
                                     <th className="px-8 py-6 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em]">Đơn vị vận chuyển</th>
+                                    <th className="px-8 py-6 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em]">Loại hình</th>
                                     <th className="px-8 py-6 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em]">Người quản lý</th>
                                     <th className="px-8 py-6 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em]">Số điện thoại</th>
                                     <th className="px-8 py-6 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em]">Địa chỉ</th>
@@ -176,6 +179,11 @@ const Shippers = () => {
                                                     <div className="text-[10px] text-slate-400 font-black uppercase tracking-widest mt-1.5 opacity-50">ID: {shipper.id.substring(0, 8)}</div>
                                                 </div>
                                             </div>
+                                        </td>
+                                        <td className="px-8 py-7 whitespace-nowrap">
+                                            <span className="text-sm font-bold text-slate-600 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100">
+                                                {SHIPPING_TYPES.find(t => t.id === shipper.shipping_type)?.label || shipper.shipping_type || '—'}
+                                            </span>
                                         </td>
                                         <td className="px-8 py-7 whitespace-nowrap font-bold text-slate-900">
                                             {shipper.manager_name}

@@ -12,6 +12,7 @@ import {
     MACHINE_TYPES,
     VALVE_TYPES
 } from '../constants/machineConstants';
+import { WAREHOUSES } from '../constants/orderConstants';
 import { supabase } from '../supabase/config';
 
 const CreateMachine = () => {
@@ -22,6 +23,7 @@ const CreateMachine = () => {
         serial_number: '',
         machine_account: '',
         status: 'chưa xác định',
+        warehouse: '',
         bluetooth_mac: '',
         machine_type: 'BV',
         version: '',
@@ -123,6 +125,17 @@ const CreateMachine = () => {
                                     className="w-full px-5 py-4 bg-white border border-gray-200 rounded-2xl outline-none focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 font-bold text-base shadow-sm cursor-pointer"
                                 >
                                     {MACHINE_STATUSES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
+                                </select>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Kho quản lý</label>
+                                <select
+                                    value={formData.warehouse}
+                                    onChange={(e) => setFormData({ ...formData, warehouse: e.target.value })}
+                                    className="w-full px-5 py-4 bg-white border border-gray-200 rounded-2xl outline-none focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 font-bold text-base shadow-sm cursor-pointer"
+                                >
+                                    <option value="">-- Chưa xác định --</option>
+                                    {WAREHOUSES.map(w => <option key={w.id} value={w.id}>{w.label}</option>)}
                                 </select>
                             </div>
                         </div>

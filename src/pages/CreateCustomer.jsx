@@ -20,7 +20,9 @@ const CreateCustomer = () => {
         phone: '',
         address: '',
         legal_rep: '',
+        contact_info: '',
         warehouse_id: 'HN',
+        business_group: '',
         care_by: ''
     };
 
@@ -142,7 +144,7 @@ const CreateCustomer = () => {
 
                     {/* Section 2: Liên hệ chi tiết */}
                     <div className="p-6 md:p-8 bg-pink-50/40 rounded-[1.5rem] md:rounded-[2.5rem] border border-pink-100 space-y-6 md:space-y-8">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
                             <div className="space-y-3">
                                 <label className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">4. Tên người đại diện *</label>
                                 <input
@@ -153,7 +155,16 @@ const CreateCustomer = () => {
                                 />
                             </div>
                             <div className="space-y-3">
-                                <label className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">5. Số điện thoại liên lạc *</label>
+                                <label className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">5. Thông tin người liên hệ</label>
+                                <input
+                                    value={formData.contact_info}
+                                    onChange={(e) => setFormData({ ...formData, contact_info: e.target.value })}
+                                    placeholder="Tên, chức vụ người liên hệ phụ..."
+                                    className="w-full px-5 py-4 bg-white border border-gray-200 rounded-2xl outline-none focus:ring-4 focus:ring-pink-100 focus:border-pink-500 font-bold text-base shadow-sm transition-all text-gray-900"
+                                />
+                            </div>
+                            <div className="space-y-3">
+                                <label className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">6. Số điện thoại liên lạc *</label>
                                 <input
                                     value={formData.phone}
                                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
@@ -164,7 +175,7 @@ const CreateCustomer = () => {
                         </div>
 
                         <div className="space-y-3">
-                            <label className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">6. Địa chỉ chi tiết (Nhận hàng) *</label>
+                            <label className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">7. Địa chỉ chi tiết (Nhận hàng) *</label>
                             <input
                                 value={formData.address}
                                 onChange={(e) => setFormData({ ...formData, address: e.target.value })}
@@ -175,9 +186,9 @@ const CreateCustomer = () => {
                     </div>
 
                     {/* Section 3: Phân bổ */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-10">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-10">
                         <div className="space-y-3">
-                            <label className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">7. Kho xuất hàng mặc định *</label>
+                            <label className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">8. Kho xuất hàng mặc định *</label>
                             <select
                                 value={formData.warehouse_id}
                                 onChange={(e) => setFormData({ ...formData, warehouse_id: e.target.value })}
@@ -187,7 +198,16 @@ const CreateCustomer = () => {
                             </select>
                         </div>
                         <div className="space-y-3">
-                            <label className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">8. NVKD Chăm sóc</label>
+                            <label className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">9. Nhóm Kinh Doanh</label>
+                            <input
+                                value={formData.business_group}
+                                onChange={(e) => setFormData({ ...formData, business_group: e.target.value })}
+                                placeholder="Ví dụ: Nhóm KD Miền Bắc..."
+                                className="w-full px-5 py-4 bg-gray-50 border border-gray-200 rounded-2xl outline-none focus:ring-4 focus:ring-pink-100 focus:border-pink-500 font-bold text-base transition-all shadow-sm text-gray-900"
+                            />
+                        </div>
+                        <div className="space-y-3">
+                            <label className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">10. NVKD Chăm sóc</label>
                             <input
                                 value={formData.care_by}
                                 onChange={(e) => setFormData({ ...formData, care_by: e.target.value })}

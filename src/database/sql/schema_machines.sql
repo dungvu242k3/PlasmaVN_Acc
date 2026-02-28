@@ -13,6 +13,7 @@ CREATE TABLE machines (
     serial_number VARCHAR(100) UNIQUE NOT NULL, -- 1. Serial (Mã máy)
     machine_account VARCHAR(100), -- 2. Tài khoản máy (Auto-fill from Serial)
     status VARCHAR(100) NOT NULL DEFAULT 'chưa xác định', -- 3. Trạng thái
+    warehouse VARCHAR(50), -- Kho quản lý máy (HN, TP.HCM, TH, DN)
     bluetooth_mac VARCHAR(100), -- 4. BluetoothMAC
     machine_type VARCHAR(50) NOT NULL, -- 5. Loại máy (BV, TM, FM, IOT)
     version VARCHAR(100), -- 6. Phiên bản

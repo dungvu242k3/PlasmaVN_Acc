@@ -4,7 +4,7 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { SHIPPER_STATUSES } from '../constants/shipperConstants';
+import { SHIPPER_STATUSES, SHIPPING_TYPES } from '../constants/shipperConstants';
 import { supabase } from '../supabase/config';
 
 const CreateShipper = () => {
@@ -13,6 +13,7 @@ const CreateShipper = () => {
 
     const initialFormState = {
         name: '',
+        shipping_type: 'NHAN_VIEN',
         manager_name: '',
         phone: '',
         address: '',
@@ -70,7 +71,7 @@ const CreateShipper = () => {
                             <span className="w-8 h-8 bg-blue-50 text-blue-600 rounded-lg flex items-center justify-center font-bold">1</span>
                             <h3 className="text-base md:text-lg font-bold text-gray-800 uppercase tracking-tight">Hồ sơ nhà vận chuyển</h3>
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
                             <div className="space-y-2">
                                 <label className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Tên ĐVVC / Công ty *</label>
                                 <input
@@ -79,6 +80,16 @@ const CreateShipper = () => {
                                     placeholder="Ví dụ: Công ty TNHH Vận tải XY"
                                     className="w-full px-5 py-4 bg-white border border-gray-200 rounded-2xl outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 font-bold shadow-sm transition-all"
                                 />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Loại hình vận chuyển *</label>
+                                <select
+                                    value={formData.shipping_type}
+                                    onChange={(e) => setFormData({ ...formData, shipping_type: e.target.value })}
+                                    className="w-full px-5 py-4 bg-white border border-gray-200 rounded-2xl outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 font-bold text-base shadow-sm cursor-pointer text-gray-900 transition-all"
+                                >
+                                    {SHIPPING_TYPES.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
+                                </select>
                             </div>
                             <div className="space-y-2">
                                 <label className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Trạng thái *</label>
