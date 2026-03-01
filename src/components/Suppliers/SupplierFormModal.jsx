@@ -121,7 +121,7 @@ export default function SupplierFormModal({ supplier, onClose, onSuccess }) {
                                 value={formData.name}
                                 onChange={handleChange}
                                 placeholder="VD: Công ty TNHH Oxy Việt Nam, Nhà máy cơ khí..."
-                                className="w-full px-5 py-4 bg-white border border-slate-200 rounded-2xl outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 font-bold text-lg shadow-sm transition-all text-slate-900"
+                                className={`w-full px-5 py-4 bg-white border border-slate-200 rounded-2xl outline-none font-bold text-lg shadow-sm transition-all text-slate-900 focus:ring-4 focus:ring-blue-100 focus:border-blue-500`}
                                 required
                             />
                         </div>
@@ -138,7 +138,7 @@ export default function SupplierFormModal({ supplier, onClose, onSuccess }) {
                                 value={formData.phone}
                                 onChange={handleChange}
                                 placeholder="024xxxxxxxx..."
-                                className="w-full px-5 py-4 bg-white border border-slate-200 rounded-2xl outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 font-bold text-lg shadow-sm transition-all text-slate-900"
+                                className={`w-full px-5 py-4 bg-white border border-slate-200 rounded-2xl outline-none font-bold text-lg shadow-sm transition-all text-slate-900 focus:ring-4 focus:ring-blue-100 focus:border-blue-500`}
                                 required
                             />
                         </div>
@@ -155,7 +155,7 @@ export default function SupplierFormModal({ supplier, onClose, onSuccess }) {
                                 onChange={handleChange}
                                 rows="3"
                                 placeholder="Số nhà, đường, quận/huyện, tỉnh/thành..."
-                                className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 font-medium text-base shadow-sm transition-all text-slate-900 resize-none"
+                                className={`w-full px-5 py-4 border border-slate-200 rounded-2xl outline-none font-medium text-base shadow-sm transition-all text-slate-900 resize-none bg-slate-50 focus:ring-4 focus:ring-blue-100 focus:border-blue-500`}
                             />
                         </div>
                     </form>

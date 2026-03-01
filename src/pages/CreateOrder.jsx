@@ -35,6 +35,7 @@ const CreateOrder = () => {
         note: '',
         productType: 'BINH',
         quantity: 0,
+        unitPrice: 0,
         department: '',
         promotion: ''
     };
@@ -52,6 +53,7 @@ const CreateOrder = () => {
         note: editOrder.note || '',
         productType: editOrder.product_type,
         quantity: editOrder.quantity,
+        unitPrice: editOrder.unit_price || 0,
         department: editOrder.department || '',
         promotion: editOrder.promotion_code || ''
     } : defaultState;
@@ -102,6 +104,17 @@ const CreateOrder = () => {
         setFormData({ ...formData, quantity: parsedValue });
     };
 
+    const handleUnitPriceChange = (e) => {
+        const value = e.target.value.replace(/\D/g, '');
+        if (value === '') {
+            setFormData({ ...formData, unitPrice: 0 });
+            return;
+        }
+        setFormData({ ...formData, unitPrice: parseInt(value, 10) });
+    };
+
+    const calculatedTotalAmount = (formData.quantity || 0) * (formData.unitPrice || 0);
+
     const handleCustomerChange = (e) => {
         const cId = e.target.value;
         const customer = customersList.find(c => c.id === cId);
@@ -145,6 +158,8 @@ const CreateOrder = () => {
                 note: formData.note,
                 product_type: formData.productType,
                 quantity: formData.quantity,
+                unit_price: formData.unitPrice,
+                total_amount: calculatedTotalAmount,
                 department: formData.department,
                 promotion_code: formData.promotion,
                 status: editOrder ? editOrder.status : initialStatus,
@@ -317,6 +332,28 @@ const CreateOrder = () => {
                                     />
                                 </div>
                             </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 md:gap-8">
+                                <div className="space-y-3">
+                                    <label className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">11b. Đơn giá (VNĐ) *</label>
+                                    <input
+                                        type="text"
+                                        value={formatNumber(formData.unitPrice)}
+                                        onChange={handleUnitPriceChange}
+                                        className="w-full px-5 py-4 bg-gray-50 border border-gray-200 rounded-2xl outline-none focus:ring-4 focus:ring-emerald-100 focus:border-emerald-500 font-black text-lg text-emerald-700 transition-all shadow-sm"
+                                    />
+                                </div>
+                                <div className="space-y-3">
+                                    <label className="text-[11px] font-black text-emerald-600 uppercase tracking-[0.2em] ml-1">11c. Thành tiền (VNĐ)</label>
+                                    <input
+                                        type="text"
+                                        disabled
+                                        value={formatNumber(calculatedTotalAmount)}
+                                        className="w-full px-5 py-4 bg-emerald-50 border border-emerald-100 rounded-2xl font-black text-lg text-emerald-800 transition-all shadow-inner opacity-80 cursor-not-allowed"
+                                    />
+                                </div>
+                            </div>
+
                             <div className="space-y-3">
                                 <label className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">12. Khoa sử dụng máy / Mã máy</label>
                                 <input

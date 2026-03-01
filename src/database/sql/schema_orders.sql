@@ -21,6 +21,8 @@ CREATE TABLE orders (
     note TEXT, -- 9. Ghi chú
     product_type VARCHAR(50) NOT NULL, -- 10. Loại hàng hóa (Máy + Bình)
     quantity INTEGER NOT NULL DEFAULT 1, -- 11. Số lượng
+    unit_price NUMERIC(15, 2) NOT NULL DEFAULT 0, -- 11.1 Đơn giá
+    total_amount NUMERIC(15, 2) NOT NULL DEFAULT 0, -- 11.2 Thành tiền (Thường bằng quantity * unit_price)
     department VARCHAR(255), -- 12. Khoa sử dụng máy
     promotion_code VARCHAR(50), -- 13. Khuyến mãi
 

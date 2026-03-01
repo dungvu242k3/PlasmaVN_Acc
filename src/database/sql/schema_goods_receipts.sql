@@ -18,6 +18,7 @@ CREATE TABLE goods_receipts (
     received_by VARCHAR(255),                         -- Người nhận hàng
     approved_by VARCHAR(255),                         -- Người duyệt
     total_items INTEGER NOT NULL DEFAULT 0,           -- Tổng số dòng hàng
+    total_amount NUMERIC(15, 2) NOT NULL DEFAULT 0,   -- Tổng giá trị đơn hàng nhập
 
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
@@ -32,6 +33,8 @@ CREATE TABLE goods_receipt_items (
     serial_number VARCHAR(100),            -- Mã serial (nếu có)
     quantity INTEGER NOT NULL DEFAULT 1,   -- Số lượng
     unit VARCHAR(50) NOT NULL DEFAULT 'cái', -- Đơn vị
+    unit_price NUMERIC(15, 2) NOT NULL DEFAULT 0, -- Đơn giá nhập
+    total_price NUMERIC(15, 2) NOT NULL DEFAULT 0, -- Thành tiền (Số lượng * Đơn giá)
     note TEXT,                             -- Ghi chú dòng
 
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP

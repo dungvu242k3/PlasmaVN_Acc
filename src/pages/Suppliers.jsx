@@ -1,12 +1,14 @@
 import {
     Building2,
     Edit,
+    Eye,
     Search,
     Trash2
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ColumnToggle from '../components/ColumnToggle';
+import SupplierDetailsModal from '../components/Suppliers/SupplierDetailsModal';
 import SupplierFormModal from '../components/Suppliers/SupplierFormModal';
 import useColumnVisibility from '../hooks/useColumnVisibility';
 import { supabase } from '../supabase/config';
@@ -23,6 +25,7 @@ const Suppliers = () => {
     const [suppliers, setSuppliers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [isFormModalOpen, setIsFormModalOpen] = useState(false);
+    const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
     const [selectedSupplier, setSelectedSupplier] = useState(null);
     const { visibleColumns, toggleColumn, isColumnVisible, resetColumns, visibleCount, totalCount } = useColumnVisibility('columns_suppliers', TABLE_COLUMNS);
     const visibleTableColumns = TABLE_COLUMNS.filter(col => isColumnVisible(col.key));
@@ -77,6 +80,11 @@ const Suppliers = () => {
     const handleEditSupplier = (supplier) => {
         setSelectedSupplier(supplier);
         setIsFormModalOpen(true);
+    };
+
+    const handleViewSupplier = (supplier) => {
+        setSelectedSupplier(supplier);
+        setIsDetailsModalOpen(true);
     };
 
     const handleCreateNew = () => {
@@ -181,15 +189,22 @@ const Suppliers = () => {
                                         <td className="px-8 py-7 text-center">
                                             <div className="flex items-center justify-center gap-1 transition-opacity">
                                                 <button
+                                                    onClick={() => handleViewSupplier(supplier)}
+                                                    className="text-slate-400 hover:text-blue-500 transition-all outline-none"
+                                                    title="Xem chi tiết"
+                                                >
+                                                    <Eye className="w-5 h-5" />
+                                                </button>
+                                                <button
                                                     onClick={() => handleEditSupplier(supplier)}
-                                                    className="text-slate-400 hover:text-slate-900 transition-all outline-none"
+                                                    className="text-slate-400 hover:text-indigo-500 transition-all outline-none"
                                                     title="Chỉnh sửa"
                                                 >
                                                     <Edit className="w-5 h-5" />
                                                 </button>
                                                 <button
                                                     onClick={() => handleDeleteSupplier(supplier.id, supplier.name)}
-                                                    className="text-slate-400 hover:text-slate-900 transition-all outline-none"
+                                                    className="text-slate-400 hover:text-rose-500 transition-all outline-none"
                                                     title="Xóa"
                                                 >
                                                     <Trash2 className="w-5 h-5" />
@@ -213,12 +228,20 @@ const Suppliers = () => {
                 </div>
             )}
 
-            {/* Modal */}
+            {/* Form Modal (Create/Edit) */}
             {isFormModalOpen && (
                 <SupplierFormModal
                     supplier={selectedSupplier}
                     onClose={() => setIsFormModalOpen(false)}
                     onSuccess={handleFormSubmitSuccess}
+                />
+            )}
+
+            {/* Details Dashboard Modal (View) */}
+            {isDetailsModalOpen && selectedSupplier && (
+                <SupplierDetailsModal
+                    supplier={selectedSupplier}
+                    onClose={() => setIsDetailsModalOpen(false)}
                 />
             )}
         </div>

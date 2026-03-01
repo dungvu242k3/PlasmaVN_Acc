@@ -20,6 +20,7 @@ const TABLE_COLUMNS = [
     { key: 'warehouse', label: 'Kho nhận' },
     { key: 'date', label: 'Ngày nhập' },
     { key: 'items', label: 'Số MH' },
+    { key: 'amount', label: 'Tổng giá trị' },
     { key: 'receiver', label: 'Người nhận' },
     { key: 'status', label: 'Trạng thái' },
 ];
@@ -320,6 +321,9 @@ const GoodsReceipts = () => {
                                             {receipt.receipt_date ? new Date(receipt.receipt_date).toLocaleDateString('vi-VN') : '—'}
                                         </td>}
                                         {isColumnVisible('items') && <td className="px-6 py-5 text-center text-sm font-black text-slate-900">{receipt.total_items}</td>}
+                                        {isColumnVisible('amount') && <td className="px-6 py-5 text-right font-black text-rose-600">
+                                            {new Intl.NumberFormat('vi-VN').format(receipt.total_amount || 0)} ₫
+                                        </td>}
                                         {isColumnVisible('receiver') && <td className="px-6 py-5 text-sm font-bold text-gray-600">{receipt.received_by || '—'}</td>}
                                         {isColumnVisible('status') && <td className="px-6 py-5 text-center">{getStatusBadge(receipt.status)}</td>}
                                         <td className="px-6 py-5 text-center sticky right-0 bg-white/50 backdrop-blur-md group-hover:bg-emerald-50/10 transition-colors">

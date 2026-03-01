@@ -1,5 +1,6 @@
 import {
     Edit,
+    Eye,
     Filter,
     Search,
     Trash2,
@@ -8,6 +9,7 @@ import {
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ColumnToggle from '../components/ColumnToggle';
+import CustomerDetailsModal from '../components/Customers/CustomerDetailsModal';
 import CustomerFormModal from '../components/Customers/CustomerFormModal';
 import { WAREHOUSES } from '../constants/orderConstants';
 import useColumnVisibility from '../hooks/useColumnVisibility';
@@ -22,6 +24,7 @@ const Customers = () => {
     const [customers, setCustomers] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isFormModalOpen, setIsFormModalOpen] = useState(false);
+    const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
     const [selectedCustomer, setSelectedCustomer] = useState(null);
 
     const TABLE_COLUMNS_DEF = [
@@ -92,6 +95,11 @@ const Customers = () => {
     const handleEditCustomer = (customer) => {
         setSelectedCustomer(customer);
         setIsFormModalOpen(true);
+    };
+
+    const handleViewCustomer = (customer) => {
+        setSelectedCustomer(customer);
+        setIsDetailsModalOpen(true);
     };
 
     const handleDeleteCustomer = async (id, name) => {
@@ -265,6 +273,13 @@ const Customers = () => {
                                     <td className="px-8 py-7 text-center whitespace-nowrap sticky right-0 z-10 bg-white/80 backdrop-blur-md border-l border-slate-50 group-hover:bg-blue-50/40 transition-all">
                                         <div className="flex items-center justify-center gap-5">
                                             <button
+                                                onClick={() => handleViewCustomer(c)}
+                                                className="text-slate-400 hover:text-blue-600 transition-all outline-none"
+                                                title="Xem chi tiết & Công nợ"
+                                            >
+                                                <Eye className="w-5 h-5" />
+                                            </button>
+                                            <button
                                                 onClick={() => handleEditCustomer(c)}
                                                 className="text-slate-400 hover:text-slate-900 transition-all outline-none"
                                                 title="Chỉnh sửa"
@@ -294,7 +309,7 @@ const Customers = () => {
                 </div>
             </div>
 
-            {/* Modal */}
+            {/* Modals */}
             {isFormModalOpen && (
                 <CustomerFormModal
                     customer={selectedCustomer}
@@ -302,6 +317,13 @@ const Customers = () => {
                     onSuccess={handleFormSubmitSuccess}
                     categories={CUSTOMER_CATEGORIES}
                     warehouses={WAREHOUSES}
+                />
+            )}
+
+            {isDetailsModalOpen && selectedCustomer && (
+                <CustomerDetailsModal
+                    customer={selectedCustomer}
+                    onClose={() => setIsDetailsModalOpen(false)}
                 />
             )}
         </div>

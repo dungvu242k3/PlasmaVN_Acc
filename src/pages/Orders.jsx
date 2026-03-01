@@ -320,14 +320,22 @@ const Orders = () => {
                                         {isColumnVisible('department') && <td className="px-8 py-6 text-sm font-bold text-slate-500">{order.department || '—'}</td>}
                                         {isColumnVisible('cylinders') && <td className="px-8 py-6 text-sm">
                                             {order.assigned_cylinders && order.assigned_cylinders.length > 0 ? (
-                                                <button
-                                                    onClick={() => setSerialsModalOrder(order)}
-                                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 hover:text-blue-700 rounded-lg transition-all text-[11px] font-black tracking-widest uppercase border border-blue-100 shadow-sm"
-                                                    title={order.assigned_cylinders.join('\n')}
-                                                >
-                                                    <Package className="w-3.5 h-3.5" />
-                                                    {order.assigned_cylinders.length} Serial
-                                                </button>
+                                                <div className="flex flex-wrap gap-1 max-w-[220px]">
+                                                    {order.assigned_cylinders.slice(0, 3).map((serial, idx) => (
+                                                        <span key={idx} className="px-2 py-1 bg-slate-100/80 text-slate-700 rounded-lg text-[10px] font-black tracking-widest uppercase font-mono border border-slate-200 shadow-sm">
+                                                            {serial}
+                                                        </span>
+                                                    ))}
+                                                    {order.assigned_cylinders.length > 3 && (
+                                                        <button
+                                                            onClick={() => setSerialsModalOrder(order)}
+                                                            className="px-2 py-1 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg text-[10px] font-black tracking-widest uppercase font-mono border border-blue-100 shadow-sm transition-colors"
+                                                            title="Bấm để xem danh sách đầy đủ"
+                                                        >
+                                                            +{order.assigned_cylinders.length - 3} nữa
+                                                        </button>
+                                                    )}
+                                                </div>
                                             ) : (
                                                 <span className="text-slate-300 font-bold">—</span>
                                             )}

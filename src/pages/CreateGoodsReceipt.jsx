@@ -23,6 +23,8 @@ const CreateGoodsReceipt = () => {
         serial_number: '',
         quantity: 1,
         unit: 'cái',
+        unit_price: 0,
+        total_price: 0,
         note: ''
     };
 
@@ -122,10 +124,14 @@ const CreateGoodsReceipt = () => {
 
         setIsSubmitting(true);
         try {
+            // Tính tổng tiền phiếu
+            const totalAmount = items.reduce((sum, item) => sum + (item.total_price || 0), 0);
+
             // Insert or Update master receipt
             const receiptPayload = {
                 ...formData,
                 total_items: items.length,
+                total_amount: totalAmount,
                 status: editReceipt ? editReceipt.status : 'CHO_DUYET' // Keep existing status if edit
             };
 
@@ -160,6 +166,8 @@ const CreateGoodsReceipt = () => {
                 serial_number: item.serial_number,
                 quantity: item.quantity,
                 unit: item.unit,
+                unit_price: item.unit_price,
+                total_price: item.total_price,
                 note: item.note,
                 receipt_id: receiptId
             }));
@@ -292,7 +300,9 @@ const CreateGoodsReceipt = () => {
                                         <th className="px-4 py-3 text-[10px] font-black text-gray-400 uppercase tracking-[0.15em] text-left">Tên hàng hóa *</th>
                                         <th className="px-4 py-3 text-[10px] font-black text-gray-400 uppercase tracking-[0.15em] text-left">Serial / Mã</th>
                                         <th className="px-4 py-3 text-[10px] font-black text-gray-400 uppercase tracking-[0.15em] text-center w-24">SL</th>
-                                        <th className="px-4 py-3 text-[10px] font-black text-gray-400 uppercase tracking-[0.15em] text-left w-28">ĐVT</th>
+                                        <th className="px-4 py-3 text-[10px] font-black text-gray-400 uppercase tracking-[0.15em] text-left w-28 whitespace-nowrap">ĐVT</th>
+                                        <th className="px-4 py-3 text-[10px] font-black text-gray-400 uppercase tracking-[0.15em] text-right w-36 whitespace-nowrap">Đơn giá (VNĐ)</th>
+                                        <th className="px-4 py-3 text-[10px] font-black text-gray-400 uppercase tracking-[0.15em] text-right w-36 whitespace-nowrap">Thành tiền</th>
                                         <th className="px-4 py-3 text-[10px] font-black text-gray-400 uppercase tracking-[0.15em] text-left">Ghi chú</th>
                                         <th className="px-4 py-3 w-12"></th>
                                     </tr>
@@ -331,7 +341,11 @@ const CreateGoodsReceipt = () => {
                                                     type="number"
                                                     min="1"
                                                     value={item.quantity}
-                                                    onChange={(e) => updateItem(idx, 'quantity', parseInt(e.target.value) || 1)}
+                                                    onChange={(e) => {
+                                                        const q = parseInt(e.target.value) || 1;
+                                                        updateItem(idx, 'quantity', q);
+                                                        updateItem(idx, 'total_price', q * (item.unit_price || 0));
+                                                    }}
                                                     className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-bold text-center outline-none focus:ring-2 focus:ring-emerald-100 focus:border-emerald-400"
                                                 />
                                             </td>
@@ -343,6 +357,23 @@ const CreateGoodsReceipt = () => {
                                                 >
                                                     {ITEM_UNITS.map(u => <option key={u.id} value={u.id}>{u.label}</option>)}
                                                 </select>
+                                            </td>
+                                            <td className="px-4 py-3">
+                                                <input
+                                                    type="text"
+                                                    value={item.unit_price ? item.unit_price.toLocaleString('vi-VN') : ''}
+                                                    onChange={(e) => {
+                                                        const rawValue = e.target.value.replace(/\./g, '');
+                                                        const p = parseFloat(rawValue) || 0;
+                                                        updateItem(idx, 'unit_price', p);
+                                                        updateItem(idx, 'total_price', (item.quantity || 1) * p);
+                                                    }}
+                                                    placeholder="0"
+                                                    className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-bold text-right outline-none focus:ring-2 focus:ring-emerald-100 focus:border-emerald-400 placeholder:text-gray-300"
+                                                />
+                                            </td>
+                                            <td className="px-4 py-3 text-right font-black text-emerald-700 text-sm whitespace-nowrap">
+                                                {new Intl.NumberFormat('vi-VN').format(item.total_price || 0)} ₫
                                             </td>
                                             <td className="px-4 py-3">
                                                 <input
@@ -369,9 +400,15 @@ const CreateGoodsReceipt = () => {
                         </div>
 
                         <div className="p-4 bg-emerald-50/50 rounded-2xl border border-emerald-100 flex items-center justify-between">
-                            <span className="text-sm font-bold text-gray-500">
-                                Tổng: <span className="text-emerald-700 text-lg font-black">{items.length}</span> mặt hàng —
-                                <span className="text-emerald-700 text-lg font-black ml-1">{items.reduce((sum, i) => sum + (i.quantity || 0), 0)}</span> đơn vị
+                            <span className="text-sm font-bold text-gray-500 flex items-center gap-4">
+                                <span>
+                                    Tổng: <span className="text-emerald-700 text-lg font-black">{items.length}</span> mặt hàng —
+                                    <span className="text-emerald-700 text-lg font-black ml-1">{items.reduce((sum, i) => sum + (i.quantity || 0), 0)}</span> đơn vị
+                                </span>
+                                <span className="w-px h-6 bg-emerald-200/50 block"></span>
+                                <span>
+                                    Tổng tiền: <span className="text-rose-600 text-xl font-black">{new Intl.NumberFormat('vi-VN').format(items.reduce((sum, i) => sum + (i.total_price || 0), 0))} ₫</span>
+                                </span>
                             </span>
                             <button
                                 onClick={addItem}
