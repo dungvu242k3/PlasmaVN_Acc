@@ -2,22 +2,24 @@ import {
     Package,
     Plus
 } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
     CUSTOMER_CATEGORIES,
-    MOCK_CUSTOMERS,
     ORDER_TYPES,
     PRODUCT_TYPES,
     WAREHOUSES
 } from '../constants/orderConstants';
+import usePermissions from '../hooks/usePermissions';
 import { supabase } from '../supabase/config';
 
 const CreateOrder = () => {
     const navigate = useNavigate();
     const { state } = useLocation();
     const editOrder = state?.order;
+    const { role, user } = usePermissions();
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [customersList, setCustomersList] = useState([]);
 
     const getNewOrderCode = () => Math.floor(1000 + Math.random() * 9000).toString();
 
@@ -41,7 +43,8 @@ const CreateOrder = () => {
         orderCode: editOrder.order_code,
         customerCategory: editOrder.customer_category,
         warehouse: editOrder.warehouse,
-        customerId: MOCK_CUSTOMERS.find(c => c.name === editOrder.customer_name)?.id || '',
+        customerId: '', // Sẽ load sau
+        customerName: editOrder.customer_name || '',
         recipientName: editOrder.recipient_name,
         recipientAddress: editOrder.recipient_address || '',
         recipientPhone: editOrder.recipient_phone,
@@ -57,10 +60,28 @@ const CreateOrder = () => {
 
     const resetForm = () => {
         setFormData({
-            ...initialFormState,
+            ...defaultState,
             orderCode: getNewOrderCode()
         });
     };
+
+    // Load actual customers instead of MOCK
+    useEffect(() => {
+        const fetchCustomers = async () => {
+            const { data } = await supabase.from('customers').select('*');
+            if (data) {
+                setCustomersList(data);
+                // If editing, find the ID naturally
+                if (editOrder) {
+                    const match = data.find(c => c.name === editOrder.customer_name);
+                    if (match) {
+                        setFormData(prev => ({ ...prev, customerId: match.id }));
+                    }
+                }
+            }
+        };
+        fetchCustomers();
+    }, [editOrder]);
 
     const formatNumber = (val) => {
         if (val === null || val === undefined || val === '') return '0';
@@ -82,16 +103,16 @@ const CreateOrder = () => {
     };
 
     const handleCustomerChange = (e) => {
-        const customerId = parseInt(e.target.value);
-        const customer = MOCK_CUSTOMERS.find(c => c.id === customerId);
+        const cId = e.target.value;
+        const customer = customersList.find(c => c.id === cId);
         if (customer) {
             setFormData({
                 ...formData,
                 customerId: customer.id,
-                recipientName: customer.recipient,
-                recipientAddress: customer.address,
-                recipientPhone: customer.phone,
-                customerCategory: customer.category
+                recipientName: customer.representative_name || customer.name || '',
+                recipientAddress: customer.shipping_address || customer.address || '',
+                recipientPhone: customer.phone || '',
+                customerCategory: customer.category || 'TM'
             });
         }
     };
@@ -104,7 +125,14 @@ const CreateOrder = () => {
 
         setIsSubmitting(true);
         try {
-            const customerName = MOCK_CUSTOMERS.find(c => c.id === formData.customerId)?.name || '';
+            const customerName = customersList.find(c => c.id === formData.customerId)?.name || formData.customerName || '';
+
+            // Xac dinh trang thai va nguoi tao
+            let initialStatus = 'CHO_DUYET';
+            if (!editOrder && (role === 'admin' || role === 'thu_kho')) {
+                initialStatus = 'DA_DUYET'; // Admin, Thu Kho tao don -> Duyet luon (Thuan tien luong demo)
+            }
+
             const payload = {
                 order_code: formData.orderCode,
                 customer_category: formData.customerCategory,
@@ -119,8 +147,8 @@ const CreateOrder = () => {
                 quantity: formData.quantity,
                 department: formData.department,
                 promotion_code: formData.promotion,
-                status: editOrder ? editOrder.status : 'CHO_DUYET',
-                ordered_by: editOrder ? editOrder.ordered_by : 'Admin'
+                status: editOrder ? editOrder.status : initialStatus,
+                ordered_by: editOrder ? editOrder.ordered_by : (user?.name || user?.email || 'Hệ thống')
             };
 
             if (editOrder) {
@@ -130,14 +158,14 @@ const CreateOrder = () => {
                     .eq('id', editOrder.id);
                 if (error) throw error;
                 alert('🎉 Cập nhật đơn hàng thành công!');
-                navigate('/don-hang');
+                navigate('/danh-sach-don-hang');
             } else {
                 const { error } = await supabase
                     .from('orders')
                     .insert([payload]);
                 if (error) throw error;
                 alert('🎉 Tạo đơn hàng thành công!');
-                resetForm(); // Tự động reset form để nhập đơn tiếp theo
+                resetForm();
             }
 
         } catch (error) {
@@ -168,7 +196,7 @@ const CreateOrder = () => {
 
                 <div className="p-6 md:p-10 space-y-8 md:space-y-10">
                     {/* Section 1: Thông tin định danh */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-6 md:gap-8">
                         <div className="space-y-3">
                             <label className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">1. Mã đơn hàng (Tự động)</label>
                             <input value={formData.orderCode} disabled className="w-full px-5 py-4 bg-gray-100 border border-gray-200 rounded-2xl font-black text-gray-500 text-base cursor-not-allowed shadow-inner" />
@@ -207,11 +235,11 @@ const CreateOrder = () => {
                                 className="w-full px-5 py-4 bg-white border border-blue-200 rounded-2xl outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 font-bold text-base shadow-md transition-all cursor-pointer"
                             >
                                 <option value="">-- Chọn khách hàng trong hệ thống --</option>
-                                {MOCK_CUSTOMERS.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                {customersList.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                             </select>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
+                        <div className="grid grid-cols-2 md:grid-cols-2 gap-6 md:gap-8">
                             <div className="space-y-3">
                                 <label className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">5. Tên người nhận *</label>
                                 <input

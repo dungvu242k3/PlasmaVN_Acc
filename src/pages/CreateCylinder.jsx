@@ -123,7 +123,7 @@ const CreateCylinder = () => {
                             <span className="w-8 h-8 bg-teal-50 text-teal-600 rounded-lg flex items-center justify-center font-bold">1</span>
                             <h3 className="text-base md:text-lg font-bold text-gray-800 uppercase tracking-tight">Thông tin cơ sở vỏ bình</h3>
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
+                        <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
                             <div className="space-y-2 lg:col-span-2">
                                 <label className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Serial RFID *</label>
                                 <input
@@ -162,7 +162,7 @@ const CreateCylinder = () => {
                             <span className="w-8 h-8 bg-teal-50 text-teal-600 rounded-lg flex items-center justify-center font-bold">2</span>
                             <h3 className="text-base md:text-lg font-bold text-gray-800 uppercase tracking-tight">Cấu hình & Thông số</h3>
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 md:gap-8">
+                        <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-5 gap-6 md:gap-8">
                             <div className="space-y-2">
                                 <label className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Khối lượng tịnh (kg)</label>
                                 <input

@@ -8,6 +8,7 @@ export default function OrderStatusUpdater({ order, userRole, onClose, onUpdateS
     const [deliveryUnit, setDeliveryUnit] = useState(order?.delivery_unit || '');
     const [selectedFile, setSelectedFile] = useState(null);
     const [errorMsg, setErrorMsg] = useState('');
+    const [scannedSerials, setScannedSerials] = useState('');
 
     if (!order) return null;
 
@@ -16,7 +17,9 @@ export default function OrderStatusUpdater({ order, userRole, onClose, onUpdateS
 
     // Filter by role (normalize to lowercase for consistent matching)
     const normalizedRole = userRole?.toLowerCase() || '';
-    const availableActions = transitions.filter(t => t.allowedRoles.includes(normalizedRole));
+    const availableActions = transitions.filter(t =>
+        normalizedRole === 'admin' || t.allowedRoles.includes(normalizedRole)
+    );
 
     const handleUpdateStatus = async (transition) => {
         try {
@@ -26,6 +29,26 @@ export default function OrderStatusUpdater({ order, userRole, onClose, onUpdateS
             let imageUrl = order.delivery_image_url;
 
             // Extra checks based on transitions
+            if (transition.nextStatus === 'DA_DUYET' && order.status === 'KHO_XU_LY' && order.product_type === 'BINH') {
+                const serials = scannedSerials.split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
+                if (serials.length !== order.quantity) {
+                    throw new Error(`Bạn cần quét đúng ${order.quantity} mã bình. Hiện tại đã quét: ${serials.length}`);
+                }
+
+                // Cập nhật trạng thái vỏ bình sang đang vận chuyển
+                const { data: updatedCylinders, error: cylError } = await supabase
+                    .from('cylinders')
+                    .update({ status: 'đang vận chuyển', customer_name: order.customer_name })
+                    .in('serial_number', serials)
+                    .select('id, serial_number');
+
+                if (cylError) throw new Error('Cập nhật mã bình trên kho thất bại: ' + cylError.message);
+
+                if (!updatedCylinders || updatedCylinders.length !== order.quantity) {
+                    throw new Error(`Phát hiện mã bình không tồn tại! Chỉ cập nhật được ${updatedCylinders?.length || 0}/${order.quantity} bình. Vui lòng kiểm tra lại.`);
+                }
+            }
+
             if (transition.nextStatus === 'CHO_GIAO_HANG' && !deliveryUnit) {
                 throw new Error('Vui lòng nhập tên Đơn vị vận chuyển.');
             }
@@ -69,6 +92,11 @@ export default function OrderStatusUpdater({ order, userRole, onClose, onUpdateS
                 updated_at: new Date().toISOString()
             };
 
+            // Nếu đây là lúc xuất kho (Gán mã bình)
+            if (transition.nextStatus === 'DA_DUYET' && order.status === 'KHO_XU_LY' && order.product_type === 'BINH') {
+                updatePayload.assigned_cylinders = scannedSerials.split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
+            }
+
             if (deliveryUnit) {
                 updatePayload.delivery_unit = deliveryUnit;
             }
@@ -107,6 +135,22 @@ export default function OrderStatusUpdater({ order, userRole, onClose, onUpdateS
                 </div>
 
                 <div className="p-6 space-y-4 overflow-y-auto">
+                    {/* RFID Scanner for Warehouse */}
+                    {(order.status === 'KHO_XU_LY') && order.product_type === 'BINH' && (
+                        <div>
+                            <label className="block text-sm font-bold text-gray-700 mb-1">
+                                Quét mã vỏ bình RFID (Phải đúng <span className="text-blue-600">{order.quantity}</span> vỏ bình)
+                            </label>
+                            <textarea
+                                placeholder="Nhập mã hoặc dùng máy quét RFID, mỗi mã một dòng hoặc cách nhau dấu phẩy..."
+                                className="w-full px-4 py-3 border border-gray-200 rounded-lg font-medium outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-50 min-h-[100px] shadow-sm transition-all"
+                                value={scannedSerials}
+                                onChange={e => setScannedSerials(e.target.value)}
+                            />
+                            <p className="text-xs text-gray-500 mt-1 font-medium italic">* Serials hợp lệ sẽ đổi ngay trạng thái sang <span className="font-bold">Đang vận chuyển</span></p>
+                        </div>
+                    )}
+
                     {/* Only show Shipper field if moving to Delivery or already in it and lacking one */}
                     {(order.status === 'DA_DUYET' || order.status === 'CHO_GIAO_HANG' || order.status === 'DANG_GIAO_HANG') && (
                         <div>

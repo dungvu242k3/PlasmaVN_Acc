@@ -36,6 +36,7 @@ const Orders = () => {
     const [isActionModalOpen, setIsActionModalOpen] = useState(false);
     const [isFormModalOpen, setIsFormModalOpen] = useState(false);
     const [orderToEdit, setOrderToEdit] = useState(null);
+    const [serialsModalOrder, setSerialsModalOrder] = useState(null);
     const { visibleColumns, toggleColumn, isColumnVisible, resetColumns, visibleCount, totalCount } = useColumnVisibility('columns_orders', TABLE_COLUMNS);
     const visibleTableColumns = TABLE_COLUMNS.filter(col => isColumnVisible(col.key));
 
@@ -317,6 +318,20 @@ const Orders = () => {
                                             <span className="text-sm font-black text-slate-900 bg-slate-100/50 px-3 py-1 rounded-lg">{formatNumber(order.quantity)}</span>
                                         </td>}
                                         {isColumnVisible('department') && <td className="px-8 py-6 text-sm font-bold text-slate-500">{order.department || '—'}</td>}
+                                        {isColumnVisible('cylinders') && <td className="px-8 py-6 text-sm">
+                                            {order.assigned_cylinders && order.assigned_cylinders.length > 0 ? (
+                                                <button
+                                                    onClick={() => setSerialsModalOrder(order)}
+                                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 hover:text-blue-700 rounded-lg transition-all text-[11px] font-black tracking-widest uppercase border border-blue-100 shadow-sm"
+                                                    title={order.assigned_cylinders.join('\n')}
+                                                >
+                                                    <Package className="w-3.5 h-3.5" />
+                                                    {order.assigned_cylinders.length} Serial
+                                                </button>
+                                            ) : (
+                                                <span className="text-slate-300 font-bold">—</span>
+                                            )}
+                                        </td>}
                                         {isColumnVisible('status') && <td className="px-8 py-6">
                                             <span className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-[0.1em] border shadow-sm transition-all duration-300 ${status.color === 'blue' ? 'bg-blue-600 text-white border-blue-700 glow-blue' :
                                                 status.color === 'yellow' ? 'bg-amber-500 text-white border-amber-600 glow-amber' :
@@ -389,6 +404,40 @@ const Orders = () => {
                         setIsActionModalOpen(false);
                     }}
                 />
+            )}
+
+            {/* SERIALS VIEW MODAL */}
+            {serialsModalOrder && (
+                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4 animate-in fade-in duration-200">
+                    <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-sm overflow-hidden flex flex-col max-h-[80vh]">
+                        <div className="p-6 border-b border-slate-100 flex items-center justify-between shrink-0 bg-slate-50/50">
+                            <div>
+                                <h3 className="text-lg font-black text-slate-900">Mã Serial Vỏ Bình</h3>
+                                <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mt-1">Đơn {serialsModalOrder.order_code}</p>
+                            </div>
+                            <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center text-blue-600 shrink-0">
+                                <Package className="w-5 h-5" />
+                            </div>
+                        </div>
+                        <div className="p-6 overflow-y-auto">
+                            <div className="grid grid-cols-2 gap-3">
+                                {serialsModalOrder.assigned_cylinders.map((serial, idx) => (
+                                    <div key={idx} className="bg-white border border-slate-200 shadow-sm rounded-xl px-3 py-2 text-center text-sm font-bold text-slate-700 font-mono">
+                                        {serial}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                        <div className="p-4 bg-slate-50 border-t border-slate-100 mt-auto shrink-0">
+                            <button
+                                onClick={() => setSerialsModalOrder(null)}
+                                className="w-full py-3 text-slate-600 font-bold text-sm bg-white hover:bg-slate-100 transition-colors rounded-xl border border-slate-200 shadow-sm"
+                            >
+                                Đóng lại
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
 
             {/* Hidden Print Template */}

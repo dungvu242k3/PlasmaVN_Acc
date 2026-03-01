@@ -1,4 +1,5 @@
 import {
+    CheckSquare,
     ChevronDown,
     Edit,
     Package,
@@ -69,6 +70,94 @@ const GoodsReceipts = () => {
         } catch (error) {
             console.error('Error deleting receipt:', error);
             alert('❌ Lỗi khi xóa phiếu nhập: ' + error.message);
+        }
+    };
+
+    const handleApproveReceipt = async (receipt) => {
+        if (!window.confirm(`Xác nhận duyệt phiếu nhập "${receipt.receipt_code}"?\nHàng hóa sẽ được cộng vào tồn kho và không thể hoàn tác.`)) {
+            return;
+        }
+
+        try {
+            // 1. Fetch receipt items
+            const { data: items, error: itemsError } = await supabase
+                .from('goods_receipt_items')
+                .select('*')
+                .eq('receipt_id', receipt.id);
+
+            if (itemsError) throw itemsError;
+            if (!items || items.length === 0) {
+                alert('⚠️ Phiếu nhập không có hàng hóa, không thể duyệt!');
+                return;
+            }
+
+            // 2. Loop through items to update inventory
+            for (const item of items) {
+                // Upsert inventory
+                const { data: invData, error: invQueryError } = await supabase
+                    .from('inventory')
+                    .select('id, quantity')
+                    .eq('warehouse_id', receipt.warehouse_id)
+                    .eq('item_type', item.item_type)
+                    .eq('item_name', item.item_name)
+                    .maybeSingle();
+
+                if (invQueryError) throw invQueryError;
+
+                let inventoryId;
+                if (invData) {
+                    // Update
+                    const { data: updatedInv, error: updateError } = await supabase
+                        .from('inventory')
+                        .update({ quantity: invData.quantity + item.quantity })
+                        .eq('id', invData.id)
+                        .select()
+                        .single();
+                    if (updateError) throw updateError;
+                    inventoryId = updatedInv.id;
+                } else {
+                    // Insert
+                    const { data: newInv, error: insertError } = await supabase
+                        .from('inventory')
+                        .insert([{
+                            warehouse_id: receipt.warehouse_id,
+                            item_type: item.item_type,
+                            item_name: item.item_name,
+                            quantity: item.quantity
+                        }])
+                        .select()
+                        .single();
+                    if (insertError) throw insertError;
+                    inventoryId = newInv.id;
+                }
+
+                // Create transaction record
+                const { error: txError } = await supabase
+                    .from('inventory_transactions')
+                    .insert([{
+                        inventory_id: inventoryId,
+                        transaction_type: 'IN',
+                        reference_id: receipt.id,
+                        reference_code: receipt.receipt_code,
+                        quantity_changed: item.quantity,
+                        note: `Duyệt phiếu nhập ${receipt.receipt_code}`
+                    }]);
+                if (txError) throw txError;
+            }
+
+            // 3. Update receipt status
+            const { error: updateReceiptError } = await supabase
+                .from('goods_receipts')
+                .update({ status: 'DA_NHAP' })
+                .eq('id', receipt.id);
+
+            if (updateReceiptError) throw updateReceiptError;
+
+            alert('✅ Đã duyệt phiếu nhập và cập nhật tồn kho thành công!');
+            fetchReceipts();
+        } catch (error) {
+            console.error('Error approving receipt:', error);
+            alert('❌ Lỗi khi duyệt phiếu: ' + error.message);
         }
     };
 
@@ -235,19 +324,28 @@ const GoodsReceipts = () => {
                                         {isColumnVisible('status') && <td className="px-6 py-5 text-center">{getStatusBadge(receipt.status)}</td>}
                                         <td className="px-6 py-5 text-center sticky right-0 bg-white/50 backdrop-blur-md group-hover:bg-emerald-50/10 transition-colors">
                                             <div className="flex items-center justify-center gap-5 transition-all">
+                                                {receipt.status === 'CHO_DUYET' && (
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); handleApproveReceipt(receipt); }}
+                                                        className="text-emerald-500 hover:text-emerald-700 transition-all outline-none"
+                                                        title="Duyệt (Nhập kho)"
+                                                    >
+                                                        <CheckSquare className="w-5 h-5 flex-shrink-0" />
+                                                    </button>
+                                                )}
                                                 <button
                                                     onClick={(e) => { e.stopPropagation(); navigate('/tao-phieu-nhap', { state: { receipt } }); }}
                                                     className="text-slate-400 hover:text-slate-900 transition-all outline-none"
-                                                    title="Chỉnh sửa"
+                                                    title={receipt.status === 'CHO_DUYET' ? "Chỉnh sửa" : "Xem chi tiết"}
                                                 >
-                                                    <Edit className="w-5 h-5" />
+                                                    <Edit className="w-5 h-5 flex-shrink-0" />
                                                 </button>
                                                 <button
                                                     onClick={(e) => { e.stopPropagation(); handleDeleteReceipt(receipt.id, receipt.receipt_code); }}
-                                                    className="text-slate-400 hover:text-slate-900 transition-all outline-none"
+                                                    className="text-slate-400 hover:text-red-500 transition-all outline-none"
                                                     title="Xóa"
                                                 >
-                                                    <Trash2 className="w-5 h-5" />
+                                                    <Trash2 className="w-5 h-5 flex-shrink-0" />
                                                 </button>
                                             </div>
                                         </td>

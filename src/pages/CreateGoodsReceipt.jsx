@@ -192,9 +192,6 @@ const CreateGoodsReceipt = () => {
 
             {/* Header */}
             <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-6 md:mb-8 relative z-10">
-                <button onClick={() => navigate('/nhap-hang')} className="w-10 h-10 bg-white border border-gray-200 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-900 hover:border-gray-400 transition-all shadow-sm">
-                    ←
-                </button>
                 <h1 className="text-2xl md:text-3xl font-black text-gray-900 tracking-tight flex items-center gap-3">
                     <PackagePlus className="w-8 h-8 text-emerald-600" />
                     {editReceipt ? 'Cập nhật phiếu nhập kho' : 'Tạo phiếu nhập kho'}
@@ -209,7 +206,7 @@ const CreateGoodsReceipt = () => {
                             <span className="w-8 h-8 bg-emerald-50 text-emerald-600 rounded-lg flex items-center justify-center font-bold">1</span>
                             <h3 className="text-base md:text-lg font-bold text-gray-800 uppercase tracking-tight">Thông tin phiếu nhập</h3>
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-6 md:gap-8">
                             <div className="space-y-2">
                                 <label className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Mã phiếu (tự sinh)</label>
                                 <input
@@ -240,7 +237,7 @@ const CreateGoodsReceipt = () => {
                                 </select>
                             </div>
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-6 md:gap-8">
                             <div className="space-y-2">
                                 <label className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Ngày nhập *</label>
                                 <input

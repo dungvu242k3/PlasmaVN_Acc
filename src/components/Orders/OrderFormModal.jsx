@@ -6,9 +6,11 @@ import {
     PRODUCT_TYPES,
     WAREHOUSES
 } from '../../constants/orderConstants';
+import usePermissions from '../../hooks/usePermissions';
 import { supabase } from '../../supabase/config';
 
 export default function OrderFormModal({ order, onClose, onSuccess }) {
+    const { role, user } = usePermissions();
     const isEdit = !!order;
     const [isLoading, setIsLoading] = useState(false);
     const [isFetchingCustomers, setIsFetchingCustomers] = useState(false);
@@ -134,6 +136,13 @@ export default function OrderFormModal({ order, onClose, onSuccess }) {
 
         try {
             const customerName = customers.find(c => c.id.toString() === formData.customerId.toString())?.name || '';
+
+            // Xac dinh trang thai va nguoi tao
+            let initialStatus = 'CHO_DUYET';
+            if (!isEdit && (role === 'admin' || role === 'thu_kho')) {
+                initialStatus = 'DA_DUYET'; // Admin, Thu Kho tao don -> Duyet luon (Thuan tien luong demo)
+            }
+
             const payload = {
                 order_code: formData.orderCode,
                 customer_category: formData.customerCategory,
@@ -148,8 +157,8 @@ export default function OrderFormModal({ order, onClose, onSuccess }) {
                 quantity: formData.quantity,
                 department: formData.department,
                 promotion_code: formData.promotion,
-                status: isEdit ? order.status : 'CHO_DUYET',
-                ordered_by: isEdit ? order.ordered_by : 'Admin',
+                status: isEdit ? order.status : initialStatus,
+                ordered_by: isEdit ? order.ordered_by : (user?.name || user?.email || 'Hệ thống'),
                 updated_at: new Date().toISOString()
             };
 

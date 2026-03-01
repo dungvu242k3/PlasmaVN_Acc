@@ -27,6 +27,7 @@ CREATE TABLE orders (
     -- Workflow specific fields
     delivery_unit VARCHAR(255), -- Đơn vị vận chuyển (Company delivery or 3rd party like Viettel Post, GHN, etc)
     delivery_image_url TEXT, -- Ảnh chứng từ đối soát (từ người giao hàng)
+    assigned_cylinders TEXT[], -- Danh sách mã Serial RFID đã gán cho đơn hàng này
     
     status VARCHAR(50) NOT NULL DEFAULT 'CHO_DUYET', -- Trạng thái xử lý
     ordered_by VARCHAR(255), -- Người đặt hàng (Hệ thống ghi nhận)
@@ -40,8 +41,10 @@ ALTER TABLE orders ADD CONSTRAINT check_order_status CHECK (
     status IN (
         'TAT_CA',            -- Tất cả
         'CHO_DUYET',         -- Chờ duyệt
+        'CHO_CTY_DUYET',     -- Chờ Cty duyệt (Mới)
+        'KHO_XU_LY',         -- Kho đang xử lý (Mới)
         'DIEU_CHINH',        -- Điều chỉnh
-        'DA_DUYET',          -- Đã duyệt
+        'DA_DUYET',          -- Đã duyệt / Xuất kho
         'CHO_GIAO_HANG',     -- Chờ giao hàng
         'DANG_GIAO_HANG',    -- Đang giao hàng
         'CHO_DOI_SOAT',      -- Chờ đối soát
