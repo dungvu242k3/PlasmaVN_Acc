@@ -38,12 +38,7 @@ const SIDEBAR_ITEMS = [
     icon: Package,
     path: "/danh-sach-don-hang",
   },
-  {
-    id: "create-order",
-    label: "Tạo đơn hàng",
-    icon: Plus,
-    path: "/tao-don-hang",
-  },
+
   {
     id: "customers",
     label: "Danh sách khách hàng",
@@ -94,7 +89,7 @@ const SIDEBAR_ITEMS = [
   },
   {
     id: "promotions",
-    label: "Khuyến mãi bình",
+    label: "Danh sách khuyến mãi",
     icon: Gift,
     path: "/danh-sach-khuyen-mai",
   },
@@ -123,12 +118,13 @@ const DASHBOARD_FEATURES = [
   },
   {
     id: "create-order",
-    title: "Tạo đơn hàng",
+    title: "Thêm đơn hàng",
     description: "Tạo mới đơn hàng nhanh chóng với các mẫu thông tin có sẵn.",
     icon: Plus,
     color: "green",
     path: "/tao-don-hang",
   },
+
   {
     id: "customers",
     title: "Danh sách khách hàng",
