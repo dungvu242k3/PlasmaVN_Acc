@@ -1,6 +1,7 @@
 import {
     ActivitySquare,
     Edit,
+    Eye,
     Filter,
     Search,
     Trash2
@@ -8,6 +9,7 @@ import {
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ColumnToggle from '../components/ColumnToggle';
+import CylinderDetailsModal from '../components/Cylinders/CylinderDetailsModal';
 import CylinderFormModal from '../components/Cylinders/CylinderFormModal';
 import { CYLINDER_STATUSES } from '../constants/machineConstants';
 import useColumnVisibility from '../hooks/useColumnVisibility';
@@ -29,6 +31,7 @@ const Cylinders = () => {
     const [cylinders, setCylinders] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isFormModalOpen, setIsFormModalOpen] = useState(false);
+    const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
     const [selectedCylinder, setSelectedCylinder] = useState(null);
     const { visibleColumns, toggleColumn, isColumnVisible, resetColumns, visibleCount, totalCount } = useColumnVisibility('columns_cylinders', TABLE_COLUMNS);
     const visibleTableColumns = TABLE_COLUMNS.filter(col => isColumnVisible(col.key));
@@ -78,6 +81,11 @@ const Cylinders = () => {
     const handleEditCylinder = (cylinder) => {
         setSelectedCylinder(cylinder);
         setIsFormModalOpen(true);
+    };
+
+    const handleViewCylinder = (cylinder) => {
+        setSelectedCylinder(cylinder);
+        setIsDetailsModalOpen(true);
     };
 
     const handleCreateNew = () => {
@@ -252,6 +260,13 @@ const Cylinders = () => {
                                     <td className="px-8 py-7 text-center whitespace-nowrap sticky right-0 z-10 bg-white/80 backdrop-blur-md border-l border-slate-50 group-hover:bg-teal-50/40 transition-all">
                                         <div className="flex items-center justify-center gap-5">
                                             <button
+                                                onClick={() => handleViewCylinder(c)}
+                                                className="text-slate-400 hover:text-teal-600 transition-all outline-none"
+                                                title="Xem lịch sử bình khí"
+                                            >
+                                                <Eye className="w-5 h-5" />
+                                            </button>
+                                            <button
                                                 onClick={() => handleEditCylinder(c)}
                                                 className="text-slate-400 hover:text-slate-900 transition-all outline-none"
                                                 title="Chỉnh sửa"
@@ -281,12 +296,19 @@ const Cylinders = () => {
                 </div>
             </div>
 
-            {/* Modal */}
+            {/* Modals */}
             {isFormModalOpen && (
                 <CylinderFormModal
                     cylinder={selectedCylinder}
                     onClose={() => setIsFormModalOpen(false)}
                     onSuccess={handleFormSubmitSuccess}
+                />
+            )}
+
+            {isDetailsModalOpen && selectedCylinder && (
+                <CylinderDetailsModal
+                    cylinder={selectedCylinder}
+                    onClose={() => setIsDetailsModalOpen(false)}
                 />
             )}
         </div>

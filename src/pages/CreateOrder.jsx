@@ -32,12 +32,13 @@ const CreateOrder = () => {
         recipientAddress: '',
         recipientPhone: '',
         orderType: 'THUONG',
-        note: '',
         productType: 'BINH',
         quantity: 0,
         unitPrice: 0,
         department: '',
-        promotion: ''
+        promotion: '',
+        shipperId: '',
+        shippingFee: 0
     };
 
     const initialFormState = editOrder ? {
@@ -50,12 +51,13 @@ const CreateOrder = () => {
         recipientAddress: editOrder.recipient_address || '',
         recipientPhone: editOrder.recipient_phone,
         orderType: editOrder.order_type,
-        note: editOrder.note || '',
         productType: editOrder.product_type,
         quantity: editOrder.quantity,
         unitPrice: editOrder.unit_price || 0,
         department: editOrder.department || '',
-        promotion: editOrder.promotion_code || ''
+        promotion: editOrder.promotion_code || '',
+        shipperId: editOrder.shipper_id || '',
+        shippingFee: editOrder.shipping_fee || 0
     } : defaultState;
 
     const [formData, setFormData] = useState(initialFormState);
@@ -82,7 +84,12 @@ const CreateOrder = () => {
                 }
             }
         };
+        const fetchShippers = async () => {
+            const { data } = await supabase.from('shippers').select('id, name');
+            if (data) setShippersList(data);
+        };
         fetchCustomers();
+        fetchShippers();
     }, [editOrder]);
 
     const formatNumber = (val) => {
@@ -111,6 +118,15 @@ const CreateOrder = () => {
             return;
         }
         setFormData({ ...formData, unitPrice: parseInt(value, 10) });
+    };
+
+    const handleShippingFeeChange = (e) => {
+        const value = e.target.value.replace(/\D/g, '');
+        if (value === '') {
+            setFormData({ ...formData, shippingFee: 0 });
+            return;
+        }
+        setFormData({ ...formData, shippingFee: parseInt(value, 10) });
     };
 
     const calculatedTotalAmount = (formData.quantity || 0) * (formData.unitPrice || 0);
@@ -162,6 +178,8 @@ const CreateOrder = () => {
                 total_amount: calculatedTotalAmount,
                 department: formData.department,
                 promotion_code: formData.promotion,
+                shipper_id: formData.shipperId || null,
+                shipping_fee: formData.shippingFee || 0,
                 status: editOrder ? editOrder.status : initialStatus,
                 ordered_by: editOrder ? editOrder.ordered_by : (user?.name || user?.email || 'Hệ thống')
             };
@@ -374,6 +392,32 @@ const CreateOrder = () => {
                                     <option value="KMB02">KMB02 - Ưu đãi bình mới</option>
                                     <option value="KM_MAY_01">KM_MAY_01 - Giảm giá máy</option>
                                 </select>
+                            </div>
+
+                            <div className="pt-4 mt-4 border-t border-gray-100 space-y-6">
+                                <h4 className="text-[11px] font-black text-rose-500 uppercase tracking-[0.2em] ml-1">14. Phí Giao Hàng & Đơn vị VC</h4>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 md:gap-8">
+                                    <div className="space-y-3">
+                                        <select
+                                            value={formData.shipperId}
+                                            onChange={(e) => setFormData({ ...formData, shipperId: e.target.value })}
+                                            className="w-full px-5 py-4 bg-white border border-rose-200 rounded-2xl outline-none focus:ring-4 focus:ring-rose-100 focus:border-rose-500 font-bold text-base transition-all shadow-sm"
+                                        >
+                                            <option value="">-- Chọn Đơn vị VC (Tuỳ chọn) --</option>
+                                            {shippersList.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                        </select>
+                                    </div>
+                                    <div className="space-y-3 relative">
+                                        <input
+                                            type="text"
+                                            value={formatNumber(formData.shippingFee)}
+                                            onChange={handleShippingFeeChange}
+                                            placeholder="Nhập cước phí..."
+                                            className="w-full px-5 py-4 pl-12 bg-white border border-rose-200 rounded-2xl outline-none focus:ring-4 focus:ring-rose-100 focus:border-rose-500 font-black text-lg text-rose-700 transition-all shadow-sm placeholder:text-rose-300 placeholder:font-medium"
+                                        />
+                                        <span className="absolute left-5 top-[9px] text-rose-400 font-black">đ</span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>

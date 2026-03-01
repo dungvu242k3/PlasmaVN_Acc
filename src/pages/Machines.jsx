@@ -1,6 +1,7 @@
 import {
     Activity,
     Edit,
+    Eye,
     Filter,
     MonitorIcon,
     Search,
@@ -9,6 +10,7 @@ import {
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ColumnToggle from '../components/ColumnToggle';
+import MachineDetailsModal from '../components/Machines/MachineDetailsModal';
 import MachineFormModal from '../components/Machines/MachineFormModal';
 import { MACHINE_STATUSES } from '../constants/machineConstants';
 import useColumnVisibility from '../hooks/useColumnVisibility';
@@ -34,6 +36,7 @@ const Machines = () => {
     const [machines, setMachines] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isFormModalOpen, setIsFormModalOpen] = useState(false);
+    const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
     const [selectedMachine, setSelectedMachine] = useState(null);
     const { visibleColumns, toggleColumn, isColumnVisible, resetColumns, visibleCount, totalCount } = useColumnVisibility('columns_machines', TABLE_COLUMNS);
     const visibleTableColumns = TABLE_COLUMNS.filter(col => isColumnVisible(col.key));
@@ -83,6 +86,11 @@ const Machines = () => {
     const handleEditMachine = (machine) => {
         setSelectedMachine(machine);
         setIsFormModalOpen(true);
+    };
+
+    const handleViewMachine = (machine) => {
+        setSelectedMachine(machine);
+        setIsDetailsModalOpen(true);
     };
 
     const handleCreateNew = () => {
@@ -250,6 +258,13 @@ const Machines = () => {
                                     <td className="px-8 py-7 text-center whitespace-nowrap sticky right-0 z-10 bg-white/80 backdrop-blur-md border-l border-slate-50 group-hover:bg-indigo-50/40 transition-all">
                                         <div className="flex items-center justify-center gap-5">
                                             <button
+                                                onClick={() => handleViewMachine(m)}
+                                                className="text-slate-400 hover:text-indigo-600 transition-all outline-none"
+                                                title="Xem lịch sử thiết bị"
+                                            >
+                                                <Eye className="w-5 h-5" />
+                                            </button>
+                                            <button
                                                 onClick={() => handleEditMachine(m)}
                                                 className="text-slate-400 hover:text-slate-900 transition-all outline-none"
                                                 title="Chỉnh sửa"
@@ -279,12 +294,19 @@ const Machines = () => {
                 </div>
             </div>
 
-            {/* Modal */}
+            {/* Modals */}
             {isFormModalOpen && (
                 <MachineFormModal
                     machine={selectedMachine}
                     onClose={() => setIsFormModalOpen(false)}
                     onSuccess={handleFormSubmitSuccess}
+                />
+            )}
+
+            {isDetailsModalOpen && selectedMachine && (
+                <MachineDetailsModal
+                    machine={selectedMachine}
+                    onClose={() => setIsDetailsModalOpen(false)}
                 />
             )}
         </div>

@@ -389,7 +389,16 @@ export default function CustomerDetailsModal({ customer, onClose }) {
                                     {transactions.length === 0 ? (
                                         <div className="p-16 text-center flex flex-col items-center">
                                             <FileText className="w-16 h-16 text-slate-200 mb-4" />
-                                            <p className="text-slate-400 font-bold text-lg">Chưa có giao dịch thu/chi nào</p>
+                                            <p className="text-slate-400 font-bold text-lg mb-6">Chưa có giao dịch thu/chi nào</p>
+                                            <button
+                                                onClick={() => {
+                                                    setActiveTab('overview');
+                                                    setShowPaymentForm(true);
+                                                }}
+                                                className="px-6 py-3 bg-violet-600 hover:bg-violet-700 text-white rounded-xl font-black text-sm shadow-xl shadow-violet-200 transition-all flex items-center gap-2"
+                                            >
+                                                <CreditCard className="w-4 h-4" /> Lập Phiếu Thu tiền Khách nợ ngay
+                                            </button>
                                         </div>
                                     ) : (
                                         <table className="w-full text-left">

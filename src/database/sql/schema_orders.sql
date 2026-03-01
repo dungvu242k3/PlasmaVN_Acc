@@ -28,6 +28,8 @@ CREATE TABLE orders (
 
     -- Workflow specific fields
     delivery_unit VARCHAR(255), -- Đơn vị vận chuyển (Company delivery or 3rd party like Viettel Post, GHN, etc)
+    shipper_id UUID REFERENCES shippers(id) ON DELETE SET NULL, -- Liên kết ID Đơn vị vận chuyển (Dùng để tính công nợ cước phí)
+    shipping_fee NUMERIC(15, 2) NOT NULL DEFAULT 0, -- Cước phí vận chuyển (Số tiền cần trả cho Đơn vị vận chuyển)
     delivery_image_url TEXT, -- Ảnh chứng từ đối soát (từ người giao hàng)
     assigned_cylinders TEXT[], -- Danh sách mã Serial RFID đã gán cho đơn hàng này
     

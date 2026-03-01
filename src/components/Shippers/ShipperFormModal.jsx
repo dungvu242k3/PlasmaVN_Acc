@@ -75,7 +75,7 @@ export default function ShipperFormModal({ shipper, onClose, onSuccess }) {
             onSuccess();
         } catch (error) {
             console.error('Error saving shipper:', error);
-            setErrorMsg(error.message || 'Có lỗi xảy ra khi lưu đối tác vận chuyển.');
+            setErrorMsg(error.message || 'Có lỗi xảy ra khi lưu đơn vị vận chuyển.');
         } finally {
             setIsLoading(false);
         }
@@ -93,10 +93,10 @@ export default function ShipperFormModal({ shipper, onClose, onSuccess }) {
                         </div>
                         <div>
                             <h3 className="text-xl font-black text-slate-900">
-                                {isEdit ? 'Cập nhật Đối tác' : 'Thêm Đối tác vận chuyển'}
+                                {isEdit ? 'Cập nhật đơn vị vận chuyển' : 'Thêm đơn vị vận chuyển'}
                             </h3>
                             <p className="text-sm font-medium text-slate-500">
-                                {isEdit ? shipper.name : 'Đăng ký thông tin nhà xe / đơn vị vận tải mới'}
+                                {isEdit ? shipper.name : 'Đăng ký thông tin đơn vị vận chuyển mới'}
                             </p>
                         </div>
                     </div>
@@ -215,8 +215,8 @@ export default function ShipperFormModal({ shipper, onClose, onSuccess }) {
                                         type="button"
                                         onClick={() => setFormData(p => ({ ...p, status }))}
                                         className={`px-6 py-2.5 rounded-xl font-bold text-sm border transition-all ${formData.status === status
-                                                ? 'bg-blue-600 text-white border-blue-700 shadow-lg shadow-blue-100'
-                                                : 'bg-white text-slate-500 border-slate-100 hover:bg-slate-50'
+                                            ? 'bg-blue-600 text-white border-blue-700 shadow-lg shadow-blue-100'
+                                            : 'bg-white text-slate-500 border-slate-100 hover:bg-slate-50'
                                             }`}
                                     >
                                         {status}

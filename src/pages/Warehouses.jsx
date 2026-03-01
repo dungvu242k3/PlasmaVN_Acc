@@ -1,5 +1,6 @@
 import {
     Edit,
+    Eye,
     Filter,
     Search,
     Trash2,
@@ -8,6 +9,7 @@ import {
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ColumnToggle from '../components/ColumnToggle';
+import WarehouseDetailsModal from '../components/Warehouses/WarehouseDetailsModal';
 import WarehouseFormModal from '../components/Warehouses/WarehouseFormModal';
 import { WAREHOUSE_STATUSES } from '../constants/warehouseConstants';
 import useColumnVisibility from '../hooks/useColumnVisibility';
@@ -30,6 +32,7 @@ const Warehouses = () => {
     const [warehouses, setWarehouses] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isFormModalOpen, setIsFormModalOpen] = useState(false);
+    const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
     const [selectedWarehouse, setSelectedWarehouse] = useState(null);
     const { visibleColumns, toggleColumn, isColumnVisible, resetColumns, visibleCount, totalCount } = useColumnVisibility('columns_warehouses', TABLE_COLUMNS);
     const visibleTableColumns = TABLE_COLUMNS.filter(col => isColumnVisible(col.key));
@@ -77,6 +80,11 @@ const Warehouses = () => {
     const handleEditWarehouse = (warehouse) => {
         setSelectedWarehouse(warehouse);
         setIsFormModalOpen(true);
+    };
+
+    const handleViewWarehouse = (warehouse) => {
+        setSelectedWarehouse(warehouse);
+        setIsDetailsModalOpen(true);
     };
 
     const handleCreateNew = () => {
@@ -229,6 +237,13 @@ const Warehouses = () => {
                                     <td className="px-8 py-7 text-center">
                                         <div className="flex items-center justify-center gap-5 transition-opacity">
                                             <button
+                                                onClick={() => handleViewWarehouse(w)}
+                                                className="text-slate-400 hover:text-orange-600 transition-all outline-none"
+                                                title="Xem lịch sử xuất/nhập kho"
+                                            >
+                                                <Eye className="w-5 h-5" />
+                                            </button>
+                                            <button
                                                 onClick={() => handleEditWarehouse(w)}
                                                 className="text-slate-400 hover:text-slate-900 transition-all outline-none"
                                                 title="Chỉnh sửa"
@@ -257,12 +272,19 @@ const Warehouses = () => {
                     </p>
                 </div>
 
-                {/* Modal */}
+                {/* Modals */}
                 {isFormModalOpen && (
                     <WarehouseFormModal
                         warehouse={selectedWarehouse}
                         onClose={() => setIsFormModalOpen(false)}
                         onSuccess={handleFormSubmitSuccess}
+                    />
+                )}
+
+                {isDetailsModalOpen && selectedWarehouse && (
+                    <WarehouseDetailsModal
+                        warehouse={selectedWarehouse}
+                        onClose={() => setIsDetailsModalOpen(false)}
                     />
                 )}
             </div>

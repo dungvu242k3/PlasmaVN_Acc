@@ -3,6 +3,7 @@ import {
     CheckCircle2,
     ChevronDown,
     Edit,
+    Eye,
     Package,
     Search,
     Trash2,
@@ -12,6 +13,7 @@ import {
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ColumnToggle from '../components/ColumnToggle';
+import ShipperDetailsModal from '../components/Shippers/ShipperDetailsModal';
 import ShipperFormModal from '../components/Shippers/ShipperFormModal';
 import { SHIPPING_TYPES } from '../constants/shipperConstants';
 import useColumnVisibility from '../hooks/useColumnVisibility';
@@ -33,6 +35,7 @@ const Shippers = () => {
     const [shippers, setShippers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [isFormModalOpen, setIsFormModalOpen] = useState(false);
+    const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
     const [selectedShipper, setSelectedShipper] = useState(null);
     const { visibleColumns, toggleColumn, isColumnVisible, resetColumns, visibleCount, totalCount } = useColumnVisibility('columns_shippers', TABLE_COLUMNS);
     const visibleTableColumns = TABLE_COLUMNS.filter(col => isColumnVisible(col.key));
@@ -79,13 +82,18 @@ const Shippers = () => {
             fetchShippers();
         } catch (error) {
             console.error('Error deleting shipper:', error);
-            alert('❌ Có lỗi xảy ra khi xóa đối tác vận chuyển: ' + error.message);
+            alert('❌ Có lỗi xảy ra khi xóa đơn vị vận chuyển: ' + error.message);
         }
     };
 
     const handleEditShipper = (shipper) => {
         setSelectedShipper(shipper);
         setIsFormModalOpen(true);
+    };
+
+    const handleViewShipper = (shipper) => {
+        setSelectedShipper(shipper);
+        setIsDetailsModalOpen(true);
     };
 
     const handleCreateNew = () => {
@@ -151,9 +159,9 @@ const Shippers = () => {
                         <div className="w-14 h-14 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-blue-200 transition-transform hover:rotate-3 duration-300">
                             <Truck className="w-8 h-8" />
                         </div>
-                        Đối tác vận chuyển
+                        Đơn vị vận chuyển
                     </h1>
-                    <p className="text-slate-500 mt-2 font-bold uppercase tracking-widest text-[10px]">Quản lý đối tác vận tải nội bộ và thuê ngoài</p>
+                    <p className="text-slate-500 mt-2 font-bold uppercase tracking-widest text-[10px]">Quản lý đơn vị vận chuyển nội bộ và thuê ngoài</p>
                 </div>
 
 
@@ -260,6 +268,13 @@ const Shippers = () => {
                                         <td className="px-8 py-7 text-center">
                                             <div className="flex items-center justify-center gap-5 transition-opacity">
                                                 <button
+                                                    onClick={() => handleViewShipper(shipper)}
+                                                    className="text-slate-400 hover:text-cyan-600 transition-all outline-none"
+                                                    title="Xem chi tiết & Cước phí"
+                                                >
+                                                    <Eye className="w-5 h-5" />
+                                                </button>
+                                                <button
                                                     onClick={() => handleEditShipper(shipper)}
                                                     className="text-slate-400 hover:text-slate-900 transition-all outline-none"
                                                     title="Chỉnh sửa"
@@ -302,12 +317,19 @@ const Shippers = () => {
                 </div>
             )}
 
-            {/* Modal */}
+            {/* Modals */}
             {isFormModalOpen && (
                 <ShipperFormModal
                     shipper={selectedShipper}
                     onClose={() => setIsFormModalOpen(false)}
                     onSuccess={handleFormSubmitSuccess}
+                />
+            )}
+
+            {isDetailsModalOpen && selectedShipper && (
+                <ShipperDetailsModal
+                    shipper={selectedShipper}
+                    onClose={() => setIsDetailsModalOpen(false)}
                 />
             )}
         </div>
