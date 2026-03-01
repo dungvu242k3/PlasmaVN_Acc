@@ -3,7 +3,7 @@ import {
     Warehouse
 } from 'lucide-react';
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
     WAREHOUSE_NAMES,
     WAREHOUSE_STATUSES
@@ -12,9 +12,18 @@ import { supabase } from '../supabase/config';
 
 const CreateWarehouse = () => {
     const navigate = useNavigate();
+    const { state } = useLocation();
+    const editWarehouse = state?.warehouse;
+
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const initialFormState = {
+    const initialFormState = editWarehouse ? {
+        name: editWarehouse.name,
+        manager_name: editWarehouse.manager_name,
+        address: editWarehouse.address,
+        capacity: editWarehouse.capacity,
+        status: editWarehouse.status
+    } : {
         name: 'Hà Nội',
         manager_name: '',
         address: '',
@@ -38,13 +47,22 @@ const CreateWarehouse = () => {
                 capacity: parseInt(formData.capacity, 10)
             };
 
-            const { error } = await supabase
-                .from('warehouses')
-                .insert([payload]);
+            if (editWarehouse) {
+                const { error } = await supabase
+                    .from('warehouses')
+                    .update(payload)
+                    .eq('id', editWarehouse.id);
 
-            if (error) throw error;
+                if (error) throw error;
+                alert('🎉 Đã cập nhật kho hàng thành công!');
+            } else {
+                const { error } = await supabase
+                    .from('warehouses')
+                    .insert([payload]);
 
-            alert('🎉 Đã thêm kho hàng mới thành công!');
+                if (error) throw error;
+                alert('🎉 Đã thêm kho hàng mới thành công!');
+            }
             navigate('/danh-sach-kho');
         } catch (error) {
             console.error('Error creating warehouse:', error);
@@ -87,7 +105,7 @@ const CreateWarehouse = () => {
             <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-6 md:mb-8 relative z-10">
                 <h1 className="text-2xl md:text-3xl font-black text-gray-900 tracking-tight flex items-center gap-3">
                     <Warehouse className="w-8 h-8 text-amber-600" />
-                    Thêm kho hàng mới
+                    {editWarehouse ? 'Cập nhật thông tin Kho' : 'Thêm kho hàng mới'}
                 </h1>
             </div>
 
@@ -180,7 +198,7 @@ const CreateWarehouse = () => {
                             {isSubmitting ? 'Đang lưu...' : (
                                 <>
                                     <CheckCircle2 className="w-5 h-5" />
-                                    Lưu hồ sơ Kho
+                                    {editWarehouse ? 'Cập nhật Kho' : 'Lưu hồ sơ Kho'}
                                 </>
                             )}
                         </button>

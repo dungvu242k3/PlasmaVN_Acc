@@ -4,15 +4,22 @@ import {
     ListFilter
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { MATERIAL_CATEGORIES } from '../constants/materialConstants';
 import { supabase } from '../supabase/config';
 
 const CreateMaterial = () => {
     const navigate = useNavigate();
+    const { state } = useLocation();
+    const editMaterial = state?.material;
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const [formData, setFormData] = useState({
+    const [formData, setFormData] = useState(editMaterial ? {
+        category: editMaterial.category,
+        name: editMaterial.name,
+        extra_number: editMaterial.extra_number || '',
+        extra_text: editMaterial.extra_text || ''
+    } : {
         category: MATERIAL_CATEGORIES[0].id,
         name: '',
         extra_number: '',
@@ -49,20 +56,30 @@ const CreateMaterial = () => {
 
         setIsSubmitting(true);
         try {
-            const { error } = await supabase
-                .from('materials')
-                .insert([payload]);
+            if (editMaterial) {
+                const { error } = await supabase
+                    .from('materials')
+                    .update(payload)
+                    .eq('id', editMaterial.id);
 
-            if (error) throw error;
+                if (error) throw error;
+                alert('🎉 Cập nhật danh mục vật tư thành công!');
+                navigate('/nguon-vat-tu');
+            } else {
+                const { error } = await supabase
+                    .from('materials')
+                    .insert([payload]);
 
-            alert('🎉 Đã thêm danh mục vật tư thành công!');
-            // Reset dữ liệu về ban đầu nhưng giữ lại loại vật tư đang chọn
-            setFormData({
-                category: formData.category,
-                name: '',
-                extra_number: '',
-                extra_text: ''
-            });
+                if (error) throw error;
+                alert('🎉 Đã thêm danh mục vật tư thành công!');
+                // Reset dữ liệu về ban đầu nhưng giữ lại loại vật tư đang chọn
+                setFormData({
+                    category: formData.category,
+                    name: '',
+                    extra_number: '',
+                    extra_text: ''
+                });
+            }
         } catch (error) {
             console.error('Error creating material:', error);
             alert('❌ Có lỗi xảy ra: ' + error.message);
@@ -104,7 +121,7 @@ const CreateMaterial = () => {
             <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-6 md:mb-8 relative z-10">
                 <h1 className="text-2xl md:text-3xl font-black text-gray-900 tracking-tight flex items-center gap-3">
                     <Layers className="w-8 h-8 text-emerald-600" />
-                    Thêm mới vật tư
+                    {editMaterial ? 'Cập nhật vật tư' : 'Thêm mới vật tư'}
                 </h1>
             </div>
 
@@ -126,7 +143,8 @@ const CreateMaterial = () => {
                                 <select
                                     value={formData.category}
                                     onChange={handleCategoryChange}
-                                    className="w-full px-5 py-4 bg-gray-50 border border-gray-200 rounded-2xl outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 font-bold text-lg shadow-sm cursor-pointer text-blue-900 transition-all"
+                                    disabled={!!editMaterial}
+                                    className={`w-full px-5 py-4 bg-gray-50 border border-gray-200 rounded-2xl outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 font-bold text-lg shadow-sm ${editMaterial ? 'cursor-not-allowed opacity-70' : 'cursor-pointer'} text-blue-900 transition-all`}
                                 >
                                     {MATERIAL_CATEGORIES.map(cat => (
                                         <option key={cat.id} value={cat.id}>{cat.label}</option>
@@ -212,7 +230,7 @@ const CreateMaterial = () => {
                             {isSubmitting ? 'Đang lưu...' : (
                                 <>
                                     <CheckCircle2 className="w-5 h-5" />
-                                    Lưu Vật tư
+                                    {editMaterial ? 'Cập nhật Vật tư' : 'Lưu Vật tư'}
                                 </>
                             )}
                         </button>

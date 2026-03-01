@@ -1,10 +1,16 @@
 import {
+    Edit,
     Filter,
     Search,
+    Trash2,
     Warehouse
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import ColumnToggle from '../components/ColumnToggle';
+import WarehouseFormModal from '../components/Warehouses/WarehouseFormModal';
 import { WAREHOUSE_STATUSES } from '../constants/warehouseConstants';
+import useColumnVisibility from '../hooks/useColumnVisibility';
 import usePermissions from '../hooks/usePermissions';
 import { supabase } from '../supabase/config';
 
@@ -13,15 +19,20 @@ const TABLE_COLUMNS = [
     { key: 'manager_name', label: 'Thủ Kho' },
     { key: 'address', label: 'Địa Chỉ' },
     { key: 'capacity', label: 'Sức Chứa' },
-    { key: 'status', label: 'Trạng Thái' },
+    { key: 'status', label: 'Trạng Thái' }
 ];
 
 const Warehouses = () => {
+    const navigate = useNavigate();
     const { role } = usePermissions();
     const [searchTerm, setSearchTerm] = useState('');
     const [activeStatus, setActiveStatus] = useState('ALL');
     const [warehouses, setWarehouses] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [isFormModalOpen, setIsFormModalOpen] = useState(false);
+    const [selectedWarehouse, setSelectedWarehouse] = useState(null);
+    const { visibleColumns, toggleColumn, isColumnVisible, resetColumns, visibleCount, totalCount } = useColumnVisibility('columns_warehouses', TABLE_COLUMNS);
+    const visibleTableColumns = TABLE_COLUMNS.filter(col => isColumnVisible(col.key));
 
     useEffect(() => {
         fetchWarehouses();
@@ -42,6 +53,40 @@ const Warehouses = () => {
         } finally {
             setIsLoading(false);
         }
+    };
+
+    const handleDeleteWarehouse = async (id, name) => {
+        if (!window.confirm(`Bạn có chắc chắn muốn xóa kho "${name}" không?`)) {
+            return;
+        }
+
+        try {
+            const { error } = await supabase
+                .from('warehouses')
+                .delete()
+                .eq('id', id);
+
+            if (error) throw error;
+            fetchWarehouses();
+        } catch (error) {
+            console.error('Error deleting warehouse:', error);
+            alert('❌ Có lỗi xảy ra khi xóa kho: ' + error.message);
+        }
+    };
+
+    const handleEditWarehouse = (warehouse) => {
+        setSelectedWarehouse(warehouse);
+        setIsFormModalOpen(true);
+    };
+
+    const handleCreateNew = () => {
+        setSelectedWarehouse(null);
+        setIsFormModalOpen(true);
+    };
+
+    const handleFormSubmitSuccess = () => {
+        fetchWarehouses();
+        setIsFormModalOpen(false);
     };
 
     const getStatusStyle = (status) => {
@@ -81,12 +126,14 @@ const Warehouses = () => {
                     </h1>
                     <p className="text-slate-500 mt-2 font-bold uppercase tracking-widest text-[10px]">Quản lý địa điểm lưu trữ, sức chứa và nhân sự vận hành</p>
                 </div>
+
+
             </div>
 
             {/* Main Content Card */}
-            <div className="bg-white rounded-[2.5rem] shadow-premium border border-slate-50 overflow-hidden glass">
+            <div className="bg-white rounded-[2.5rem] shadow-premium border border-slate-50 glass">
                 {/* Filters Top Bar */}
-                <div className="p-8 bg-white flex flex-col lg:flex-row gap-6 items-center border-b border-slate-50 glass">
+                <div className="p-8 bg-white flex flex-col lg:flex-row gap-6 items-center border-b border-slate-50 glass relative z-20 rounded-t-[2.5rem]">
                     <div className="relative flex-1 group w-full">
                         <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 group-focus-within:text-amber-500 transition-colors" />
                         <input
@@ -113,6 +160,7 @@ const Warehouses = () => {
                                 ))}
                             </select>
                         </div>
+                        <ColumnToggle columns={TABLE_COLUMNS} visibleColumns={visibleColumns} onToggle={toggleColumn} onReset={resetColumns} visibleCount={visibleCount} totalCount={totalCount} />
                     </div>
                 </div>
 
@@ -122,11 +170,12 @@ const Warehouses = () => {
                         <thead className="glass-header">
                             <tr>
                                 <th className="px-8 py-6 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] text-center w-24">STT</th>
-                                {TABLE_COLUMNS.map(col => (
+                                {visibleTableColumns.map(col => (
                                     <th key={col.key} className="px-8 py-6 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] text-left whitespace-nowrap">
                                         {col.label}
                                     </th>
                                 ))}
+                                <th className="px-8 py-6 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] text-center whitespace-nowrap">Thao tác</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-50/50">
@@ -141,7 +190,7 @@ const Warehouses = () => {
                                 </tr>
                             ) : filteredWarehouses.length === 0 ? (
                                 <tr>
-                                    <td colSpan={TABLE_COLUMNS.length + 1} className="px-8 py-32 text-center">
+                                    <td colSpan={visibleTableColumns.length + 2} className="px-8 py-32 text-center">
                                         <div className="flex flex-col items-center gap-8 text-slate-400">
                                             <div className="w-24 h-24 bg-slate-50 rounded-[2.5rem] flex items-center justify-center">
                                                 <Warehouse className="w-12 h-12 text-slate-200" />
@@ -157,25 +206,43 @@ const Warehouses = () => {
                                     <td className="px-8 py-7 whitespace-nowrap text-center">
                                         <span className="font-black text-slate-300 group-hover:text-amber-500 transition-colors text-lg">{idx + 1}</span>
                                     </td>
-                                    <td className="px-8 py-7 whitespace-nowrap">
+                                    {isColumnVisible('name') && <td className="px-8 py-7 whitespace-nowrap">
                                         <span className="font-black text-amber-600 bg-amber-50 px-4 py-2 rounded-xl border border-amber-100 uppercase tracking-widest text-[11px] group-hover:bg-white group-hover:shadow-sm transition-all shadow-inner">
                                             {w.name}
                                         </span>
-                                    </td>
-                                    <td className="px-8 py-7 whitespace-nowrap font-black text-black text-base group-hover:text-amber-600 transition-colors">
+                                    </td>}
+                                    {isColumnVisible('manager_name') && <td className="px-8 py-7 whitespace-nowrap font-black text-black text-base group-hover:text-amber-600 transition-colors">
                                         {w.manager_name}
-                                    </td>
-                                    <td className="px-8 py-7 text-slate-900 font-bold text-sm leading-relaxed max-w-[300px] truncate" title={w.address}>
+                                    </td>}
+                                    {isColumnVisible('address') && <td className="px-8 py-7 text-slate-900 font-bold text-sm leading-relaxed max-w-[300px] truncate" title={w.address}>
                                         {w.address}
-                                    </td>
-                                    <td className="px-8 py-7 whitespace-nowrap font-black text-black text-base">
+                                    </td>}
+                                    {isColumnVisible('capacity') && <td className="px-8 py-7 whitespace-nowrap font-black text-black text-base">
                                         {w.capacity?.toLocaleString('vi-VN')} <span className="text-slate-300 font-black uppercase tracking-widest text-[10px] ml-1 opacity-60">Vỏ bình</span>
-                                    </td>
-                                    <td className="px-8 py-7 whitespace-nowrap">
+                                    </td>}
+                                    {isColumnVisible('status') && <td className="px-8 py-7 whitespace-nowrap">
                                         <span className={`inline-flex items-center px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all shadow-sm ${getStatusStyle(w.status)}`}>
                                             <div className={`w-1.5 h-1.5 rounded-full mr-2 ${getStatusStyle(w.status).includes('emerald') ? 'bg-emerald-500' : getStatusStyle(w.status).includes('amber') ? 'bg-amber-500' : 'bg-rose-500'}`} />
                                             {w.status}
                                         </span>
+                                    </td>}
+                                    <td className="px-8 py-7 text-center">
+                                        <div className="flex items-center justify-center gap-5 transition-opacity">
+                                            <button
+                                                onClick={() => handleEditWarehouse(w)}
+                                                className="text-slate-400 hover:text-slate-900 transition-all outline-none"
+                                                title="Chỉnh sửa"
+                                            >
+                                                <Edit className="w-5 h-5" />
+                                            </button>
+                                            <button
+                                                onClick={() => handleDeleteWarehouse(w.id, w.name)}
+                                                className="text-slate-400 hover:text-slate-900 transition-all outline-none"
+                                                title="Xóa"
+                                            >
+                                                <Trash2 className="w-5 h-5" />
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             ))}
@@ -189,6 +256,15 @@ const Warehouses = () => {
                         Quy mô mạng lưới: <span className="text-amber-600 mx-2 text-lg">{filteredWarehouses.length}</span> cơ sở kho bãi
                     </p>
                 </div>
+
+                {/* Modal */}
+                {isFormModalOpen && (
+                    <WarehouseFormModal
+                        warehouse={selectedWarehouse}
+                        onClose={() => setIsFormModalOpen(false)}
+                        onSuccess={handleFormSubmitSuccess}
+                    />
+                )}
             </div>
         </div>
     );

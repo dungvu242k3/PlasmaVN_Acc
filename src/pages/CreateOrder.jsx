@@ -3,7 +3,7 @@ import {
     Plus
 } from 'lucide-react';
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
     CUSTOMER_CATEGORIES,
     MOCK_CUSTOMERS,
@@ -15,11 +15,13 @@ import { supabase } from '../supabase/config';
 
 const CreateOrder = () => {
     const navigate = useNavigate();
+    const { state } = useLocation();
+    const editOrder = state?.order;
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     const getNewOrderCode = () => Math.floor(1000 + Math.random() * 9000).toString();
 
-    const initialFormState = {
+    const defaultState = {
         orderCode: getNewOrderCode(),
         customerCategory: 'TM',
         warehouse: 'HN',
@@ -34,6 +36,22 @@ const CreateOrder = () => {
         department: '',
         promotion: ''
     };
+
+    const initialFormState = editOrder ? {
+        orderCode: editOrder.order_code,
+        customerCategory: editOrder.customer_category,
+        warehouse: editOrder.warehouse,
+        customerId: MOCK_CUSTOMERS.find(c => c.name === editOrder.customer_name)?.id || '',
+        recipientName: editOrder.recipient_name,
+        recipientAddress: editOrder.recipient_address || '',
+        recipientPhone: editOrder.recipient_phone,
+        orderType: editOrder.order_type,
+        note: editOrder.note || '',
+        productType: editOrder.product_type,
+        quantity: editOrder.quantity,
+        department: editOrder.department || '',
+        promotion: editOrder.promotion_code || ''
+    } : defaultState;
 
     const [formData, setFormData] = useState(initialFormState);
 
@@ -87,32 +105,40 @@ const CreateOrder = () => {
         setIsSubmitting(true);
         try {
             const customerName = MOCK_CUSTOMERS.find(c => c.id === formData.customerId)?.name || '';
-            const { error } = await supabase
-                .from('orders')
-                .insert([
-                    {
-                        order_code: formData.orderCode,
-                        customer_category: formData.customerCategory,
-                        warehouse: formData.warehouse,
-                        customer_name: customerName,
-                        recipient_name: formData.recipientName,
-                        recipient_address: formData.recipientAddress,
-                        recipient_phone: formData.recipientPhone,
-                        order_type: formData.orderType,
-                        note: formData.note,
-                        product_type: formData.productType,
-                        quantity: formData.quantity,
-                        department: formData.department,
-                        promotion_code: formData.promotion,
-                        status: 'CHO_DUYET',
-                        ordered_by: 'Admin'
-                    }
-                ]);
+            const payload = {
+                order_code: formData.orderCode,
+                customer_category: formData.customerCategory,
+                warehouse: formData.warehouse,
+                customer_name: customerName,
+                recipient_name: formData.recipientName,
+                recipient_address: formData.recipientAddress,
+                recipient_phone: formData.recipientPhone,
+                order_type: formData.orderType,
+                note: formData.note,
+                product_type: formData.productType,
+                quantity: formData.quantity,
+                department: formData.department,
+                promotion_code: formData.promotion,
+                status: editOrder ? editOrder.status : 'CHO_DUYET',
+                ordered_by: editOrder ? editOrder.ordered_by : 'Admin'
+            };
 
-            if (error) throw error;
-
-            alert('🎉 Tạo đơn hàng thành công!');
-            resetForm(); // Tự động reset form để nhập đơn tiếp theo
+            if (editOrder) {
+                const { error } = await supabase
+                    .from('orders')
+                    .update(payload)
+                    .eq('id', editOrder.id);
+                if (error) throw error;
+                alert('🎉 Cập nhật đơn hàng thành công!');
+                navigate('/don-hang');
+            } else {
+                const { error } = await supabase
+                    .from('orders')
+                    .insert([payload]);
+                if (error) throw error;
+                alert('🎉 Tạo đơn hàng thành công!');
+                resetForm(); // Tự động reset form để nhập đơn tiếp theo
+            }
 
         } catch (error) {
             console.error('Error creating order:', error);
@@ -135,7 +161,7 @@ const CreateOrder = () => {
                         <div className="w-8 h-8 bg-white/20 backdrop-blur-md rounded-lg flex items-center justify-center text-white shadow-inner">
                             <Plus className="w-5 h-5" />
                         </div>
-                        Thông tin đơn hàng
+                        {editOrder ? 'Cập nhật đơn hàng' : 'Thông tin đơn hàng'}
                     </h3>
                     <p className="text-blue-100 text-xs md:text-sm mt-1 md:ml-10">Vui lòng điền đầy đủ các thông tin bắt buộc được đánh dấu (*)</p>
                 </div>
@@ -176,6 +202,7 @@ const CreateOrder = () => {
                                 <Package className="w-4 h-4" /> 4. Chọn Khách hàng *
                             </label>
                             <select
+                                value={formData.customerId}
                                 onChange={handleCustomerChange}
                                 className="w-full px-5 py-4 bg-white border border-blue-200 rounded-2xl outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 font-bold text-base shadow-md transition-all cursor-pointer"
                             >
@@ -304,7 +331,7 @@ const CreateOrder = () => {
                                 : 'bg-gradient-to-r from-blue-600 to-indigo-700 shadow-blue-200 hover:scale-[1.02] active:scale-95'
                                 }`}
                         >
-                            {isSubmitting ? 'Đang lưu đơn...' : 'Xác nhận tạo đơn hàng'}
+                            {isSubmitting ? 'Đang lưu đơn...' : editOrder ? 'Xác nhận cập nhật' : 'Xác nhận tạo đơn hàng'}
                         </button>
                     </div>
                 </div>

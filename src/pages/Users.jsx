@@ -1,21 +1,37 @@
 import {
     Briefcase,
+    Edit,
     Phone,
     Search,
     ShieldCheck,
+    Trash2,
     UserCircle,
     Users as UsersIcon
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import ColumnToggle from '../components/ColumnToggle';
+import UserFormModal from '../components/Users/UserFormModal';
 import { USER_STATUSES } from '../constants/userConstants';
+import useColumnVisibility from '../hooks/useColumnVisibility';
 import { supabase } from '../supabase/config';
+
+const TABLE_COLUMNS = [
+    { key: 'info', label: 'Thông tin nhân sự' },
+    { key: 'contact', label: 'Liên lạc' },
+    { key: 'role', label: 'Vai trò / Công việc' },
+    { key: 'status', label: 'Trạng thái' },
+];
 
 const Users = () => {
     const navigate = useNavigate();
     const [searchTerm, setSearchTerm] = useState('');
     const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [isFormModalOpen, setIsFormModalOpen] = useState(false);
+    const [selectedUser, setSelectedUser] = useState(null);
+    const { visibleColumns, toggleColumn, isColumnVisible, resetColumns, visibleCount, totalCount } = useColumnVisibility('columns_users', TABLE_COLUMNS);
+    const visibleTableColumns = TABLE_COLUMNS.filter(col => isColumnVisible(col.key));
 
     useEffect(() => {
         fetchUsers();
@@ -37,6 +53,40 @@ const Users = () => {
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleDeleteUser = async (id, name) => {
+        if (!window.confirm(`Bạn có chắc chắn muốn xóa nhân sự "${name}" không?`)) {
+            return;
+        }
+
+        try {
+            const { error } = await supabase
+                .from('app_users')
+                .delete()
+                .eq('id', id);
+
+            if (error) throw error;
+            fetchUsers();
+        } catch (error) {
+            console.error('Error deleting user:', error);
+            alert('❌ Có lỗi xảy ra khi xóa nhân sự: ' + error.message);
+        }
+    };
+
+    const handleEditUser = (user) => {
+        setSelectedUser(user);
+        setIsFormModalOpen(true);
+    };
+
+    const handleCreateNew = () => {
+        setSelectedUser(null);
+        setIsFormModalOpen(true);
+    };
+
+    const handleFormSubmitSuccess = () => {
+        fetchUsers();
+        setIsFormModalOpen(false);
     };
 
     const getStatusConfig = (statusId) => {
@@ -75,19 +125,24 @@ const Users = () => {
                     </h1>
                     <p className="text-slate-500 mt-2 font-bold uppercase tracking-widest text-[10px]">Quản lý tài khoản, phân quyền và theo dõi truy cập</p>
                 </div>
+
+
             </div>
 
             {/* Content Bar */}
-            <div className="bg-white p-8 rounded-[2.5rem] shadow-premium border border-slate-50 mb-8 glass">
-                <div className="relative group w-full">
-                    <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 group-focus-within:text-indigo-500 transition-colors" />
-                    <input
-                        type="text"
-                        placeholder="Tìm kiếm nhân viên, username, SĐT hoặc bộ phận..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full pl-14 pr-6 py-4 bg-slate-50/50 border border-transparent focus:bg-white focus:border-indigo-100 rounded-2xl focus:ring-4 focus:ring-indigo-50 outline-none transition-all text-sm font-bold text-slate-600 shadow-inner"
-                    />
+            <div className="bg-white p-8 rounded-[2.5rem] shadow-premium border border-slate-50 mb-8 glass relative z-20">
+                <div className="flex items-center gap-4">
+                    <div className="relative group w-full flex-1">
+                        <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 group-focus-within:text-indigo-500 transition-colors" />
+                        <input
+                            type="text"
+                            placeholder="Tìm kiếm nhân viên, username, SĐT hoặc bộ phận..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="w-full pl-14 pr-6 py-4 bg-slate-50/50 border border-transparent focus:bg-white focus:border-indigo-100 rounded-2xl focus:ring-4 focus:ring-indigo-50 outline-none transition-all text-sm font-bold text-slate-600 shadow-inner"
+                        />
+                    </div>
+                    <ColumnToggle columns={TABLE_COLUMNS} visibleColumns={visibleColumns} onToggle={toggleColumn} onReset={resetColumns} visibleCount={visibleCount} totalCount={totalCount} />
                 </div>
             </div>
 
@@ -112,10 +167,12 @@ const Users = () => {
                             <thead className="glass-header">
                                 <tr>
                                     <th className="px-8 py-6 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] text-center w-24">STT</th>
-                                    <th className="px-8 py-6 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em]">Thông tin nhân sự</th>
-                                    <th className="px-8 py-6 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em]">Liên lạc</th>
-                                    <th className="px-8 py-6 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em]">Vai trò / Công việc</th>
-                                    <th className="px-8 py-6 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em]">Trạng thái</th>
+                                    {visibleTableColumns.map(col => (
+                                        <th key={col.key} className="px-8 py-6 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em]">
+                                            {col.label}
+                                        </th>
+                                    ))}
+                                    <th className="px-8 py-6 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] text-center">Thao tác</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-50/50">
@@ -126,7 +183,7 @@ const Users = () => {
                                             <td className="px-8 py-7 whitespace-nowrap text-center">
                                                 <span className="font-black text-slate-300 group-hover:text-indigo-500 transition-colors text-lg">{index + 1}</span>
                                             </td>
-                                            <td className="px-8 py-7">
+                                            {isColumnVisible('info') && <td className="px-8 py-7">
                                                 <div className="flex items-center gap-4">
                                                     <div className="avatar-initials group-hover:scale-110 group-hover:rotate-6 transition-all duration-300">
                                                         {getInitials(user.name)}
@@ -136,14 +193,14 @@ const Users = () => {
                                                         <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1 opacity-60">@{user.username}</div>
                                                     </div>
                                                 </div>
-                                            </td>
-                                            <td className="px-8 py-7 whitespace-nowrap">
+                                            </td>}
+                                            {isColumnVisible('contact') && <td className="px-8 py-7 whitespace-nowrap">
                                                 <div className="flex items-center gap-2.5 font-bold text-slate-900 bg-slate-50 px-4 py-2 rounded-xl border border-slate-100 group-hover:bg-white group-hover:shadow-sm transition-all duration-300 w-max">
                                                     <Phone className="w-4 h-4 text-indigo-400" />
                                                     {user.phone}
                                                 </div>
-                                            </td>
-                                            <td className="px-8 py-7 whitespace-nowrap">
+                                            </td>}
+                                            {isColumnVisible('role') && <td className="px-8 py-7 whitespace-nowrap">
                                                 <div className="flex flex-col gap-2">
                                                     <div className="flex items-center gap-2 text-indigo-600 font-black bg-indigo-50 border border-indigo-100 px-4 py-2 rounded-xl w-max group-hover:bg-white transition-all text-[11px] uppercase tracking-widest">
                                                         {user.role === 'Admin' ? <ShieldCheck className="w-4 h-4" /> : <Briefcase className="w-4 h-4 opacity-50" />}
@@ -156,12 +213,30 @@ const Users = () => {
                                                         </div>
                                                     )}
                                                 </div>
-                                            </td>
-                                            <td className="px-8 py-7 whitespace-nowrap text-sm">
+                                            </td>}
+                                            {isColumnVisible('status') && <td className="px-8 py-7 whitespace-nowrap text-sm">
                                                 <span className={`px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all shadow-sm flex items-center gap-2 w-max group-hover:bg-white ${statusConfig.colorClass} ${statusConfig.id === 'active' ? 'glow-emerald' : 'glow-amber'}`}>
                                                     <div className={`w-1.5 h-1.5 rounded-full ${statusConfig.id === 'active' ? 'bg-emerald-500' : 'bg-amber-500'} animate-pulse`} />
                                                     {user.status}
                                                 </span>
+                                            </td>}
+                                            <td className="px-8 py-7 text-center">
+                                                <div className="flex items-center justify-center gap-5 transition-opacity">
+                                                    <button
+                                                        onClick={() => handleEditUser(user)}
+                                                        className="text-slate-400 hover:text-slate-900 transition-all outline-none"
+                                                        title="Chỉnh sửa"
+                                                    >
+                                                        <Edit className="w-5 h-5" />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDeleteUser(user.id, user.name)}
+                                                        className="text-slate-400 hover:text-slate-900 transition-all outline-none"
+                                                        title="Xóa"
+                                                    >
+                                                        <Trash2 className="w-5 h-5" />
+                                                    </button>
+                                                </div>
                                             </td>
                                         </tr>
                                     );
@@ -179,6 +254,15 @@ const Users = () => {
                         Tổng quy mô nhân sự: <span className="text-indigo-600 mx-2 text-lg">{filteredUsers.length}</span> tài khoản định danh
                     </p>
                 </div>
+            )}
+
+            {/* Modal */}
+            {isFormModalOpen && (
+                <UserFormModal
+                    user={selectedUser}
+                    onClose={() => setIsFormModalOpen(false)}
+                    onSuccess={handleFormSubmitSuccess}
+                />
             )}
         </div>
     );

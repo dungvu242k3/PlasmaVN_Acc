@@ -3,15 +3,24 @@ import {
     Truck
 } from 'lucide-react';
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { SHIPPER_STATUSES, SHIPPING_TYPES } from '../constants/shipperConstants';
 import { supabase } from '../supabase/config';
 
 const CreateShipper = () => {
     const navigate = useNavigate();
+    const { state } = useLocation();
+    const editShipper = state?.shipper;
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const initialFormState = {
+    const initialFormState = editShipper ? {
+        name: editShipper.name,
+        shipping_type: editShipper.shipping_type,
+        manager_name: editShipper.manager_name,
+        phone: editShipper.phone,
+        address: editShipper.address,
+        status: editShipper.status
+    } : {
         name: '',
         shipping_type: 'NHAN_VIEN',
         manager_name: '',
@@ -30,13 +39,22 @@ const CreateShipper = () => {
 
         setIsSubmitting(true);
         try {
-            const { error } = await supabase
-                .from('shippers')
-                .insert([formData]);
+            if (editShipper) {
+                const { error } = await supabase
+                    .from('shippers')
+                    .update(formData)
+                    .eq('id', editShipper.id);
 
-            if (error) throw error;
+                if (error) throw error;
+                alert('🎉 Đã cập nhật đơn vị vận chuyển thành công!');
+            } else {
+                const { error } = await supabase
+                    .from('shippers')
+                    .insert([formData]);
 
-            alert('🎉 Đã thêm đơn vị vận chuyển thành công!');
+                if (error) throw error;
+                alert('🎉 Đã thêm đơn vị vận chuyển thành công!');
+            }
             navigate('/danh-sach-dvvc');
         } catch (error) {
             console.error('Error creating shipper:', error);
@@ -59,7 +77,7 @@ const CreateShipper = () => {
             <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-6 md:mb-8 relative z-10">
                 <h1 className="text-2xl md:text-3xl font-black text-gray-900 tracking-tight flex items-center gap-3">
                     <Truck className="w-8 h-8 text-emerald-600" />
-                    Thêm đơn vị vận chuyển
+                    {editShipper ? 'Cập nhật ĐVVC' : 'Thêm đơn vị vận chuyển'}
                 </h1>
             </div>
 
@@ -160,7 +178,7 @@ const CreateShipper = () => {
                             {isSubmitting ? 'Đang lưu...' : (
                                 <>
                                     <CheckCircle2 className="w-5 h-5" />
-                                    Lưu ĐVVC
+                                    {editShipper ? 'Cập nhật ĐVVC' : 'Lưu ĐVVC'}
                                 </>
                             )}
                         </button>

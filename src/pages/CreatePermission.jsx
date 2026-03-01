@@ -7,16 +7,20 @@ import {
     Users
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { ACTION_TYPES, MODULE_PERMISSIONS } from '../constants/permissionConstants';
 import { supabase } from '../supabase/config';
 
 const CreatePermission = () => {
     const navigate = useNavigate();
+    const { state } = useLocation();
+    const editRole = state?.role;
+    const isUserRoleEdit = state?.isUserRole;
+
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const [permissionType, setPermissionType] = useState('role'); // 'role' or 'user'
-    const [roleName, setRoleName] = useState('');
+    const [permissionType, setPermissionType] = useState(editRole ? (isUserRoleEdit ? 'user' : 'role') : 'role');
+    const [roleName, setRoleName] = useState(editRole && !isUserRoleEdit ? editRole.name : '');
     const [usersList, setUsersList] = useState([]);
     const [selectedUserId, setSelectedUserId] = useState('');
 
@@ -44,7 +48,12 @@ const CreatePermission = () => {
                     .order('name');
                 if (!error && data) {
                     setUsersList(data);
-                    if (data.length > 0) setSelectedUserId(data[0].id);
+                    if (isUserRoleEdit && editRole) {
+                        const u = data.find(user => user.username === editRole.username);
+                        if (u) setSelectedUserId(u.id);
+                    } else if (data.length > 0) {
+                        setSelectedUserId(data[0].id);
+                    }
                 }
             } catch (err) {
                 console.error('Error fetching users:', err);
@@ -63,7 +72,7 @@ const CreatePermission = () => {
         return acc;
     }, {});
 
-    const [permissions, setPermissions] = useState(initialPermissions);
+    const [permissions, setPermissions] = useState(editRole ? editRole.permissions : initialPermissions);
 
     // Fetch existing permissions when User or Role is selected
     useEffect(() => {
@@ -103,8 +112,11 @@ const CreatePermission = () => {
                 }
             }
         };
-        loadExisting();
-    }, [permissionType, selectedUserId, roleName, usersList, rolesList]);
+        // Tắt tính năng tự tải đè lên khi đang ở chế độ Edit ban đầu
+        if (!editRole) {
+            loadExisting();
+        }
+    }, [permissionType, selectedUserId, roleName, usersList, rolesList, editRole]);
 
     const handleCheckboxChange = (moduleId, actionId) => {
         setPermissions(prev => ({
@@ -173,14 +185,23 @@ const CreatePermission = () => {
                     permissions: permissions
                 };
 
-                const { error } = await supabase
-                    .from('app_roles')
-                    .insert([payload]);
+                if (editRole && !isUserRoleEdit) {
+                    const { error } = await supabase
+                        .from('app_roles')
+                        .update(payload)
+                        .eq('id', editRole.id);
 
-                if (error) throw error;
+                    if (error) throw error;
+                    alert('🎉 Đã cập nhật Nhóm phân quyền thành công!');
+                } else {
+                    const { error } = await supabase
+                        .from('app_roles')
+                        .insert([payload]);
 
-                alert('🎉 Đã thêm Nhóm phân quyền mới thành công!');
-                setRoleName('');
+                    if (error) throw error;
+                    alert('🎉 Đã thêm Nhóm phân quyền mới thành công!');
+                }
+                navigate('/phan-quyen');
             } else {
                 if (!selectedUserId) {
                     alert('Vui lòng chọn một người dùng (*)');
@@ -215,6 +236,7 @@ const CreatePermission = () => {
                 if (userUpdateError) throw userUpdateError;
 
                 alert(`🎉 Đã cấp quyền riêng cho Người dùng "${user.name}" thành công!`);
+                navigate('/phan-quyen');
             }
 
             // Refresh lists to reflect new roles
@@ -244,7 +266,7 @@ const CreatePermission = () => {
             <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-6 md:mb-8 relative z-10">
                 <h1 className="text-2xl md:text-3xl font-black text-gray-900 tracking-tight flex items-center gap-3">
                     <ShieldPlus className="w-8 h-8 text-indigo-600" />
-                    Thêm quyền / Nhóm người dùng
+                    {editRole ? 'Cập nhật quyền' : 'Thêm quyền / Nhóm người dùng'}
                 </h1>
             </div>
 
@@ -262,14 +284,16 @@ const CreatePermission = () => {
                         <div className="flex items-center gap-2 bg-gray-100 p-1 rounded-xl w-max">
                             <button
                                 onClick={() => setPermissionType('role')}
-                                className={`flex items-center gap-2 px-6 py-2.5 rounded-lg font-bold text-sm transition-all ${permissionType === 'role' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                                disabled={!!editRole}
+                                className={`flex items-center gap-2 px-6 py-2.5 rounded-lg font-bold text-sm transition-all ${permissionType === 'role' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'} ${editRole ? 'opacity-70 cursor-not-allowed' : ''}`}
                             >
                                 <Users className="w-4 h-4" />
                                 Theo Nhóm quyền (Role)
                             </button>
                             <button
                                 onClick={() => setPermissionType('user')}
-                                className={`flex items-center gap-2 px-6 py-2.5 rounded-lg font-bold text-sm transition-all ${permissionType === 'user' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+                                disabled={!!editRole}
+                                className={`flex items-center gap-2 px-6 py-2.5 rounded-lg font-bold text-sm transition-all ${permissionType === 'user' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'} ${editRole ? 'opacity-70 cursor-not-allowed' : ''}`}
                             >
                                 <UserCircle className="w-4 h-4" />
                                 Theo Người dùng (User)
@@ -300,7 +324,8 @@ const CreatePermission = () => {
                                     <select
                                         value={selectedUserId}
                                         onChange={(e) => setSelectedUserId(e.target.value)}
-                                        className="w-full px-5 py-4 bg-white border border-gray-200 rounded-2xl outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 font-bold text-lg shadow-sm transition-all text-gray-900 appearance-none cursor-pointer"
+                                        disabled={!!editRole}
+                                        className={`w-full px-5 py-4 bg-white border border-gray-200 rounded-2xl outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 font-bold text-lg shadow-sm transition-all text-gray-900 appearance-none ${editRole ? 'opacity-70 cursor-not-allowed bg-gray-50' : 'cursor-pointer'}`}
                                     >
                                         {usersList.length === 0 && <option value="">Đang tải danh sách người dùng...</option>}
                                         {usersList.map(user => (
@@ -399,7 +424,7 @@ const CreatePermission = () => {
                             {isSubmitting ? 'Đang lưu...' : (
                                 <>
                                     <Save className="w-5 h-5" />
-                                    Lưu quyền
+                                    {editRole ? 'Cập nhật quyền' : 'Lưu quyền'}
                                 </>
                             )}
                         </button>

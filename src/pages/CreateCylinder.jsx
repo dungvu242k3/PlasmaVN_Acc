@@ -3,7 +3,7 @@ import {
     CheckCircle2
 } from 'lucide-react';
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
     CYLINDER_STATUSES,
     CYLINDER_VOLUMES,
@@ -16,9 +16,11 @@ import { supabase } from '../supabase/config';
 
 const CreateCylinder = () => {
     const navigate = useNavigate();
+    const { state } = useLocation();
+    const editCylinder = state?.cylinder;
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const initialFormState = {
+    const defaultState = {
         serial_number: '',
         status: 'sẵn sàng',
         net_weight: '',
@@ -29,6 +31,7 @@ const CreateCylinder = () => {
         handle_type: 'Có quai'
     };
 
+    const initialFormState = editCylinder || defaultState;
     const [formData, setFormData] = useState(initialFormState);
 
     const handleCreateCylinder = async () => {
@@ -39,17 +42,30 @@ const CreateCylinder = () => {
 
         setIsSubmitting(true);
         try {
-            // Transform net_weight string to numeric implicitly or null if empty
             const payload = { ...formData };
             if (!payload.net_weight) delete payload.net_weight;
 
-            const { error } = await supabase
-                .from('cylinders')
-                .insert([payload]);
+            if (editCylinder) {
+                // Remove readonly/system fields before update to prevent errors
+                delete payload.id;
+                delete payload.created_at;
+                delete payload.updated_at;
+                const { error } = await supabase
+                    .from('cylinders')
+                    .update(payload)
+                    .eq('id', editCylinder.id);
 
-            if (error) throw error;
+                if (error) throw error;
+                alert('🎉 Cập nhật vỏ bình thành công!');
+            } else {
+                const { error } = await supabase
+                    .from('cylinders')
+                    .insert([payload]);
 
-            alert('🎉 Đã thêm vỏ bình mới thành công!');
+                if (error) throw error;
+                alert('🎉 Đã thêm vỏ bình mới thành công!');
+            }
+
             navigate('/danh-sach-binh');
         } catch (error) {
             console.error('Error creating cylinder:', error);
@@ -95,7 +111,7 @@ const CreateCylinder = () => {
             <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-6 md:mb-8 relative z-10">
                 <h1 className="text-2xl md:text-3xl font-black text-gray-900 tracking-tight flex items-center gap-3">
                     <ActivitySquare className="w-8 h-8 text-teal-600" />
-                    Thêm vỏ bình / bình khí mới
+                    {editCylinder ? 'Cập nhật vỏ bình / bình khí' : 'Thêm vỏ bình / bình khí mới'}
                 </h1>
             </div>
 
@@ -219,7 +235,7 @@ const CreateCylinder = () => {
                             {isSubmitting ? 'Đang lưu...' : (
                                 <>
                                     <CheckCircle2 className="w-5 h-5" />
-                                    Lưu hồ sơ Bình
+                                    {editCylinder ? 'Cập nhật hồ sơ Bình' : 'Lưu hồ sơ Bình'}
                                 </>
                             )}
                         </button>

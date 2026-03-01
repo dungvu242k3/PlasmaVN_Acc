@@ -2,15 +2,29 @@ import {
     ActivitySquare,
     CheckCircle2,
     ChevronDown,
+    Edit,
     Package,
     Search,
+    Trash2,
     Truck,
     XCircle
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import ColumnToggle from '../components/ColumnToggle';
+import ShipperFormModal from '../components/Shippers/ShipperFormModal';
 import { SHIPPING_TYPES } from '../constants/shipperConstants';
+import useColumnVisibility from '../hooks/useColumnVisibility';
 import { supabase } from '../supabase/config';
+
+const TABLE_COLUMNS = [
+    { key: 'name', label: 'Đơn vị vận chuyển' },
+    { key: 'type', label: 'Loại hình' },
+    { key: 'manager', label: 'Người quản lý' },
+    { key: 'phone', label: 'Số điện thoại' },
+    { key: 'address', label: 'Địa chỉ' },
+    { key: 'status', label: 'Trạng thái' },
+];
 
 const Shippers = () => {
     const navigate = useNavigate();
@@ -18,6 +32,10 @@ const Shippers = () => {
     const [statusFilter, setStatusFilter] = useState('all');
     const [shippers, setShippers] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [isFormModalOpen, setIsFormModalOpen] = useState(false);
+    const [selectedShipper, setSelectedShipper] = useState(null);
+    const { visibleColumns, toggleColumn, isColumnVisible, resetColumns, visibleCount, totalCount } = useColumnVisibility('columns_shippers', TABLE_COLUMNS);
+    const visibleTableColumns = TABLE_COLUMNS.filter(col => isColumnVisible(col.key));
 
     useEffect(() => {
         fetchShippers();
@@ -44,6 +62,40 @@ const Shippers = () => {
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleDeleteShipper = async (id, name) => {
+        if (!window.confirm(`Bạn có chắc chắn muốn xóa hệ thống đối tác "${name}" không?`)) {
+            return;
+        }
+
+        try {
+            const { error } = await supabase
+                .from('shippers')
+                .delete()
+                .eq('id', id);
+
+            if (error) throw error;
+            fetchShippers();
+        } catch (error) {
+            console.error('Error deleting shipper:', error);
+            alert('❌ Có lỗi xảy ra khi xóa đối tác vận chuyển: ' + error.message);
+        }
+    };
+
+    const handleEditShipper = (shipper) => {
+        setSelectedShipper(shipper);
+        setIsFormModalOpen(true);
+    };
+
+    const handleCreateNew = () => {
+        setSelectedShipper(null);
+        setIsFormModalOpen(true);
+    };
+
+    const handleFormSubmitSuccess = () => {
+        fetchShippers();
+        setIsFormModalOpen(false);
     };
 
     const getStatusStyle = (status) => {
@@ -103,10 +155,12 @@ const Shippers = () => {
                     </h1>
                     <p className="text-slate-500 mt-2 font-bold uppercase tracking-widest text-[10px]">Quản lý đối tác vận tải nội bộ và thuê ngoài</p>
                 </div>
+
+
             </div>
 
             {/* Filters Section */}
-            <div className="bg-white p-8 rounded-[2.5rem] shadow-premium border border-slate-50 mb-8 flex flex-col md:flex-row gap-6 items-center glass">
+            <div className="bg-white p-8 rounded-[2.5rem] shadow-premium border border-slate-50 mb-8 flex flex-col md:flex-row gap-6 items-center glass relative z-20">
                 <div className="flex-1 relative group w-full">
                     <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 group-focus-within:text-blue-500 transition-colors" />
                     <input
@@ -132,6 +186,7 @@ const Shippers = () => {
                         <ChevronDown className="w-4 h-4" />
                     </div>
                 </div>
+                <ColumnToggle columns={TABLE_COLUMNS} visibleColumns={visibleColumns} onToggle={toggleColumn} onReset={resetColumns} visibleCount={visibleCount} totalCount={totalCount} />
             </div>
 
             {/* Table Section */}
@@ -155,12 +210,12 @@ const Shippers = () => {
                             <thead className="glass-header">
                                 <tr>
                                     <th className="px-8 py-6 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] text-center w-24">STT</th>
-                                    <th className="px-8 py-6 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em]">Đơn vị vận chuyển</th>
-                                    <th className="px-8 py-6 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em]">Loại hình</th>
-                                    <th className="px-8 py-6 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em]">Người quản lý</th>
-                                    <th className="px-8 py-6 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em]">Số điện thoại</th>
-                                    <th className="px-8 py-6 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em]">Địa chỉ</th>
-                                    <th className="px-8 py-6 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em]">Trạng thái</th>
+                                    {visibleTableColumns.map(col => (
+                                        <th key={col.key} className="px-8 py-6 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em]">
+                                            {col.label}
+                                        </th>
+                                    ))}
+                                    <th className="px-8 py-6 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] text-center">Thao tác</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-50/50">
@@ -169,7 +224,7 @@ const Shippers = () => {
                                         <td className="px-8 py-7 whitespace-nowrap text-center">
                                             <span className="font-black text-slate-300 group-hover:text-blue-500 transition-colors text-lg">{index + 1}</span>
                                         </td>
-                                        <td className="px-8 py-7">
+                                        {isColumnVisible('name') && <td className="px-8 py-7">
                                             <div className="flex items-center gap-4">
                                                 <div className="avatar-initials group-hover:scale-110 group-hover:rotate-6 transition-all duration-300 bg-gradient-to-tr from-slate-700 to-slate-900">
                                                     {getInitials(shipper.name)}
@@ -179,28 +234,46 @@ const Shippers = () => {
                                                     <div className="text-[10px] text-slate-400 font-black uppercase tracking-widest mt-1.5 opacity-50">ID: {shipper.id.substring(0, 8)}</div>
                                                 </div>
                                             </div>
-                                        </td>
-                                        <td className="px-8 py-7 whitespace-nowrap">
+                                        </td>}
+                                        {isColumnVisible('type') && <td className="px-8 py-7 whitespace-nowrap">
                                             <span className="text-sm font-bold text-slate-600 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100">
                                                 {SHIPPING_TYPES.find(t => t.id === shipper.shipping_type)?.label || shipper.shipping_type || '—'}
                                             </span>
-                                        </td>
-                                        <td className="px-8 py-7 whitespace-nowrap font-bold text-slate-900">
+                                        </td>}
+                                        {isColumnVisible('manager') && <td className="px-8 py-7 whitespace-nowrap font-bold text-slate-900">
                                             {shipper.manager_name}
-                                        </td>
-                                        <td className="px-8 py-7 whitespace-nowrap">
+                                        </td>}
+                                        {isColumnVisible('phone') && <td className="px-8 py-7 whitespace-nowrap">
                                             <span className="font-black text-blue-600 bg-blue-50/50 px-3 py-1.5 rounded-xl border border-blue-100 group-hover:bg-white transition-all text-sm">
                                                 {shipper.phone}
                                             </span>
-                                        </td>
-                                        <td className="px-8 py-7 text-slate-900 font-bold text-sm leading-relaxed max-w-[250px] truncate" title={shipper.address}>
+                                        </td>}
+                                        {isColumnVisible('address') && <td className="px-8 py-7 text-slate-900 font-bold text-sm leading-relaxed max-w-[250px] truncate" title={shipper.address}>
                                             {shipper.address}
-                                        </td>
-                                        <td className="px-8 py-7 whitespace-nowrap">
+                                        </td>}
+                                        {isColumnVisible('status') && <td className="px-8 py-7 whitespace-nowrap">
                                             <span className={`px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest border inline-flex items-center transition-all shadow-sm ${getStatusStyle(shipper.status)} ${shipper.status === 'Đang hoạt động' ? 'glow-emerald' : 'glow-amber'}`}>
                                                 {getStatusIcon(shipper.status)}
                                                 {shipper.status}
                                             </span>
+                                        </td>}
+                                        <td className="px-8 py-7 text-center">
+                                            <div className="flex items-center justify-center gap-5 transition-opacity">
+                                                <button
+                                                    onClick={() => handleEditShipper(shipper)}
+                                                    className="text-slate-400 hover:text-slate-900 transition-all outline-none"
+                                                    title="Chỉnh sửa"
+                                                >
+                                                    <Edit className="w-5 h-5" />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDeleteShipper(shipper.id, shipper.name)}
+                                                    className="text-slate-400 hover:text-slate-900 transition-all outline-none"
+                                                    title="Xóa"
+                                                >
+                                                    <Trash2 className="w-5 h-5" />
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))}
@@ -227,6 +300,15 @@ const Shippers = () => {
                         </span>
                     </div>
                 </div>
+            )}
+
+            {/* Modal */}
+            {isFormModalOpen && (
+                <ShipperFormModal
+                    shipper={selectedShipper}
+                    onClose={() => setIsFormModalOpen(false)}
+                    onSuccess={handleFormSubmitSuccess}
+                />
             )}
         </div>
     );

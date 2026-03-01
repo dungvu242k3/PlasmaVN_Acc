@@ -1,12 +1,26 @@
 import {
     CalendarDays,
+    Edit,
     Gift,
     Search,
-    Tag
+    Tag,
+    Trash2
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import ColumnToggle from '../components/ColumnToggle';
+import PromotionFormModal from '../components/Promotions/PromotionFormModal';
+import useColumnVisibility from '../hooks/useColumnVisibility';
 import { supabase } from '../supabase/config';
+
+const TABLE_COLUMNS = [
+    { key: 'code', label: 'Mã Khuyến mãi' },
+    { key: 'content', label: 'Nội dung ưu đãi' },
+    { key: 'period', label: 'Thời hạn áp dụng' },
+    { key: 'target', label: 'Đối tượng' },
+    { key: 'status', label: 'Tình trạng' },
+    { key: 'active', label: 'Kích hoạt' },
+];
 
 const Promotions = () => {
     const navigate = useNavigate();
@@ -14,6 +28,10 @@ const Promotions = () => {
     const [promotions, setPromotions] = useState([]);
     const [loading, setLoading] = useState(true);
     const [filterStatus, setFilterStatus] = useState('all'); // 'all', 'active', 'expired'
+    const [isFormModalOpen, setIsFormModalOpen] = useState(false);
+    const [selectedPromo, setSelectedPromo] = useState(null);
+    const { visibleColumns, toggleColumn, isColumnVisible, resetColumns, visibleCount, totalCount } = useColumnVisibility('columns_promotions', TABLE_COLUMNS);
+    const visibleTableColumns = TABLE_COLUMNS.filter(col => isColumnVisible(col.key));
 
     useEffect(() => {
         fetchPromotions();
@@ -61,6 +79,18 @@ const Promotions = () => {
         return matchSearch;
     });
 
+    const handleDeletePromo = async (id, code) => {
+        if (!window.confirm(`Bạn có chắc chắn muốn xóa mã khuyến mãi ${code} không?`)) return;
+        try {
+            const { error } = await supabase.from('app_promotions').delete().eq('id', id);
+            if (error) throw error;
+            fetchPromotions();
+        } catch (error) {
+            console.error('Error deleting promotion:', error);
+            alert('❌ Có lỗi xảy ra: ' + error.message);
+        }
+    };
+
     const handleToggleActive = async (id, currentActive) => {
         try {
             const { error } = await supabase
@@ -72,6 +102,21 @@ const Promotions = () => {
         } catch (error) {
             console.error('Error toggling promotion:', error);
         }
+    };
+
+    const handleEditPromo = (promo) => {
+        setSelectedPromo(promo);
+        setIsFormModalOpen(true);
+    };
+
+    const handleCreateNew = () => {
+        setSelectedPromo(null);
+        setIsFormModalOpen(true);
+    };
+
+    const handleFormSubmitSuccess = () => {
+        fetchPromotions();
+        setIsFormModalOpen(false);
     };
 
     return (
@@ -92,10 +137,12 @@ const Promotions = () => {
                     </h1>
                     <p className="text-slate-500 mt-2 font-bold uppercase tracking-widest text-[10px]">Quản lý mã KM, khấu trừ bình khí và ưu đãi khách hàng</p>
                 </div>
+
+
             </div>
 
             {/* Filters Section */}
-            <div className="bg-white p-8 rounded-[2.5rem] shadow-premium border border-slate-50 mb-8 space-y-6 glass">
+            <div className="bg-white p-8 rounded-[2.5rem] shadow-premium border border-slate-50 mb-8 space-y-6 glass relative z-20">
                 {/* Status Filter Tabs */}
                 <div className="flex items-center gap-2 bg-slate-50 p-1.5 rounded-2xl w-max shadow-inner">
                     {[
@@ -123,6 +170,9 @@ const Promotions = () => {
                         className="w-full pl-14 pr-6 py-4 bg-slate-50/50 border border-transparent focus:bg-white focus:border-rose-100 rounded-2xl focus:ring-4 focus:ring-rose-50 outline-none transition-all text-sm font-bold text-slate-600 shadow-inner"
                     />
                 </div>
+                <div className="flex items-center justify-end">
+                    <ColumnToggle columns={TABLE_COLUMNS} visibleColumns={visibleColumns} onToggle={toggleColumn} onReset={resetColumns} visibleCount={visibleCount} totalCount={totalCount} />
+                </div>
             </div>
 
             {/* Table Section */}
@@ -146,12 +196,12 @@ const Promotions = () => {
                             <thead className="glass-header">
                                 <tr>
                                     <th className="px-8 py-6 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] text-center w-24">STT</th>
-                                    <th className="px-8 py-6 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em]">Mã Khuyến mãi</th>
-                                    <th className="px-8 py-6 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] text-center">Nội dung ưu đãi</th>
-                                    <th className="px-8 py-6 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em]">Thời hạn áp dụng</th>
-                                    <th className="px-8 py-6 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em]">Đối tượng</th>
-                                    <th className="px-8 py-6 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] text-center">Tình trạng</th>
-                                    <th className="px-8 py-6 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] text-center">Kích hoạt</th>
+                                    {visibleTableColumns.map(col => (
+                                        <th key={col.key} className={`px-8 py-6 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] ${col.key === 'content' || col.key === 'status' || col.key === 'active' ? 'text-center' : ''}`}>
+                                            {col.label}
+                                        </th>
+                                    ))}
+                                    <th className="px-8 py-6 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] text-center">Thao tác</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-50/50">
@@ -162,36 +212,36 @@ const Promotions = () => {
                                             <td className="px-8 py-7 whitespace-nowrap text-center">
                                                 <span className="font-black text-slate-300 group-hover:text-rose-500 transition-colors text-lg">{index + 1}</span>
                                             </td>
-                                            <td className="px-8 py-7">
+                                            {isColumnVisible('code') && <td className="px-8 py-7">
                                                 <div className="flex items-center gap-3">
                                                     <div className="p-2 bg-rose-50 rounded-xl text-rose-500 group-hover:bg-white transition-all transform group-hover:rotate-12">
                                                         <Tag className="w-4 h-4" />
                                                     </div>
                                                     <span className="font-black text-black text-base group-hover:text-rose-600 transition-colors">{promo.code}</span>
                                                 </div>
-                                            </td>
-                                            <td className="px-8 py-7 text-center">
+                                            </td>}
+                                            {isColumnVisible('content') && <td className="px-8 py-7 text-center">
                                                 <span className="font-black text-rose-600 bg-rose-50 px-4 py-2 rounded-xl border border-rose-100 group-hover:bg-white group-hover:shadow-sm transition-all text-sm">
                                                     + {promo.free_cylinders} bình khí
                                                 </span>
-                                            </td>
-                                            <td className="px-8 py-7">
+                                            </td>}
+                                            {isColumnVisible('period') && <td className="px-8 py-7">
                                                 <div className="flex items-center gap-3 text-sm font-bold text-slate-900">
                                                     <CalendarDays className="w-4 h-4 text-slate-300" />
                                                     <span className="whitespace-nowrap">{formatDate(promo.start_date)} — {formatDate(promo.end_date)}</span>
                                                 </div>
-                                            </td>
-                                            <td className="px-8 py-7">
+                                            </td>}
+                                            {isColumnVisible('target') && <td className="px-8 py-7">
                                                 <span className="font-black text-[10px] uppercase tracking-widest text-slate-900 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100 group-hover:bg-white transition-all">
                                                     {promo.customer_type}
                                                 </span>
-                                            </td>
-                                            <td className="px-8 py-7 text-center">
+                                            </td>}
+                                            {isColumnVisible('status') && <td className="px-8 py-7 text-center">
                                                 <span className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all shadow-sm ${status.color.replace('bg-', 'bg-').replace('text-', 'text-')} group-hover:bg-white`}>
                                                     {status.label}
                                                 </span>
-                                            </td>
-                                            <td className="px-8 py-7 text-center">
+                                            </td>}
+                                            {isColumnVisible('active') && <td className="px-8 py-7 text-center">
                                                 <label className="relative inline-flex items-center cursor-pointer">
                                                     <input
                                                         type="checkbox"
@@ -201,6 +251,24 @@ const Promotions = () => {
                                                     />
                                                     <div className="w-12 h-6.5 bg-slate-100 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:border-slate-200 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-rose-500 shadow-inner"></div>
                                                 </label>
+                                            </td>}
+                                            <td className="px-8 py-7 text-center">
+                                                <div className="flex items-center justify-center gap-5 transition-opacity">
+                                                    <button
+                                                        onClick={() => handleEditPromo(promo)}
+                                                        className="text-slate-400 hover:text-slate-900 transition-all outline-none"
+                                                        title="Chỉnh sửa"
+                                                    >
+                                                        <Edit className="w-5 h-5" />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDeletePromo(promo.id, promo.code)}
+                                                        className="text-slate-400 hover:text-slate-900 transition-all outline-none"
+                                                        title="Xóa"
+                                                    >
+                                                        <Trash2 className="w-5 h-5" />
+                                                    </button>
+                                                </div>
                                             </td>
                                         </tr>
                                     );
@@ -217,6 +285,15 @@ const Promotions = () => {
                         Đang rà soát <span className="font-black text-rose-600 mx-1">{filteredPromotions.length}</span> mã khuyến mãi <span className="text-slate-300 mx-1">/</span> Tổng {promotions.length} mã
                     </p>
                 </div>
+            )}
+
+            {/* Modal */}
+            {isFormModalOpen && (
+                <PromotionFormModal
+                    promotion={selectedPromo}
+                    onClose={() => setIsFormModalOpen(false)}
+                    onSuccess={handleFormSubmitSuccess}
+                />
             )}
         </div>
     );

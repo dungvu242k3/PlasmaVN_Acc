@@ -5,7 +5,7 @@ import {
     Tag
 } from 'lucide-react';
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '../supabase/config';
 
 const CUSTOMER_TYPES = [
@@ -24,11 +24,26 @@ const INITIAL_FORM_STATE = {
 
 const CreatePromotion = () => {
     const navigate = useNavigate();
+    const { state } = useLocation();
+    const editPromo = state?.promo;
+
     const [saving, setSaving] = useState(false);
-    const [formData, setFormData] = useState(INITIAL_FORM_STATE);
+    const [formData, setFormData] = useState(editPromo ? {
+        code: editPromo.code,
+        free_cylinders: editPromo.free_cylinders,
+        start_date: editPromo.start_date,
+        end_date: editPromo.end_date,
+        customer_type: editPromo.customer_type,
+    } : INITIAL_FORM_STATE);
 
     const handleReset = () => {
-        setFormData(INITIAL_FORM_STATE);
+        setFormData(editPromo ? {
+            code: editPromo.code,
+            free_cylinders: editPromo.free_cylinders,
+            start_date: editPromo.start_date,
+            end_date: editPromo.end_date,
+            customer_type: editPromo.customer_type,
+        } : INITIAL_FORM_STATE);
     };
 
     const handleChange = (field, value) => {
@@ -62,20 +77,31 @@ const CreatePromotion = () => {
 
         setSaving(true);
         try {
-            const { error } = await supabase
-                .from('app_promotions')
-                .insert([{
-                    code: formData.code.trim().toUpperCase(),
-                    free_cylinders: Number(formData.free_cylinders),
-                    start_date: formData.start_date,
-                    end_date: formData.end_date,
-                    customer_type: formData.customer_type,
-                    is_active: true,
-                }]);
+            const payload = {
+                code: formData.code.trim().toUpperCase(),
+                free_cylinders: Number(formData.free_cylinders),
+                start_date: formData.start_date,
+                end_date: formData.end_date,
+                customer_type: formData.customer_type,
+                is_active: editPromo ? editPromo.is_active : true,
+            };
 
-            if (error) throw error;
-            alert('Tạo mã khuyến mãi thành công!');
-            handleReset();
+            if (editPromo) {
+                const { error } = await supabase
+                    .from('app_promotions')
+                    .update(payload)
+                    .eq('id', editPromo.id);
+                if (error) throw error;
+                alert('Cập nhật mã khuyến mãi thành công!');
+                navigate('/khuyen-mai');
+            } else {
+                const { error } = await supabase
+                    .from('app_promotions')
+                    .insert([payload]);
+                if (error) throw error;
+                alert('Tạo mã khuyến mãi thành công!');
+                handleReset();
+            }
         } catch (error) {
             console.error('Error creating promotion:', error);
             if (error.code === '23505') {
@@ -98,7 +124,7 @@ const CreatePromotion = () => {
             <div className="mb-8 relative z-10">
                 <h1 className="text-2xl md:text-3xl font-black text-gray-900 tracking-tight flex items-center gap-3">
                     <Gift className="w-8 h-8 text-rose-600" />
-                    Tạo Mã Khuyến Mãi mới
+                    {editPromo ? 'Cập nhật Mã Khuyến Mãi' : 'Tạo Mã Khuyến Mãi mới'}
                 </h1>
                 <p className="text-gray-500 mt-2 font-medium">Thiết lập thông tin mã khuyến mãi bình cho khách hàng hoặc đại lý</p>
             </div>
@@ -200,7 +226,7 @@ const CreatePromotion = () => {
                             className="flex items-center justify-center gap-2 px-8 py-3.5 bg-blue-600 text-white font-bold rounded-2xl hover:bg-blue-700 hover:shadow-lg transition-all shadow-blue-200 shadow-md disabled:opacity-50"
                         >
                             <Save className="w-5 h-5" />
-                            {saving ? 'Đang lưu...' : 'Tạo Mã KM'}
+                            {saving ? 'Đang lưu...' : editPromo ? 'Cập nhật Mã KM' : 'Tạo Mã KM'}
                         </button>
                     </div>
                 </div>

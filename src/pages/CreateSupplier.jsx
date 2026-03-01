@@ -3,14 +3,20 @@ import {
     CheckCircle2
 } from 'lucide-react';
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '../supabase/config';
 
 const CreateSupplier = () => {
     const navigate = useNavigate();
+    const { state } = useLocation();
+    const editSupplier = state?.supplier;
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const initialFormState = {
+    const initialFormState = editSupplier ? {
+        name: editSupplier.name,
+        phone: editSupplier.phone,
+        address: editSupplier.address
+    } : {
         name: '',
         phone: '',
         address: ''
@@ -26,13 +32,22 @@ const CreateSupplier = () => {
 
         setIsSubmitting(true);
         try {
-            const { error } = await supabase
-                .from('suppliers')
-                .insert([formData]);
+            if (editSupplier) {
+                const { error } = await supabase
+                    .from('suppliers')
+                    .update(formData)
+                    .eq('id', editSupplier.id);
 
-            if (error) throw error;
+                if (error) throw error;
+                alert('🎉 Đã cập nhật nhà cung cấp thành công!');
+            } else {
+                const { error } = await supabase
+                    .from('suppliers')
+                    .insert([formData]);
 
-            alert('🎉 Đã thêm nhà cung cấp thành công!');
+                if (error) throw error;
+                alert('🎉 Đã thêm nhà cung cấp thành công!');
+            }
             navigate('/nha-cung-cap');
         } catch (error) {
             console.error('Error creating supplier:', error);
@@ -55,7 +70,7 @@ const CreateSupplier = () => {
             <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-6 md:mb-8 relative z-10">
                 <h1 className="text-2xl md:text-3xl font-black text-gray-900 tracking-tight flex items-center gap-3">
                     <Building2 className="w-8 h-8 text-slate-600" />
-                    Thêm nhà cung cấp mới
+                    {editSupplier ? 'Cập nhật nhà cung cấp' : 'Thêm nhà cung cấp mới'}
                 </h1>
             </div>
 
@@ -127,7 +142,7 @@ const CreateSupplier = () => {
                             {isSubmitting ? 'Đang lưu...' : (
                                 <>
                                     <CheckCircle2 className="w-5 h-5" />
-                                    Lưu Nhà cung cấp
+                                    {editSupplier ? 'Cập nhật Nhà cung cấp' : 'Lưu Nhà cung cấp'}
                                 </>
                             )}
                         </button>

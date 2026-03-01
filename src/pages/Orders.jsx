@@ -1,14 +1,18 @@
 import {
     ChevronDown,
+    Edit,
     Filter,
     MoreHorizontal,
     Package,
     Printer,
-    Search
+    Search,
+    Trash2
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import ColumnToggle from '../components/ColumnToggle';
 import OrderPrintTemplate from '../components/OrderPrintTemplate';
+import OrderFormModal from '../components/Orders/OrderFormModal';
 import OrderStatusUpdater from '../components/Orders/OrderStatusUpdater';
 import {
     CUSTOMER_CATEGORIES,
@@ -17,6 +21,7 @@ import {
     PRODUCT_TYPES,
     TABLE_COLUMNS
 } from '../constants/orderConstants';
+import useColumnVisibility from '../hooks/useColumnVisibility';
 import usePermissions from '../hooks/usePermissions';
 import { supabase } from '../supabase/config';
 
@@ -29,18 +34,14 @@ const Orders = () => {
     const [ordersToPrint, setOrdersToPrint] = useState(null);
     const [selectedIds, setSelectedIds] = useState([]);
     const [isActionModalOpen, setIsActionModalOpen] = useState(false);
+    const [isFormModalOpen, setIsFormModalOpen] = useState(false);
+    const [orderToEdit, setOrderToEdit] = useState(null);
+    const { visibleColumns, toggleColumn, isColumnVisible, resetColumns, visibleCount, totalCount } = useColumnVisibility('columns_orders', TABLE_COLUMNS);
+    const visibleTableColumns = TABLE_COLUMNS.filter(col => isColumnVisible(col.key));
 
     const formatNumber = (num) => {
         if (!num) return '0';
         return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-    };
-
-    const handleQuantityChange = (e) => {
-        // Removed as it was for the modal form
-    };
-
-    const handleCustomerChange = (e) => {
-        // Removed as it was for the modal form
     };
 
     const [orders, setOrders] = useState([]);
@@ -78,25 +79,8 @@ const Orders = () => {
         );
 
         const matchesStatus = activeTab === 'ALL' || order.status === activeTab;
-
-        // Scope logic: Admins and Thu Kho can see all orders
-        // Sales and Customers can only see their own created orders
-        let matchesScope = true;
-
-        // Note: For full production use, user.name or a firm UUID should be stored and checked 
-        // against order.ordered_by or order.sales_person. For now we use the mocked user.name
-        if (role !== 'admin' && role !== 'thu_kho' && role !== 'shipper') {
-            // Example simplified check:
-            // matchesScope = order.ordered_by === user?.name;
-            // In this mockup we allow it to pass, but the logic is here.
-        }
-
-        return matchesSearch && matchesStatus && matchesScope;
+        return matchesSearch && matchesStatus;
     });
-
-    const handleCreateOrder = async () => {
-        // Removed as it moved to CreateOrder.jsx
-    };
 
     const getStatusConfig = (statusId) => {
         return ORDER_STATUSES.find(s => s.id === statusId) || ORDER_STATUSES[0];
@@ -107,7 +91,7 @@ const Orders = () => {
     };
 
     const handlePrint = (order) => {
-        setOrdersToPrint(order); // OrderPrintTemplate now handles single and multi
+        setOrdersToPrint(order);
         setTimeout(() => {
             window.print();
         }, 150);
@@ -144,6 +128,35 @@ const Orders = () => {
     const handleAction = (order) => {
         setSelectedOrder(order);
         setIsActionModalOpen(true);
+    };
+
+    const handleDeleteOrder = async (id, orderCode) => {
+        if (!window.confirm(`Bạn có chắc chắn muốn xóa đơn hàng ${orderCode} không?`)) {
+            return;
+        }
+
+        try {
+            const { error } = await supabase
+                .from('orders')
+                .delete()
+                .eq('id', id);
+
+            if (error) throw error;
+            fetchOrders();
+        } catch (error) {
+            console.error('Error deleting order:', error);
+            alert('❌ Có lỗi xảy ra khi xóa đơn hàng: ' + error.message);
+        }
+    };
+
+    const handleEditOrder = (order) => {
+        setOrderToEdit(order);
+        setIsFormModalOpen(true);
+    };
+
+    const handleFormSubmitSuccess = () => {
+        fetchOrders();
+        setIsFormModalOpen(false);
     };
 
     const getRowStyle = (category, isSelected) => {
@@ -186,16 +199,16 @@ const Orders = () => {
                             }`}
                     >
                         <Printer className="w-4 h-4" />
-                        In hàng loạt ({selectedIds.length})
+                        In ({selectedIds.length})
                     </button>
                 </div>
             </div>
 
             {/* Main Content Card */}
-            <div className="bg-white rounded-[2.5rem] shadow-premium border border-slate-50 overflow-hidden glass">
+            <div className="bg-white rounded-[2.5rem] shadow-premium border border-slate-50 glass">
 
                 {/* Filters Top Bar */}
-                <div className="p-8 flex flex-col lg:flex-row gap-6 items-center border-b border-slate-50">
+                <div className="p-8 flex flex-col lg:flex-row gap-6 items-center border-b border-slate-50 relative z-20 rounded-t-[2.5rem]">
                     <div className="relative flex-1 group w-full">
                         <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
                         <input
@@ -225,6 +238,7 @@ const Orders = () => {
                             </div>
                         </div>
                     </div>
+                    <ColumnToggle columns={TABLE_COLUMNS} visibleColumns={visibleColumns} onToggle={toggleColumn} onReset={resetColumns} visibleCount={visibleCount} totalCount={totalCount} />
                 </div>
 
                 {/* Table Section */}
@@ -242,7 +256,7 @@ const Orders = () => {
                                         />
                                     </div>
                                 </th>
-                                {TABLE_COLUMNS.map(col => (
+                                {visibleTableColumns.map(col => (
                                     <th key={col.key} className="px-8 py-5 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] text-left">
                                         {col.label}
                                     </th>
@@ -253,7 +267,7 @@ const Orders = () => {
                         <tbody className="divide-y divide-slate-50/50">
                             {isLoading ? (
                                 <tr>
-                                    <td colSpan={TABLE_COLUMNS.length + 2} className="px-8 py-24 text-center">
+                                    <td colSpan={visibleTableColumns.length + 2} className="px-8 py-24 text-center">
                                         <div className="flex flex-col items-center gap-6">
                                             <div className="w-14 h-14 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
                                             <p className="text-slate-400 font-black animate-pulse tracking-widest text-xs uppercase">Đang tải dữ liệu đơn hàng...</p>
@@ -262,7 +276,7 @@ const Orders = () => {
                                 </tr>
                             ) : filteredOrders.length === 0 ? (
                                 <tr>
-                                    <td colSpan={TABLE_COLUMNS.length + 2} className="px-8 py-24 text-center">
+                                    <td colSpan={visibleTableColumns.length + 2} className="px-8 py-24 text-center">
                                         <div className="flex flex-col items-center gap-6 text-slate-300">
                                             <div className="w-20 h-20 bg-slate-50 rounded-[2rem] flex items-center justify-center">
                                                 <Package className="w-10 h-10 opacity-30" />
@@ -285,25 +299,25 @@ const Orders = () => {
                                                 />
                                             </div>
                                         </td>
-                                        <td className="px-8 py-6 whitespace-nowrap">
+                                        {isColumnVisible('code') && <td className="px-8 py-6 whitespace-nowrap">
                                             <span className="text-sm font-black text-blue-700 bg-blue-50/50 px-3 py-1.5 rounded-xl border border-blue-100/50 group-hover:bg-white transition-all duration-300">
                                                 {order.order_code}
                                             </span>
-                                        </td>
-                                        <td className="px-8 py-6 text-sm font-bold text-slate-500">{getLabel(CUSTOMER_CATEGORIES, order.customer_category)}</td>
-                                        <td className="px-8 py-6">
+                                        </td>}
+                                        {isColumnVisible('category') && <td className="px-8 py-6 text-sm font-bold text-slate-500">{getLabel(CUSTOMER_CATEGORIES, order.customer_category)}</td>}
+                                        {isColumnVisible('customer') && <td className="px-8 py-6">
                                             <span className="text-sm font-black text-slate-800 group-hover:text-blue-700 transition-colors uppercase tracking-tight">{order.customer_name}</span>
-                                        </td>
-                                        <td className="px-8 py-6">
+                                        </td>}
+                                        {isColumnVisible('recipient') && <td className="px-8 py-6">
                                             <span className="text-sm font-bold text-slate-600">{order.recipient_name}</span>
-                                        </td>
-                                        <td className="px-8 py-6 text-sm font-bold text-slate-500">{getLabel(ORDER_TYPES, order.order_type)}</td>
-                                        <td className="px-8 py-6 text-sm font-bold text-slate-500">{getLabel(PRODUCT_TYPES, order.product_type)}</td>
-                                        <td className="px-8 py-6">
+                                        </td>}
+                                        {isColumnVisible('type') && <td className="px-8 py-6 text-sm font-bold text-slate-500">{getLabel(ORDER_TYPES, order.order_type)}</td>}
+                                        {isColumnVisible('product') && <td className="px-8 py-6 text-sm font-bold text-slate-500">{getLabel(PRODUCT_TYPES, order.product_type)}</td>}
+                                        {isColumnVisible('quantity') && <td className="px-8 py-6">
                                             <span className="text-sm font-black text-slate-900 bg-slate-100/50 px-3 py-1 rounded-lg">{formatNumber(order.quantity)}</span>
-                                        </td>
-                                        <td className="px-8 py-6 text-sm font-bold text-slate-500">{order.department || '—'}</td>
-                                        <td className="px-8 py-6">
+                                        </td>}
+                                        {isColumnVisible('department') && <td className="px-8 py-6 text-sm font-bold text-slate-500">{order.department || '—'}</td>}
+                                        {isColumnVisible('status') && <td className="px-8 py-6">
                                             <span className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-[0.1em] border shadow-sm transition-all duration-300 ${status.color === 'blue' ? 'bg-blue-600 text-white border-blue-700 glow-blue' :
                                                 status.color === 'yellow' ? 'bg-amber-500 text-white border-amber-600 glow-amber' :
                                                     status.color === 'orange' ? 'bg-orange-500 text-white border-orange-600 glow-amber' :
@@ -312,24 +326,39 @@ const Orders = () => {
                                                 <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></div>
                                                 {status.label}
                                             </span>
-                                        </td>
-                                        <td className="px-8 py-6 text-sm font-black text-slate-400">
+                                        </td>}
+                                        {isColumnVisible('date') && <td className="px-8 py-6 text-sm font-black text-slate-400">
                                             {order.created_at ? new Date(order.created_at).toLocaleDateString('vi-VN') : '---'}
-                                        </td>
+                                        </td>}
                                         <td className="px-8 py-6 text-center">
-                                            <div className="flex items-center justify-center gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <div className="flex items-center justify-center gap-4">
                                                 <button
                                                     onClick={() => handlePrint(order)}
-                                                    className="p-3 text-slate-400 hover:text-blue-600 hover:bg-white hover:shadow-card group-hover:scale-110 rounded-2xl transition-all"
+                                                    className="text-slate-400 hover:text-slate-900 transition-all outline-none"
                                                     title="In đơn hàng"
                                                 >
-                                                    <Printer className="w-5 h-5" />
+                                                    <Printer className="w-4.5 h-4.5" />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleEditOrder(order)}
+                                                    className="text-slate-400 hover:text-slate-900 transition-all outline-none"
+                                                    title="Chỉnh sửa"
+                                                >
+                                                    <Edit className="w-4.5 h-4.5" />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDeleteOrder(order.id, order.order_code)}
+                                                    className="text-slate-400 hover:text-slate-900 transition-all outline-none"
+                                                    title="Xóa"
+                                                >
+                                                    <Trash2 className="w-4.5 h-4.5" />
                                                 </button>
                                                 <button
                                                     onClick={() => handleAction(order)}
-                                                    className="p-3 text-slate-400 hover:text-slate-900 hover:bg-white hover:shadow-card group-hover:scale-110 rounded-2xl transition-all"
+                                                    className="text-slate-400 hover:text-slate-900 transition-all outline-none"
+                                                    title="Cập nhật trạng thái"
                                                 >
-                                                    <MoreHorizontal className="w-5 h-5" />
+                                                    <MoreHorizontal className="w-4.5 h-4.5" />
                                                 </button>
                                             </div>
                                         </td>
@@ -366,6 +395,15 @@ const Orders = () => {
             <div className="print-only-content">
                 <OrderPrintTemplate orders={ordersToPrint} />
             </div>
+
+            {/* Form Modal */}
+            {isFormModalOpen && (
+                <OrderFormModal
+                    order={orderToEdit}
+                    onClose={() => setIsFormModalOpen(false)}
+                    onSuccess={handleFormSubmitSuccess}
+                />
+            )}
         </div>
     );
 };

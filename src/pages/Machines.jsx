@@ -1,21 +1,17 @@
 import {
     Activity,
+    Edit,
     Filter,
-    MonitorIcon // or similar icon
-    ,
-
-
-
-
-
-
-
-
-
-    Search
+    MonitorIcon,
+    Search,
+    Trash2
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import ColumnToggle from '../components/ColumnToggle';
+import MachineFormModal from '../components/Machines/MachineFormModal';
 import { MACHINE_STATUSES } from '../constants/machineConstants';
+import useColumnVisibility from '../hooks/useColumnVisibility';
 import usePermissions from '../hooks/usePermissions';
 import { supabase } from '../supabase/config';
 
@@ -32,10 +28,15 @@ const TABLE_COLUMNS = [
 
 const Machines = () => {
     const { role } = usePermissions();
+    const navigate = useNavigate();
     const [searchTerm, setSearchTerm] = useState('');
     const [activeStatus, setActiveStatus] = useState('ALL');
     const [machines, setMachines] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [isFormModalOpen, setIsFormModalOpen] = useState(false);
+    const [selectedMachine, setSelectedMachine] = useState(null);
+    const { visibleColumns, toggleColumn, isColumnVisible, resetColumns, visibleCount, totalCount } = useColumnVisibility('columns_machines', TABLE_COLUMNS);
+    const visibleTableColumns = TABLE_COLUMNS.filter(col => isColumnVisible(col.key));
 
     useEffect(() => {
         fetchMachines();
@@ -58,6 +59,40 @@ const Machines = () => {
         } finally {
             setIsLoading(false);
         }
+    };
+
+    const handleDeleteMachine = async (id, serial_number) => {
+        if (!window.confirm(`Bạn có chắc chắn muốn xóa máy có mã ${serial_number} này không? Chú ý: Hành động này không thể hoàn tác.`)) {
+            return;
+        }
+
+        try {
+            const { error } = await supabase
+                .from('machines')
+                .delete()
+                .eq('id', id);
+
+            if (error) throw error;
+            fetchMachines();
+        } catch (error) {
+            console.error('Error deleting machine:', error);
+            alert('❌ Có lỗi xảy ra khi xóa máy: ' + error.message);
+        }
+    };
+
+    const handleEditMachine = (machine) => {
+        setSelectedMachine(machine);
+        setIsFormModalOpen(true);
+    };
+
+    const handleCreateNew = () => {
+        setSelectedMachine(null);
+        setIsFormModalOpen(true);
+    };
+
+    const handleFormSubmitSuccess = () => {
+        fetchMachines();
+        setIsFormModalOpen(false);
     };
 
     const getStatusStyle = (status) => {
@@ -109,12 +144,14 @@ const Machines = () => {
                     </h1>
                     <p className="text-slate-500 mt-2 font-bold uppercase tracking-widest text-[10px]">Quản lý danh mục và trạng thái máy móc hệ thống</p>
                 </div>
+
+
             </div>
 
             {/* Main Content Card */}
-            <div className="bg-white rounded-[2.5rem] shadow-premium border border-slate-50 overflow-hidden glass">
+            <div className="bg-white rounded-[2.5rem] shadow-premium border border-slate-50 glass">
                 {/* Filters Top Bar */}
-                <div className="p-8 bg-white flex flex-col lg:flex-row gap-6 items-center border-b border-slate-50">
+                <div className="p-8 bg-white flex flex-col lg:flex-row gap-6 items-center border-b border-slate-50 relative z-20 rounded-t-[2.5rem]">
                     <div className="relative flex-1 group w-full">
                         <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 group-focus-within:text-indigo-500 transition-colors" />
                         <input
@@ -144,6 +181,7 @@ const Machines = () => {
                                 <Search className="w-4 h-4 rotate-90" />
                             </div>
                         </div>
+                        <ColumnToggle columns={TABLE_COLUMNS} visibleColumns={visibleColumns} onToggle={toggleColumn} onReset={resetColumns} visibleCount={visibleCount} totalCount={totalCount} />
                     </div>
                 </div>
 
@@ -152,17 +190,18 @@ const Machines = () => {
                     <table className="w-full border-collapse min-w-[1000px]">
                         <thead className="glass-header">
                             <tr>
-                                {TABLE_COLUMNS.map(col => (
+                                {visibleTableColumns.map(col => (
                                     <th key={col.key} className="px-8 py-6 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] text-left whitespace-nowrap">
                                         {col.label}
                                     </th>
                                 ))}
+                                <th className="px-8 py-6 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] text-center sticky right-0 z-10 bg-slate-50/80 backdrop-blur-md border-l border-slate-50 shadow-sm">Thao tác</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-50/50">
                             {isLoading ? (
                                 <tr>
-                                    <td colSpan={TABLE_COLUMNS.length} className="px-8 py-28 text-center">
+                                    <td colSpan={visibleTableColumns.length + 1} className="px-8 py-28 text-center">
                                         <div className="flex flex-col items-center gap-6">
                                             <div className="w-14 h-14 border-4 border-indigo-50 border-t-indigo-600 rounded-full animate-spin"></div>
                                             <p className="text-slate-400 font-black animate-pulse tracking-[0.2em] text-[10px] uppercase">Đang rà soát danh sách thiết bị...</p>
@@ -171,7 +210,7 @@ const Machines = () => {
                                 </tr>
                             ) : filteredMachines.length === 0 ? (
                                 <tr>
-                                    <td colSpan={TABLE_COLUMNS.length} className="px-8 py-32 text-center">
+                                    <td colSpan={visibleTableColumns.length + 1} className="px-8 py-32 text-center">
                                         <div className="flex flex-col items-center gap-8 text-slate-400">
                                             <div className="w-24 h-24 bg-slate-50 rounded-[2.5rem] flex items-center justify-center">
                                                 <Activity className="w-12 h-12 text-slate-200" />
@@ -184,29 +223,47 @@ const Machines = () => {
                                 </tr>
                             ) : filteredMachines.map((m) => (
                                 <tr key={m.id} className="group hover:bg-indigo-50/20 transition-all duration-300">
-                                    <td className="px-8 py-7 whitespace-nowrap">
+                                    {isColumnVisible('serial_number') && <td className="px-8 py-7 whitespace-nowrap">
                                         <span className="font-black text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-xl border border-indigo-100 uppercase tracking-widest text-[11px] group-hover:bg-white group-hover:shadow-sm transition-all">
                                             {m.serial_number}
                                         </span>
-                                    </td>
-                                    <td className="px-8 py-7 whitespace-nowrap font-black text-black text-base group-hover:text-indigo-600 transition-colors">
+                                    </td>}
+                                    {isColumnVisible('machine_type') && <td className="px-8 py-7 whitespace-nowrap font-black text-black text-base group-hover:text-indigo-600 transition-colors">
                                         {m.machine_type || '-'}
-                                    </td>
-                                    <td className="px-8 py-7 font-black text-black whitespace-nowrap">
+                                    </td>}
+                                    {isColumnVisible('customer_name') && <td className="px-8 py-7 font-black text-black whitespace-nowrap">
                                         {m.customer_name ? (
                                             <span className="bg-slate-50 px-4 py-2 rounded-xl border border-slate-100 group-hover:bg-white transition-all">{m.customer_name}</span>
                                         ) : (
                                             <span className="text-slate-300 font-bold italic text-sm">Sẵn sàng xuất kho</span>
                                         )}
-                                    </td>
-                                    <td className="px-8 py-7 whitespace-nowrap">
+                                    </td>}
+                                    {isColumnVisible('status') && <td className="px-8 py-7 whitespace-nowrap">
                                         <span className={`inline-flex items-center px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${getStatusStyle(m.status)}`}>
                                             <div className={`w-1.5 h-1.5 rounded-full mr-2 ${getStatusStyle(m.status).includes('emerald') ? 'bg-emerald-500' : getStatusStyle(m.status).includes('amber') ? 'bg-amber-500' : 'bg-rose-500'}`} />
                                             {getStatusLabel(m.status)}
                                         </span>
-                                    </td>
-                                    <td className="px-8 py-7 text-slate-900 font-bold text-sm leading-relaxed max-w-[250px] truncate" title={m.department_in_charge}>
+                                    </td>}
+                                    {isColumnVisible('department_in_charge') && <td className="px-8 py-7 text-slate-900 font-bold text-sm leading-relaxed max-w-[250px] truncate" title={m.department_in_charge}>
                                         {m.department_in_charge || '-'}
+                                    </td>}
+                                    <td className="px-8 py-7 text-center whitespace-nowrap sticky right-0 z-10 bg-white/80 backdrop-blur-md border-l border-slate-50 group-hover:bg-indigo-50/40 transition-all">
+                                        <div className="flex items-center justify-center gap-5">
+                                            <button
+                                                onClick={() => handleEditMachine(m)}
+                                                className="text-slate-400 hover:text-slate-900 transition-all outline-none"
+                                                title="Chỉnh sửa"
+                                            >
+                                                <Edit className="w-5 h-5" />
+                                            </button>
+                                            <button
+                                                onClick={() => handleDeleteMachine(m.id, m.serial_number)}
+                                                className="text-slate-400 hover:text-slate-900 transition-all outline-none"
+                                                title="Xóa"
+                                            >
+                                                <Trash2 className="w-5 h-5" />
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             ))}
@@ -221,6 +278,15 @@ const Machines = () => {
                     </p>
                 </div>
             </div>
+
+            {/* Modal */}
+            {isFormModalOpen && (
+                <MachineFormModal
+                    machine={selectedMachine}
+                    onClose={() => setIsFormModalOpen(false)}
+                    onSuccess={handleFormSubmitSuccess}
+                />
+            )}
         </div>
     );
 };

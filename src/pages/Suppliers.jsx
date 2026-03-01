@@ -1,16 +1,31 @@
 import {
     Building2,
-    Search
+    Edit,
+    Search,
+    Trash2
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import ColumnToggle from '../components/ColumnToggle';
+import SupplierFormModal from '../components/Suppliers/SupplierFormModal';
+import useColumnVisibility from '../hooks/useColumnVisibility';
 import { supabase } from '../supabase/config';
+
+const TABLE_COLUMNS = [
+    { key: 'info', label: 'Thông tin đối tác' },
+    { key: 'phone', label: 'Số điện thoại' },
+    { key: 'address', label: 'Địa chỉ liên hệ' },
+];
 
 const Suppliers = () => {
     const navigate = useNavigate();
     const [searchTerm, setSearchTerm] = useState('');
     const [suppliers, setSuppliers] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [isFormModalOpen, setIsFormModalOpen] = useState(false);
+    const [selectedSupplier, setSelectedSupplier] = useState(null);
+    const { visibleColumns, toggleColumn, isColumnVisible, resetColumns, visibleCount, totalCount } = useColumnVisibility('columns_suppliers', TABLE_COLUMNS);
+    const visibleTableColumns = TABLE_COLUMNS.filter(col => isColumnVisible(col.key));
 
     useEffect(() => {
         fetchSuppliers();
@@ -40,6 +55,40 @@ const Suppliers = () => {
         supplier.address.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
+    const handleDeleteSupplier = async (id, name) => {
+        if (!window.confirm(`Bạn có chắc chắn muốn xóa đối tác "${name}" không?`)) {
+            return;
+        }
+
+        try {
+            const { error } = await supabase
+                .from('suppliers')
+                .delete()
+                .eq('id', id);
+
+            if (error) throw error;
+            fetchSuppliers();
+        } catch (error) {
+            console.error('Error deleting supplier:', error);
+            alert('❌ Có lỗi xảy ra khi xóa nhà cung cấp: ' + error.message);
+        }
+    };
+
+    const handleEditSupplier = (supplier) => {
+        setSelectedSupplier(supplier);
+        setIsFormModalOpen(true);
+    };
+
+    const handleCreateNew = () => {
+        setSelectedSupplier(null);
+        setIsFormModalOpen(true);
+    };
+
+    const handleFormSubmitSuccess = () => {
+        fetchSuppliers();
+        setIsFormModalOpen(false);
+    };
+
     return (
         <div className="p-4 md:p-8 max-w-[1600px] mx-auto font-sans bg-[#F8FAFC] min-h-screen noise-bg">
             {/* Decorative Background Blobs */}
@@ -58,19 +107,24 @@ const Suppliers = () => {
                     </h1>
                     <p className="text-slate-400 mt-2 font-bold uppercase tracking-widest text-[10px]">Quản lý các đối tác cung cấp vật tư</p>
                 </div>
+
+
             </div>
 
             {/* Filters Section */}
-            <div className="bg-white p-8 rounded-[2.5rem] shadow-premium border border-slate-50 mb-10 glass">
-                <div className="flex-1 relative group">
-                    <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
-                    <input
-                        type="text"
-                        placeholder="Tìm kiếm theo Tên, SĐT, Địa chỉ..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full pl-14 pr-6 py-4 bg-slate-50/50 border border-transparent focus:bg-white focus:border-blue-100 rounded-2xl outline-none focus:ring-4 focus:ring-blue-50 font-bold text-slate-600 transition-all shadow-inner"
-                    />
+            <div className="bg-white p-8 rounded-[2.5rem] shadow-premium border border-slate-50 mb-10 glass relative z-20">
+                <div className="flex items-center gap-4">
+                    <div className="flex-1 relative group">
+                        <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+                        <input
+                            type="text"
+                            placeholder="Tìm kiếm theo Tên, SĐT, Địa chỉ..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="w-full pl-14 pr-6 py-4 bg-slate-50/50 border border-transparent focus:bg-white focus:border-blue-100 rounded-2xl outline-none focus:ring-4 focus:ring-blue-50 font-bold text-slate-600 transition-all shadow-inner"
+                        />
+                    </div>
+                    <ColumnToggle columns={TABLE_COLUMNS} visibleColumns={visibleColumns} onToggle={toggleColumn} onReset={resetColumns} visibleCount={visibleCount} totalCount={totalCount} />
                 </div>
             </div>
 
@@ -95,9 +149,12 @@ const Suppliers = () => {
                             <thead className="glass-header">
                                 <tr>
                                     <th className="px-8 py-6 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] text-center w-24">STT</th>
-                                    <th className="px-8 py-6 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em]">Thông tin đối tác</th>
-                                    <th className="px-8 py-6 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em]">Số điện thoại</th>
-                                    <th className="px-8 py-6 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em]">Địa chỉ liên hệ</th>
+                                    {visibleTableColumns.map(col => (
+                                        <th key={col.key} className="px-8 py-6 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em]">
+                                            {col.label}
+                                        </th>
+                                    ))}
+                                    <th className="px-8 py-6 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] text-center">Thao tác</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-50/50">
@@ -106,20 +163,38 @@ const Suppliers = () => {
                                         <td className="px-8 py-7 whitespace-nowrap text-center">
                                             <span className="font-black text-slate-200 group-hover:text-blue-500 transition-colors duration-300 text-lg">{index + 1}</span>
                                         </td>
-                                        <td className="px-8 py-7">
+                                        {isColumnVisible('info') && <td className="px-8 py-7">
                                             <div className="font-black text-slate-800 text-base group-hover:text-blue-600 transition-colors">{supplier.name}</div>
                                             <div className="text-[10px] text-slate-300 font-black uppercase tracking-widest mt-1.5 flex items-center gap-2">
                                                 <div className="w-1.5 h-1.5 rounded-full bg-slate-200" />
                                                 ID: {supplier.id.substring(0, 8)}
                                             </div>
-                                        </td>
-                                        <td className="px-8 py-7 whitespace-nowrap">
+                                        </td>}
+                                        {isColumnVisible('phone') && <td className="px-8 py-7 whitespace-nowrap">
                                             <span className="font-black text-slate-800 bg-slate-50 px-4 py-2 rounded-xl border border-slate-100 group-hover:bg-white group-hover:shadow-sm transition-all">
                                                 {supplier.phone}
                                             </span>
-                                        </td>
-                                        <td className="px-8 py-7 text-sm font-bold text-slate-500 leading-relaxed max-w-xs">
+                                        </td>}
+                                        {isColumnVisible('address') && <td className="px-8 py-7 text-sm font-bold text-slate-500 leading-relaxed max-w-xs">
                                             {supplier.address}
+                                        </td>}
+                                        <td className="px-8 py-7 text-center">
+                                            <div className="flex items-center justify-center gap-1 transition-opacity">
+                                                <button
+                                                    onClick={() => handleEditSupplier(supplier)}
+                                                    className="text-slate-400 hover:text-slate-900 transition-all outline-none"
+                                                    title="Chỉnh sửa"
+                                                >
+                                                    <Edit className="w-5 h-5" />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDeleteSupplier(supplier.id, supplier.name)}
+                                                    className="text-slate-400 hover:text-slate-900 transition-all outline-none"
+                                                    title="Xóa"
+                                                >
+                                                    <Trash2 className="w-5 h-5" />
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))}
@@ -136,6 +211,15 @@ const Suppliers = () => {
                         Hiển thị <span className="text-blue-600 ml-1">{filteredSuppliers.length}</span> / {suppliers.length} đối tác hệ thống
                     </p>
                 </div>
+            )}
+
+            {/* Modal */}
+            {isFormModalOpen && (
+                <SupplierFormModal
+                    supplier={selectedSupplier}
+                    onClose={() => setIsFormModalOpen(false)}
+                    onSuccess={handleFormSubmitSuccess}
+                />
             )}
         </div>
     );

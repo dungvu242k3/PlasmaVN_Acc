@@ -7,15 +7,24 @@ import {
     UserPlus
 } from 'lucide-react';
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { USER_ROLES, USER_STATUSES } from '../constants/userConstants';
 import { supabase } from '../supabase/config';
 
 const CreateUser = () => {
     const navigate = useNavigate();
+    const { state } = useLocation();
+    const editUser = state?.userAcc;
+
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const initialFormState = {
+    const initialFormState = editUser ? {
+        name: editUser.name,
+        username: editUser.username,
+        role: editUser.role,
+        phone: editUser.phone,
+        status: editUser.status
+    } : {
         name: '',
         username: '',
         role: USER_ROLES[0].id, // Default to first role (Admin or whatever is first)
@@ -41,17 +50,19 @@ const CreateUser = () => {
 
         setIsSubmitting(true);
         try {
-            // Check if username already exists to provide a friendly error message
-            const { data: existingUser, error: checkError } = await supabase
-                .from('app_users')
-                .select('id')
-                .eq('username', formData.username.trim())
-                .single();
+            if (!editUser || formData.username.trim() !== editUser.username) {
+                // Check if username already exists
+                const { data: existingUser } = await supabase
+                    .from('app_users')
+                    .select('id')
+                    .eq('username', formData.username.trim())
+                    .single();
 
-            if (existingUser) {
-                alert(`Tên tài khoản "${formData.username}" đã tồn tại. Vui lòng chọn tên khác.`);
-                setIsSubmitting(false);
-                return;
+                if (existingUser) {
+                    alert(`Tên tài khoản "${formData.username}" đã tồn tại. Vui lòng chọn tên khác.`);
+                    setIsSubmitting(false);
+                    return;
+                }
             }
 
             const payload = {
@@ -62,15 +73,23 @@ const CreateUser = () => {
                 status: formData.status
             };
 
-            const { error } = await supabase
-                .from('app_users')
-                .insert([payload]);
+            if (editUser) {
+                const { error } = await supabase
+                    .from('app_users')
+                    .update(payload)
+                    .eq('id', editUser.id);
+                if (error) throw error;
+                alert('🎉 Đã cập nhật chức danh thành công!');
+                navigate('/nhan-su');
+            } else {
+                const { error } = await supabase
+                    .from('app_users')
+                    .insert([payload]);
 
-            if (error) throw error;
-
-            alert('🎉 Đã thêm người dùng mới thành công!');
-            // Reset form completely for the next entry
-            setFormData(initialFormState);
+                if (error) throw error;
+                alert('🎉 Đã thêm người dùng mới thành công!');
+                setFormData(initialFormState);
+            }
 
         } catch (error) {
             console.error('Error creating user:', error);
@@ -93,7 +112,7 @@ const CreateUser = () => {
             <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-6 md:mb-8 relative z-10">
                 <h1 className="text-2xl md:text-3xl font-black text-gray-900 tracking-tight flex items-center gap-3">
                     <UserPlus className="w-8 h-8 text-blue-600" />
-                    Thêm người dùng mới
+                    {editUser ? 'Cập nhật tài khoản người dùng' : 'Thêm người dùng mới'}
                 </h1>
             </div>
 
@@ -211,10 +230,10 @@ const CreateUser = () => {
                             disabled={isSubmitting}
                             className={`w-full sm:w-auto px-12 py-4 rounded-2xl font-black text-white text-lg shadow-xl shadow-blue-200 transition-all flex justify-center items-center gap-3 ${isSubmitting ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 active:scale-95'}`}
                         >
-                            {isSubmitting ? 'Đang cấp tài khoản...' : (
+                            {isSubmitting ? 'Đang lưu tài khoản...' : (
                                 <>
                                     <CheckCircle2 className="w-5 h-5" />
-                                    Tạo Người dùng
+                                    {editUser ? 'Lưu thay đổi' : 'Tạo Người dùng'}
                                 </>
                             )}
                         </button>

@@ -2,12 +2,15 @@ import {
     Edit,
     Filter,
     Search,
+    Trash2,
     Users
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import ColumnToggle from '../components/ColumnToggle';
 import CustomerFormModal from '../components/Customers/CustomerFormModal';
 import { WAREHOUSES } from '../constants/orderConstants';
+import useColumnVisibility from '../hooks/useColumnVisibility';
 import usePermissions from '../hooks/usePermissions';
 import { supabase } from '../supabase/config';
 
@@ -21,14 +24,7 @@ const Customers = () => {
     const [isFormModalOpen, setIsFormModalOpen] = useState(false);
     const [selectedCustomer, setSelectedCustomer] = useState(null);
 
-    const CUSTOMER_CATEGORIES = [
-        { id: 'BV', label: 'Bệnh viện' },
-        { id: 'TM', label: 'Thẩm mỹ viện' },
-        { id: 'PK', label: 'Phòng khám' },
-        { id: 'NG', label: 'Khách ngoại giao' },
-    ];
-
-    const TABLE_COLUMNS = [
+    const TABLE_COLUMNS_DEF = [
         { key: 'code', label: 'Mã khách hàng' },
         { key: 'name', label: 'Tên khách hàng' },
         { key: 'phone', label: 'Số điện thoại' },
@@ -42,6 +38,16 @@ const Customers = () => {
         { key: 'machines_in_use', label: 'Mã máy đang sử dụng' },
         { key: 'care_by', label: 'KD chăm sóc' },
     ];
+    const { visibleColumns, toggleColumn, isColumnVisible, resetColumns, visibleCount, totalCount } = useColumnVisibility('columns_customers', TABLE_COLUMNS_DEF);
+
+    const CUSTOMER_CATEGORIES = [
+        { id: 'BV', label: 'Bệnh viện' },
+        { id: 'TM', label: 'Thẩm mỹ viện' },
+        { id: 'PK', label: 'Phòng khám' },
+        { id: 'NG', label: 'Khách ngoại giao' },
+    ];
+
+    const visibleTableColumns = TABLE_COLUMNS_DEF.filter(col => isColumnVisible(col.key));
 
     useEffect(() => {
         fetchCustomers();
@@ -88,6 +94,25 @@ const Customers = () => {
         setIsFormModalOpen(true);
     };
 
+    const handleDeleteCustomer = async (id, name) => {
+        if (!window.confirm(`Bạn có chắc chắn muốn xóa hệ thống khách hàng "${name}" không? Toàn bộ dữ liệu liên quan sẽ bị xóa và không thể khôi phục.`)) {
+            return;
+        }
+
+        try {
+            const { error } = await supabase
+                .from('customers')
+                .delete()
+                .eq('id', id);
+
+            if (error) throw error;
+            fetchCustomers();
+        } catch (error) {
+            console.error('Error deleting customer:', error);
+            alert('❌ Có lỗi xảy ra khi xóa khách hàng: ' + error.message);
+        }
+    };
+
     const handleFormSubmitSuccess = () => {
         fetchCustomers();
         setIsFormModalOpen(false);
@@ -114,9 +139,9 @@ const Customers = () => {
             </div>
 
             {/* Main Content Card */}
-            <div className="bg-white rounded-[2.5rem] shadow-premium border border-slate-50 overflow-hidden glass">
+            <div className="bg-white rounded-[2.5rem] shadow-premium border border-slate-50">
                 {/* Filters Top Bar */}
-                <div className="p-8 bg-white flex flex-col lg:flex-row gap-6 items-center border-b border-slate-50 glass">
+                <div className="p-8 bg-white flex flex-col lg:flex-row gap-6 items-center border-b border-slate-50 glass relative z-20 rounded-t-[2.5rem]">
                     <div className="relative flex-1 group w-full">
                         <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 group-focus-within:text-blue-500 transition-colors" />
                         <input
@@ -146,6 +171,14 @@ const Customers = () => {
                                 <Search className="w-4 h-4 rotate-90" />
                             </div>
                         </div>
+                        <ColumnToggle
+                            columns={TABLE_COLUMNS_DEF}
+                            visibleColumns={visibleColumns}
+                            onToggle={toggleColumn}
+                            onReset={resetColumns}
+                            visibleCount={visibleCount}
+                            totalCount={totalCount}
+                        />
                     </div>
                 </div>
 
@@ -154,7 +187,7 @@ const Customers = () => {
                     <table className="w-full border-collapse min-w-[2000px]">
                         <thead className="glass-header">
                             <tr>
-                                {TABLE_COLUMNS.map(col => (
+                                {visibleTableColumns.map(col => (
                                     <th key={col.key} className="px-8 py-6 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] text-left whitespace-nowrap">
                                         {col.label}
                                     </th>
@@ -165,7 +198,7 @@ const Customers = () => {
                         <tbody className="divide-y divide-slate-50/50">
                             {isLoading ? (
                                 <tr>
-                                    <td colSpan={TABLE_COLUMNS.length + 1} className="px-8 py-28 text-center">
+                                    <td colSpan={visibleTableColumns.length + 1} className="px-8 py-28 text-center">
                                         <div className="flex flex-col items-center gap-6">
                                             <div className="w-14 h-14 border-4 border-blue-50 border-t-blue-600 rounded-full animate-spin"></div>
                                             <p className="text-slate-400 font-black animate-pulse tracking-[0.2em] text-[10px] uppercase">Đang tải hồ sơ khách hàng...</p>
@@ -174,7 +207,7 @@ const Customers = () => {
                                 </tr>
                             ) : filteredCustomers.length === 0 ? (
                                 <tr>
-                                    <td colSpan={TABLE_COLUMNS.length + 1} className="px-8 py-32 text-center">
+                                    <td colSpan={visibleTableColumns.length + 1} className="px-8 py-32 text-center">
                                         <div className="flex flex-col items-center gap-8 text-slate-400">
                                             <div className="w-24 h-24 bg-slate-50 rounded-[2.5rem] flex items-center justify-center">
                                                 <Users className="w-12 h-12 text-slate-200" />
@@ -187,56 +220,65 @@ const Customers = () => {
                                 </tr>
                             ) : filteredCustomers.map((c) => (
                                 <tr key={c.id} className="group hover:bg-blue-50/20 transition-all duration-300">
-                                    <td className="px-8 py-7 whitespace-nowrap">
+                                    {isColumnVisible('code') && <td className="px-8 py-7 whitespace-nowrap">
                                         <span className="font-black text-blue-600 bg-blue-50 px-3 py-1.5 rounded-xl border border-blue-100 uppercase tracking-widest text-[11px] group-hover:bg-white group-hover:shadow-sm transition-all">
                                             {c.code}
                                         </span>
-                                    </td>
-                                    <td className="px-8 py-7 whitespace-nowrap font-black text-slate-900 text-base group-hover:text-blue-600 transition-colors">
+                                    </td>}
+                                    {isColumnVisible('name') && <td className="px-8 py-7 whitespace-nowrap font-black text-slate-900 text-base group-hover:text-blue-600 transition-colors">
                                         {c.name}
-                                    </td>
-                                    <td className="px-8 py-7 font-black text-slate-900 whitespace-nowrap">
+                                    </td>}
+                                    {isColumnVisible('phone') && <td className="px-8 py-7 font-black text-slate-900 whitespace-nowrap">
                                         {c.phone ? (
                                             <span className="bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100 group-hover:bg-white transition-all">{c.phone}</span>
                                         ) : '-'}
-                                    </td>
-                                    <td className="px-8 py-7 min-w-[250px] text-sm font-bold text-slate-900 leading-relaxed">
+                                    </td>}
+                                    {isColumnVisible('address') && <td className="px-8 py-7 min-w-[250px] text-sm font-bold text-slate-900 leading-relaxed">
                                         {c.address || '-'}
-                                    </td>
-                                    <td className="px-8 py-7 whitespace-nowrap text-slate-900 font-bold">
+                                    </td>}
+                                    {isColumnVisible('legal_rep') && <td className="px-8 py-7 whitespace-nowrap text-slate-900 font-bold">
                                         {c.legal_rep || '-'}
-                                    </td>
-                                    <td className="px-8 py-7 whitespace-nowrap text-slate-900 font-black text-xs uppercase tracking-tight">
+                                    </td>}
+                                    {isColumnVisible('managed_by') && <td className="px-8 py-7 whitespace-nowrap text-slate-900 font-black text-xs uppercase tracking-tight">
                                         {c.managed_by || '-'}
-                                    </td>
-                                    <td className="px-8 py-7 whitespace-nowrap">
+                                    </td>}
+                                    {isColumnVisible('category') && <td className="px-8 py-7 whitespace-nowrap">
                                         <span className="inline-flex items-center px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest bg-slate-100 text-slate-500 border border-slate-200 group-hover:bg-white transition-all">
                                             {getLabel(CUSTOMER_CATEGORIES, c.category)}
                                         </span>
-                                    </td>
-                                    <td className="px-8 py-7 whitespace-nowrap text-center font-black text-cyan-600 text-lg">
+                                    </td>}
+                                    {isColumnVisible('current_cylinders') && <td className="px-8 py-7 whitespace-nowrap text-center font-black text-cyan-600 text-lg">
                                         {c.current_cylinders || 0}
-                                    </td>
-                                    <td className="px-8 py-7 whitespace-nowrap text-center font-black text-indigo-600 text-lg">
+                                    </td>}
+                                    {isColumnVisible('current_machines') && <td className="px-8 py-7 whitespace-nowrap text-center font-black text-indigo-600 text-lg">
                                         {c.current_machines || 0}
-                                    </td>
-                                    <td className="px-8 py-7 whitespace-nowrap text-center font-black text-rose-500 text-lg">
+                                    </td>}
+                                    {isColumnVisible('borrowed_cylinders') && <td className="px-8 py-7 whitespace-nowrap text-center font-black text-rose-500 text-lg">
                                         {c.borrowed_cylinders || 0}
-                                    </td>
-                                    <td className="px-8 py-7 min-w-[180px] text-slate-900 font-bold text-sm">
+                                    </td>}
+                                    {isColumnVisible('machines_in_use') && <td className="px-8 py-7 min-w-[180px] text-slate-900 font-bold text-sm">
                                         {c.machines_in_use || '-'}
-                                    </td>
-                                    <td className="px-8 py-7 whitespace-nowrap text-slate-900 font-black text-xs">
+                                    </td>}
+                                    {isColumnVisible('care_by') && <td className="px-8 py-7 whitespace-nowrap text-slate-900 font-black text-xs">
                                         {c.care_by || '-'}
-                                    </td>
+                                    </td>}
                                     <td className="px-8 py-7 text-center whitespace-nowrap sticky right-0 z-10 bg-white/80 backdrop-blur-md border-l border-slate-50 group-hover:bg-blue-50/40 transition-all">
-                                        <button
-                                            onClick={() => handleEditCustomer(c)}
-                                            className="w-10 h-10 flex items-center justify-center text-slate-300 hover:text-blue-600 hover:bg-white rounded-xl transition-all shadow-sm border border-transparent hover:border-blue-100 outline-none"
-                                            title="Chỉnh sửa"
-                                        >
-                                            <Edit className="w-5 h-5" />
-                                        </button>
+                                        <div className="flex items-center justify-center gap-5">
+                                            <button
+                                                onClick={() => handleEditCustomer(c)}
+                                                className="text-slate-400 hover:text-slate-900 transition-all outline-none"
+                                                title="Chỉnh sửa"
+                                            >
+                                                <Edit className="w-5 h-5" />
+                                            </button>
+                                            <button
+                                                onClick={() => handleDeleteCustomer(c.id, c.name)}
+                                                className="text-slate-400 hover:text-slate-900 transition-all outline-none"
+                                                title="Xóa"
+                                            >
+                                                <Trash2 className="w-5 h-5" />
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             ))}

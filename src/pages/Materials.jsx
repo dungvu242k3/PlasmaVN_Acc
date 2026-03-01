@@ -1,10 +1,13 @@
 import {
+    Edit,
     Layers,
     PackageOpen,
-    Search
+    Search,
+    Trash2
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import MaterialFormModal from '../components/Materials/MaterialFormModal';
 import { MATERIAL_CATEGORIES } from '../constants/materialConstants';
 import { supabase } from '../supabase/config';
 
@@ -14,6 +17,8 @@ const Materials = () => {
     const [categoryFilter, setCategoryFilter] = useState(MATERIAL_CATEGORIES[0].id); // Mặc định chọn loại đầu tiên
     const [materials, setMaterials] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [isFormModalOpen, setIsFormModalOpen] = useState(false);
+    const [selectedMaterial, setSelectedMaterial] = useState(null);
 
     useEffect(() => {
         fetchMaterials();
@@ -36,6 +41,40 @@ const Materials = () => {
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleDeleteMaterial = async (id, name) => {
+        if (!window.confirm(`Bạn có chắc muốn xóa vật tư "${name}" không?`)) {
+            return;
+        }
+
+        try {
+            const { error } = await supabase
+                .from('materials')
+                .delete()
+                .eq('id', id);
+
+            if (error) throw error;
+            fetchMaterials();
+        } catch (error) {
+            console.error('Error deleting material:', error);
+            alert('Lỗi khi xóa vật tư: ' + error.message);
+        }
+    };
+
+    const handleEditMaterial = (material) => {
+        setSelectedMaterial(material);
+        setIsFormModalOpen(true);
+    };
+
+    const handleCreateNew = () => {
+        setSelectedMaterial(null);
+        setIsFormModalOpen(true);
+    };
+
+    const handleFormSubmitSuccess = () => {
+        fetchMaterials();
+        setIsFormModalOpen(false);
     };
 
     // Helper functions for dynamic data display
@@ -65,6 +104,8 @@ const Materials = () => {
                     </h1>
                     <p className="text-slate-500 mt-2 font-bold uppercase tracking-widest text-[10px]">Lưu trữ danh mục cấu kiện cơ bản phục vụ lắp ráp</p>
                 </div>
+
+
             </div>
 
             {/* Filters Section */}
@@ -125,6 +166,7 @@ const Materials = () => {
                                     {currentCategoryDef.hasTextField && (
                                         <th className="px-8 py-6 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em]">{currentCategoryDef.textFieldLabel}</th>
                                     )}
+                                    <th className="px-8 py-6 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] text-center sticky right-0 z-10 bg-slate-50/80 backdrop-blur-md border-l border-slate-50 shadow-sm">Thao tác</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-50/50">
@@ -150,6 +192,24 @@ const Materials = () => {
                                                 {material.extra_text || <span className="text-slate-300 italic opacity-50">-</span>}
                                             </td>
                                         )}
+                                        <td className="px-8 py-7 text-center whitespace-nowrap sticky right-0 z-10 bg-white/80 backdrop-blur-md border-l border-slate-50 group-hover:bg-blue-50/40 transition-all">
+                                            <div className="flex items-center justify-center gap-5">
+                                                <button
+                                                    onClick={() => handleEditMaterial(material)}
+                                                    className="text-slate-400 hover:text-slate-900 transition-all outline-none"
+                                                    title="Chỉnh sửa"
+                                                >
+                                                    <Edit className="w-5 h-5" />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDeleteMaterial(material.id, material.name)}
+                                                    className="text-slate-400 hover:text-slate-900 transition-all outline-none"
+                                                    title="Xóa"
+                                                >
+                                                    <Trash2 className="w-5 h-5" />
+                                                </button>
+                                            </div>
+                                        </td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -165,6 +225,15 @@ const Materials = () => {
                         Hiển thị <span className="text-indigo-600 mx-1">{filteredMaterials.length}</span> / {materials.length} vật tư
                     </p>
                 </div>
+            )}
+
+            {/* Modal */}
+            {isFormModalOpen && (
+                <MaterialFormModal
+                    material={selectedMaterial}
+                    onClose={() => setIsFormModalOpen(false)}
+                    onSuccess={handleFormSubmitSuccess}
+                />
             )}
         </div>
     );

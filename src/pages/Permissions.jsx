@@ -1,15 +1,16 @@
 import {
-    ActivitySquare,
     CheckCircle2,
-    Plus,
+    Edit,
     Search,
     ShieldCheck,
+    Trash2,
     UserCircle,
     Users,
     XCircle
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import PermissionFormModal from '../components/Permissions/PermissionFormModal';
 import { ACTION_TYPES, MODULE_PERMISSIONS } from '../constants/permissionConstants';
 import { supabase } from '../supabase/config';
 
@@ -20,6 +21,9 @@ const Permissions = () => {
     const [usersList, setUsersList] = useState([]);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState('roles'); // 'roles' or 'users'
+    const [isFormModalOpen, setIsFormModalOpen] = useState(false);
+    const [selectedRole, setSelectedRole] = useState(null);
+    const [isUserRole, setIsUserRole] = useState(false);
 
     useEffect(() => {
         fetchRoles();
@@ -83,6 +87,50 @@ const Permissions = () => {
         }
     };
 
+    const handleDeleteRole = async (id, name) => {
+        if (!window.confirm(`Bạn có chắc chắn muốn xóa quyền của "${name}" này không?`)) {
+            return;
+        }
+
+        try {
+            const { error } = await supabase
+                .from('app_roles')
+                .delete()
+                .eq('id', id);
+
+            if (error) throw error;
+            if (activeTab === 'roles') {
+                fetchRoles();
+            } else {
+                fetchUsers();
+            }
+        } catch (error) {
+            console.error('Error deleting role:', error);
+            alert('❌ Có lỗi xảy ra khi xóa quyền: ' + error.message);
+        }
+    };
+
+    const handleEditRole = (role, isUser) => {
+        setSelectedRole(role);
+        setIsUserRole(isUser);
+        setIsFormModalOpen(true);
+    };
+
+    const handleCreateNew = () => {
+        setSelectedRole(null);
+        setIsUserRole(false);
+        setIsFormModalOpen(true);
+    };
+
+    const handleFormSubmitSuccess = () => {
+        if (activeTab === 'roles') {
+            fetchRoles();
+        } else {
+            fetchUsers();
+        }
+        setIsFormModalOpen(false);
+    };
+
     const filteredRoles = roles.filter(role =>
         role.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
@@ -110,13 +158,7 @@ const Permissions = () => {
                     </h1>
                     <p className="text-slate-500 mt-2 font-bold uppercase tracking-widest text-[10px]">Thiết lập luồng truy cập (Xem, Thêm, Sửa, Xóa) cho từng nhóm tài khoản</p>
                 </div>
-                <button
-                    onClick={() => navigate('/tao-phan-quyen')}
-                    className="group flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-black text-xs uppercase tracking-[0.2em] rounded-2xl hover:shadow-2xl hover:shadow-blue-200 hover:-translate-y-1 transition-all duration-300 w-full md:w-auto justify-center"
-                >
-                    <Plus className="w-5 h-5 group-hover:rotate-90 transition-transform" />
-                    Thiết lập quyền mới
-                </button>
+
             </div>
 
             {/* Filters Section */}
@@ -185,9 +227,20 @@ const Permissions = () => {
                                             Quyền Ưu tiên (Ghi đè)
                                         </span>
                                     )}
-                                    <div className="p-2 bg-slate-100/50 rounded-lg text-slate-300">
-                                        <ActivitySquare className="w-5 h-5" />
-                                    </div>
+                                    <button
+                                        onClick={() => handleEditRole(item, activeTab === 'users')}
+                                        className="text-slate-400 hover:text-slate-900 transition-all outline-none"
+                                        title="Chỉnh sửa"
+                                    >
+                                        <Edit className="w-5 h-5" />
+                                    </button>
+                                    <button
+                                        onClick={() => handleDeleteRole(item.id, item.name)}
+                                        className="text-slate-400 hover:text-slate-900 transition-all outline-none"
+                                        title="Xóa"
+                                    >
+                                        <Trash2 className="w-5 h-5" />
+                                    </button>
                                 </div>
                             </div>
 
@@ -225,6 +278,16 @@ const Permissions = () => {
                         </div>
                     ))}
                 </div>
+            )}
+
+            {/* Modal */}
+            {isFormModalOpen && (
+                <PermissionFormModal
+                    role={selectedRole}
+                    isUserRole={isUserRole}
+                    onClose={() => setIsFormModalOpen(false)}
+                    onSuccess={handleFormSubmitSuccess}
+                />
             )}
         </div>
     );

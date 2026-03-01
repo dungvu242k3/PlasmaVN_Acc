@@ -1,14 +1,27 @@
 import {
     ChevronDown,
+    Edit,
     Package,
-    PackagePlus,
     Search,
+    Trash2
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import ColumnToggle from '../components/ColumnToggle';
 import { RECEIPT_STATUSES } from '../constants/goodsReceiptConstants';
 import { WAREHOUSES } from '../constants/orderConstants';
+import useColumnVisibility from '../hooks/useColumnVisibility';
 import { supabase } from '../supabase/config';
+
+const TABLE_COLUMNS = [
+    { key: 'code', label: 'Mã phiếu' },
+    { key: 'supplier', label: 'Nhà cung cấp' },
+    { key: 'warehouse', label: 'Kho nhận' },
+    { key: 'date', label: 'Ngày nhập' },
+    { key: 'items', label: 'Số MH' },
+    { key: 'receiver', label: 'Người nhận' },
+    { key: 'status', label: 'Trạng thái' },
+];
 
 const GoodsReceipts = () => {
     const navigate = useNavigate();
@@ -17,6 +30,8 @@ const GoodsReceipts = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('ALL');
     const [warehouseFilter, setWarehouseFilter] = useState('ALL');
+    const { visibleColumns, toggleColumn, isColumnVisible, resetColumns, visibleCount, totalCount } = useColumnVisibility('columns_goods_receipts', TABLE_COLUMNS);
+    const visibleTableColumns = TABLE_COLUMNS.filter(col => isColumnVisible(col.key));
 
     useEffect(() => {
         fetchReceipts();
@@ -35,6 +50,25 @@ const GoodsReceipts = () => {
             console.error('Error loading receipts:', error);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleDeleteReceipt = async (id, code) => {
+        if (!window.confirm(`Bạn có chắc muốn xóa phiếu nhập "${code}" không? Hành động này sẽ không thể hoàn tác.`)) {
+            return;
+        }
+
+        try {
+            const { error } = await supabase
+                .from('goods_receipts')
+                .delete()
+                .eq('id', id);
+
+            if (error) throw error;
+            fetchReceipts();
+        } catch (error) {
+            console.error('Error deleting receipt:', error);
+            alert('❌ Lỗi khi xóa phiếu nhập: ' + error.message);
         }
     };
 
@@ -94,13 +128,7 @@ const GoodsReceipts = () => {
                         Nhập hàng từ NCC
                     </h1>
                 </div>
-                <button
-                    onClick={() => navigate('/tao-phieu-nhap')}
-                    className="px-6 py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-black text-sm shadow-xl shadow-emerald-200 hover:shadow-emerald-300 transition-all active:scale-95 flex items-center gap-2"
-                >
-                    <PackagePlus className="w-5 h-5" />
-                    Tạo phiếu nhập mới
-                </button>
+
             </div>
 
             {/* Stats Cards */}
@@ -119,7 +147,7 @@ const GoodsReceipts = () => {
             </div>
 
             {/* Filters */}
-            <div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-lg border border-white p-4 md:p-6 mb-6 relative z-10">
+            <div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-lg border border-white p-4 md:p-6 mb-6 relative z-20">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="relative">
                         <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -152,6 +180,9 @@ const GoodsReceipts = () => {
                         <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                     </div>
                 </div>
+                <div className="flex items-center justify-end mt-4">
+                    <ColumnToggle columns={TABLE_COLUMNS} visibleColumns={visibleColumns} onToggle={toggleColumn} onReset={resetColumns} visibleCount={visibleCount} totalCount={totalCount} />
+                </div>
             </div>
 
             {/* Table */}
@@ -173,36 +204,53 @@ const GoodsReceipts = () => {
                             <thead>
                                 <tr className="bg-gradient-to-r from-gray-50 to-gray-100/50 border-b border-gray-100">
                                     <th className="px-6 py-5 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] text-center w-16">STT</th>
-                                    <th className="px-6 py-5 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em]">Mã phiếu</th>
-                                    <th className="px-6 py-5 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em]">Nhà cung cấp</th>
-                                    <th className="px-6 py-5 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em]">Kho nhận</th>
-                                    <th className="px-6 py-5 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em]">Ngày nhập</th>
-                                    <th className="px-6 py-5 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] text-center">Số MH</th>
-                                    <th className="px-6 py-5 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em]">Người nhận</th>
-                                    <th className="px-6 py-5 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] text-center">Trạng thái</th>
+                                    {visibleTableColumns.map(col => (
+                                        <th key={col.key} className={`px-6 py-5 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] ${col.key === 'items' || col.key === 'status' ? 'text-center' : ''}`}>
+                                            {col.label}
+                                        </th>
+                                    ))}
+                                    <th className="px-6 py-5 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] text-center sticky right-0 bg-white/50 backdrop-blur-sm">Thao tác</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-50">
                                 {filteredReceipts.map((receipt, idx) => (
                                     <tr key={receipt.id} className="hover:bg-emerald-50/30 transition-colors cursor-pointer">
                                         <td className="px-6 py-5 text-center text-sm font-bold text-gray-400">{idx + 1}</td>
-                                        <td className="px-6 py-5">
+                                        {isColumnVisible('code') && <td className="px-6 py-5">
                                             <span className="text-sm font-black text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-100">
                                                 {receipt.receipt_code}
                                             </span>
-                                        </td>
-                                        <td className="px-6 py-5 font-bold text-slate-900 text-sm">{receipt.supplier_name}</td>
-                                        <td className="px-6 py-5">
+                                        </td>}
+                                        {isColumnVisible('supplier') && <td className="px-6 py-5 font-bold text-slate-900 text-sm">{receipt.supplier_name}</td>}
+                                        {isColumnVisible('warehouse') && <td className="px-6 py-5">
                                             <span className="text-sm font-bold text-slate-600 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100">
                                                 {getWarehouseLabel(receipt.warehouse_id)}
                                             </span>
-                                        </td>
-                                        <td className="px-6 py-5 text-sm font-bold text-gray-600">
+                                        </td>}
+                                        {isColumnVisible('date') && <td className="px-6 py-5 text-sm font-bold text-gray-600">
                                             {receipt.receipt_date ? new Date(receipt.receipt_date).toLocaleDateString('vi-VN') : '—'}
+                                        </td>}
+                                        {isColumnVisible('items') && <td className="px-6 py-5 text-center text-sm font-black text-slate-900">{receipt.total_items}</td>}
+                                        {isColumnVisible('receiver') && <td className="px-6 py-5 text-sm font-bold text-gray-600">{receipt.received_by || '—'}</td>}
+                                        {isColumnVisible('status') && <td className="px-6 py-5 text-center">{getStatusBadge(receipt.status)}</td>}
+                                        <td className="px-6 py-5 text-center sticky right-0 bg-white/50 backdrop-blur-md group-hover:bg-emerald-50/10 transition-colors">
+                                            <div className="flex items-center justify-center gap-5 transition-all">
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); navigate('/tao-phieu-nhap', { state: { receipt } }); }}
+                                                    className="text-slate-400 hover:text-slate-900 transition-all outline-none"
+                                                    title="Chỉnh sửa"
+                                                >
+                                                    <Edit className="w-5 h-5" />
+                                                </button>
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); handleDeleteReceipt(receipt.id, receipt.receipt_code); }}
+                                                    className="text-slate-400 hover:text-slate-900 transition-all outline-none"
+                                                    title="Xóa"
+                                                >
+                                                    <Trash2 className="w-5 h-5" />
+                                                </button>
+                                            </div>
                                         </td>
-                                        <td className="px-6 py-5 text-center text-sm font-black text-slate-900">{receipt.total_items}</td>
-                                        <td className="px-6 py-5 text-sm font-bold text-gray-600">{receipt.received_by || '—'}</td>
-                                        <td className="px-6 py-5 text-center">{getStatusBadge(receipt.status)}</td>
                                     </tr>
                                 ))}
                             </tbody>

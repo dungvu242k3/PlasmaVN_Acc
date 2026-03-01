@@ -5,13 +5,15 @@ import {
     Trash2
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { ITEM_TYPES, ITEM_UNITS } from '../constants/goodsReceiptConstants';
 import { WAREHOUSES } from '../constants/orderConstants';
 import { supabase } from '../supabase/config';
 
 const CreateGoodsReceipt = () => {
     const navigate = useNavigate();
+    const { state } = useLocation();
+    const editReceipt = state?.receipt;
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [suppliers, setSuppliers] = useState([]);
 
@@ -37,6 +39,29 @@ const CreateGoodsReceipt = () => {
 
     // Auto-generate receipt code
     useEffect(() => {
+        if (editReceipt) {
+            setFormData({
+                receipt_code: editReceipt.receipt_code,
+                supplier_name: editReceipt.supplier_name,
+                warehouse_id: editReceipt.warehouse_id,
+                receipt_date: editReceipt.receipt_date ? editReceipt.receipt_date.split('T')[0] : new Date().toISOString().split('T')[0],
+                received_by: editReceipt.received_by || '',
+                note: editReceipt.note || ''
+            });
+
+            const fetchItems = async () => {
+                const { data } = await supabase
+                    .from('goods_receipt_items')
+                    .select('*')
+                    .eq('receipt_id', editReceipt.id);
+                if (data && data.length > 0) {
+                    setItems(data);
+                }
+            };
+            fetchItems();
+            return;
+        }
+
         const generateCode = async () => {
             try {
                 const { data } = await supabase
@@ -57,7 +82,7 @@ const CreateGoodsReceipt = () => {
             }
         };
         generateCode();
-    }, []);
+    }, [editReceipt]);
 
     // Load suppliers list
     useEffect(() => {
@@ -97,25 +122,46 @@ const CreateGoodsReceipt = () => {
 
         setIsSubmitting(true);
         try {
-            // Insert master receipt
+            // Insert or Update master receipt
             const receiptPayload = {
                 ...formData,
                 total_items: items.length,
-                status: 'CHO_DUYET'
+                status: editReceipt ? editReceipt.status : 'CHO_DUYET' // Keep existing status if edit
             };
 
-            const { data: receipt, error: receiptError } = await supabase
-                .from('goods_receipts')
-                .insert([receiptPayload])
-                .select()
-                .single();
+            let receiptId;
 
-            if (receiptError) throw receiptError;
+            if (editReceipt) {
+                const { error: receiptError } = await supabase
+                    .from('goods_receipts')
+                    .update(receiptPayload)
+                    .eq('id', editReceipt.id);
+
+                if (receiptError) throw receiptError;
+                receiptId = editReceipt.id;
+
+                // Delete old items
+                await supabase.from('goods_receipt_items').delete().eq('receipt_id', receiptId);
+            } else {
+                const { data: receipt, error: receiptError } = await supabase
+                    .from('goods_receipts')
+                    .insert([receiptPayload])
+                    .select()
+                    .single();
+
+                if (receiptError) throw receiptError;
+                receiptId = receipt.id;
+            }
 
             // Insert items
             const itemsPayload = items.map(item => ({
-                ...item,
-                receipt_id: receipt.id
+                item_type: item.item_type,
+                item_name: item.item_name,
+                serial_number: item.serial_number,
+                quantity: item.quantity,
+                unit: item.unit,
+                note: item.note,
+                receipt_id: receiptId
             }));
 
             const { error: itemsError } = await supabase
@@ -124,7 +170,7 @@ const CreateGoodsReceipt = () => {
 
             if (itemsError) throw itemsError;
 
-            alert('🎉 Tạo phiếu nhập kho thành công!');
+            alert(editReceipt ? '🎉 Cập nhật phiếu nhập kho thành công!' : '🎉 Tạo phiếu nhập kho thành công!');
             navigate('/nhap-hang');
         } catch (error) {
             console.error('Error creating goods receipt:', error);
@@ -151,7 +197,7 @@ const CreateGoodsReceipt = () => {
                 </button>
                 <h1 className="text-2xl md:text-3xl font-black text-gray-900 tracking-tight flex items-center gap-3">
                     <PackagePlus className="w-8 h-8 text-emerald-600" />
-                    Tạo phiếu nhập kho
+                    {editReceipt ? 'Cập nhật phiếu nhập kho' : 'Tạo phiếu nhập kho'}
                 </h1>
             </div>
 
@@ -358,7 +404,7 @@ const CreateGoodsReceipt = () => {
                             {isSubmitting ? 'Đang lưu...' : (
                                 <>
                                     <CheckCircle2 className="w-5 h-5" />
-                                    Lưu phiếu nhập kho
+                                    {editReceipt ? 'Cập nhật phiếu nhập kho' : 'Lưu phiếu nhập kho'}
                                 </>
                             )}
                         </button>

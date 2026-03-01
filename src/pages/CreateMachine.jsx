@@ -3,7 +3,7 @@ import {
     MonitorIcon
 } from 'lucide-react';
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
     CYLINDER_VOLUMES,
     EMISSION_HEAD_TYPES,
@@ -17,9 +17,11 @@ import { supabase } from '../supabase/config';
 
 const CreateMachine = () => {
     const navigate = useNavigate();
+    const { state } = useLocation();
+    const editMachine = state?.machine;
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const initialFormState = {
+    const defaultState = {
         serial_number: '',
         machine_account: '',
         status: 'chưa xác định',
@@ -33,6 +35,7 @@ const CreateMachine = () => {
         emission_head_type: 'không'
     };
 
+    const initialFormState = editMachine || defaultState;
     const [formData, setFormData] = useState(initialFormState);
 
     const handleSerialChange = (e) => {
@@ -52,13 +55,28 @@ const CreateMachine = () => {
 
         setIsSubmitting(true);
         try {
-            const { error } = await supabase
-                .from('machines')
-                .insert([formData]);
+            const payload = { ...formData };
+            if (editMachine) {
+                delete payload.id;
+                delete payload.created_at;
+                delete payload.updated_at;
 
-            if (error) throw error;
+                const { error } = await supabase
+                    .from('machines')
+                    .update(payload)
+                    .eq('id', editMachine.id);
 
-            alert('🎉 Đã thêm máy mới thành công!');
+                if (error) throw error;
+                alert('🎉 Đã cập nhật máy thành công!');
+            } else {
+                const { error } = await supabase
+                    .from('machines')
+                    .insert([payload]);
+
+                if (error) throw error;
+                alert('🎉 Đã thêm máy mới thành công!');
+            }
+
             navigate('/danh-sach-may');
         } catch (error) {
             console.error('Error creating machine:', error);
@@ -86,7 +104,7 @@ const CreateMachine = () => {
             <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-6 md:mb-8 relative z-10">
                 <h1 className="text-2xl md:text-3xl font-black text-gray-900 tracking-tight flex items-center gap-3">
                     <MonitorIcon className="w-8 h-8 text-indigo-600" />
-                    Thêm máy mới vào hệ thống
+                    {editMachine ? 'Cập nhật thiết bị hệ thống' : 'Thêm máy mới vào hệ thống'}
                 </h1>
             </div>
 
@@ -246,7 +264,7 @@ const CreateMachine = () => {
                             {isSubmitting ? 'Đang lưu...' : (
                                 <>
                                     <CheckCircle2 className="w-5 h-5" />
-                                    Lưu hồ sơ máy
+                                    {editMachine ? 'Cập nhật hồ sơ máy' : 'Lưu hồ sơ máy'}
                                 </>
                             )}
                         </button>
