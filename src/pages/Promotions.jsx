@@ -1,16 +1,15 @@
 import {
-    Chart as ChartJS,
-    CategoryScale,
-    LinearScale,
-    BarElement,
     ArcElement,
-    PointElement,
-    LineElement,
-    Title,
+    BarElement,
+    CategoryScale,
+    Chart as ChartJS,
+    Legend as ChartLegend,
     Tooltip as ChartTooltip,
-    Legend as ChartLegend
+    LinearScale,
+    LineElement,
+    PointElement,
+    Title
 } from 'chart.js';
-import { Bar as BarChartJS, Pie as PieChartJS, Line as LineChartJS } from 'react-chartjs-2';
 import {
     CalendarDays,
     ChevronDown,
@@ -23,8 +22,8 @@ import {
     Trash2
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { Bar as BarChartJS, Pie as PieChartJS } from 'react-chartjs-2';
 import { useNavigate } from 'react-router-dom';
-import ColumnToggle from '../components/ColumnToggle';
 import PromotionFormModal from '../components/Promotions/PromotionFormModal';
 import useColumnVisibility from '../hooks/useColumnVisibility';
 import { supabase } from '../supabase/config';
@@ -62,7 +61,7 @@ const Promotions = () => {
     const [selectedPromo, setSelectedPromo] = useState(null);
     const { visibleColumns, toggleColumn, isColumnVisible, resetColumns, visibleCount, totalCount } = useColumnVisibility('columns_promotions', TABLE_COLUMNS);
     const visibleTableColumns = TABLE_COLUMNS.filter(col => isColumnVisible(col.key));
-    
+
     // Filter states
     const [selectedStatuses, setSelectedStatuses] = useState([]);
     const [selectedCustomerTypes, setSelectedCustomerTypes] = useState([]);
@@ -83,7 +82,7 @@ const Promotions = () => {
 
             if (error) throw error;
             setPromotions(data || []);
-            
+
             // Extract unique customer types
             const uniqueTypes = [...new Set((data || []).map(p => p.customer_type).filter(Boolean))];
             setUniqueCustomerTypes(uniqueTypes);
@@ -125,12 +124,12 @@ const Promotions = () => {
         // Status filter
         const status = getPromoStatus(promo);
         const matchStatus = selectedStatuses.length === 0 || selectedStatuses.includes(status.label);
-        
+
         // Customer type filter
         const matchCustomerType = selectedCustomerTypes.length === 0 || selectedCustomerTypes.includes(promo.customer_type);
-        
+
         // Active status filter
-        const matchActive = selectedActiveStatus.length === 0 || 
+        const matchActive = selectedActiveStatus.length === 0 ||
             (selectedActiveStatus.includes('active') && promo.is_active) ||
             (selectedActiveStatus.includes('inactive') && !promo.is_active);
 
@@ -212,8 +211,8 @@ const Promotions = () => {
                 </button>
                 {isOpen && (
                     <>
-                        <div 
-                            className="fixed inset-0 z-10" 
+                        <div
+                            className="fixed inset-0 z-10"
                             onClick={() => setIsOpen(false)}
                         ></div>
                         <div className="absolute top-full left-0 mt-1 bg-white border border-[#E5E7EB] shadow-lg z-20 min-w-[250px] max-h-80">
@@ -275,27 +274,25 @@ const Promotions = () => {
     ];
 
     return (
-        <div className="p-6 bg-[#F8F9FA] min-h-screen" style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif' }}>
+        <div className="p-4 sm:p-6 bg-[#F8F9FA] min-h-screen" style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif' }}>
             {/* Navigation Tabs */}
-            <div className="flex items-center gap-1 mb-8 border-b border-[#E5E7EB]">
+            <div className="flex items-center gap-1 mb-6 sm:mb-8 border-b border-[#E5E7EB] overflow-x-auto no-scrollbar">
                 <button
                     onClick={() => setActiveView('list')}
-                    className={`px-6 py-3 text-sm font-semibold tracking-wide transition-colors ${
-                        activeView === 'list' 
-                            ? 'text-[#2563EB] border-b-2 border-[#2563EB]' 
+                    className={`px-6 py-3 text-sm font-semibold tracking-wide transition-colors ${activeView === 'list'
+                            ? 'text-[#2563EB] border-b-2 border-[#2563EB]'
                             : 'text-[#6B7280] hover:text-[#374151]'
-                    }`}
+                        }`}
                     style={activeView === 'list' ? { color: '#2563EB', borderBottomColor: '#2563EB' } : { color: '#6B7280' }}
                 >
                     Danh sách
                 </button>
                 <button
                     onClick={() => setActiveView('stats')}
-                    className={`px-6 py-3 text-sm font-semibold tracking-wide transition-colors ${
-                        activeView === 'stats' 
-                            ? 'text-[#2563EB] border-b-2 border-[#2563EB]' 
+                    className={`px-6 py-3 text-sm font-semibold tracking-wide transition-colors ${activeView === 'stats'
+                            ? 'text-[#2563EB] border-b-2 border-[#2563EB]'
                             : 'text-[#6B7280] hover:text-[#374151]'
-                    }`}
+                        }`}
                     style={activeView === 'stats' ? { color: '#2563EB', borderBottomColor: '#2563EB' } : { color: '#6B7280' }}
                 >
                     Thống kê
@@ -305,46 +302,27 @@ const Promotions = () => {
             {activeView === 'list' ? (
                 <>
                     {/* Header with Add Button */}
-                    <div className="flex items-center justify-between mb-6">
-                        <h1 className="text-2xl font-semibold text-[#111827] tracking-tight" style={{ color: '#111827' }}>Danh sách khuyến mãi</h1>
-                        <button
-                            onClick={handleCreateNew}
-                            className="flex items-center gap-2 px-5 py-2.5 text-white font-medium text-sm transition-all duration-200 shadow-sm hover:shadow-md"
-                            style={{ backgroundColor: '#2563EB' }}
-                            onMouseEnter={(e) => e.target.style.backgroundColor = '#1D4ED8'}
-                            onMouseLeave={(e) => e.target.style.backgroundColor = '#2563EB'}
-                        >
-                            <Plus className="w-4 h-4" />
-                            Thêm
-                        </button>
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
+                        <h1 className="text-xl sm:text-2xl font-semibold text-[#111827] tracking-tight">Danh sách khuyến mãi</h1>
+                        <button onClick={handleCreateNew} className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 text-white font-medium text-sm transition-all duration-200 shadow-sm hover:shadow-md" style={{ backgroundColor: '#2563EB' }} onMouseEnter={(e) => e.target.style.backgroundColor = '#1D4ED8'} onMouseLeave={(e) => e.target.style.backgroundColor = '#2563EB'}><Plus className="w-4 h-4" /> Thêm mới</button>
                     </div>
 
-                    {/* Search Bar and Summary Stats - Same Row */}
-                    <div className="mb-6 flex items-center gap-4">
-                        {/* Search Bar */}
+                    {/* Search Bar and Summary Stats */}
+                    <div className="mb-6 flex flex-col lg:flex-row lg:items-center gap-4">
                         <div className="flex-1 relative">
                             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#9CA3AF]" />
-                            <input
-                                type="text"
-                                placeholder="Tìm theo mã KM, loại khách hàng..."
-                                className="w-full pl-12 pr-4 py-3 border border-[#D1D5DB] focus:outline-none focus:ring-2 focus:ring-[#2563EB] focus:border-[#2563EB] bg-white text-[#111827] placeholder-[#9CA3AF] text-sm transition-all"
-                                style={{ fontFamily: '"Roboto", sans-serif' }}
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                            />
+                            <input type="text" placeholder="Tìm theo mã KM, loại khách hàng..." className="w-full pl-12 pr-4 py-3 border border-[#D1D5DB] focus:outline-none focus:ring-2 focus:ring-[#2563EB] focus:border-[#2563EB] bg-white text-[#111827] placeholder-[#9CA3AF] text-sm transition-all" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
                         </div>
-
-                        {/* Summary Stats */}
-                        <div className="flex items-center gap-6 px-6 py-3 bg-[#EFF6FF] border border-[#BFDBFE]">
-                            <div className="flex items-center gap-2">
-                                <span className="text-sm text-[#6B7280]" style={{ fontFamily: '"Roboto", sans-serif' }}>Tổng số:</span>
-                                <span className="text-lg font-semibold text-[#2563EB]" style={{ fontFamily: '"Roboto", sans-serif' }}>{filteredPromotionsCount}</span>
+                        <div className="flex items-center gap-4 px-4 py-3 bg-[#EFF6FF] border border-[#BFDBFE]">
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                                <span className="text-[10px] sm:text-sm text-[#6B7280]">Tổng số:</span>
+                                <span className="text-sm sm:text-lg font-semibold text-[#2563EB]">{filteredPromotionsCount}</span>
                             </div>
                         </div>
                     </div>
 
                     {/* Filter Dropdowns */}
-                    <div className="mb-6 flex items-center gap-3 flex-wrap">
+                    <div className="mb-6 flex items-center gap-3 flex-wrap overflow-x-auto no-scrollbar">
                         <FilterDropdown
                             label="Trạng thái"
                             selectedCount={selectedStatuses.length}
@@ -449,106 +427,73 @@ const Promotions = () => {
                     </div>
 
                     {/* Main Content Card */}
-                    <div className="bg-white border border-[#E5E7EB] shadow-sm">
-                        {/* Table Section */}
-                        <div className="w-full overflow-x-auto">
+                    <div className="bg-white rounded-lg border border-[#E5E7EB] shadow-sm overflow-hidden">
+                        {/* Mobile Card List */}
+                        <div className="md:hidden divide-y divide-[#E5E7EB]">
+                            {loading ? (
+                                <div className="px-4 py-16 text-center"><div className="flex flex-col items-center gap-4"><div className="w-8 h-8 border-4 border-[#2563EB] border-t-transparent rounded-full animate-spin"></div><p className="text-[#6B7280] text-sm font-medium">Đang tải...</p></div></div>
+                            ) : filteredPromotions.length === 0 ? (
+                                <div className="px-4 py-16 text-center"><div className="flex flex-col items-center gap-4"><Gift className="w-12 h-12 text-[#D1D5DB]" /><p className="text-sm font-medium text-[#6B7280]">Không tìm thấy khuyến mãi nào</p></div></div>
+                            ) : filteredPromotions.map((promo, index) => {
+                                const status = getPromoStatus(promo);
+                                return (
+                                    <div key={promo.id} className="p-4 bg-white hover:bg-gray-50 active:bg-gray-100 transition-colors">
+                                        <div className="flex justify-between items-start mb-3">
+                                            <div className="flex items-center gap-2">
+                                                <Tag className="w-4 h-4 text-[#2563EB] flex-shrink-0" />
+                                                <div>
+                                                    <h3 className="text-sm font-bold text-[#111827]">{promo.code}</h3>
+                                                    <span className="text-[10px] text-[#6B7280]">#{index + 1}</span>
+                                                </div>
+                                            </div>
+                                            <span className={`px-2.5 py-1 text-[10px] font-semibold border rounded-full whitespace-nowrap ${status.label === 'Đang hoạt động' ? 'text-[#10B981] bg-[#D1FAE5] border-[#A7F3D0]' : status.label === 'Hết hạn' ? 'text-[#EF4444] bg-[#FEE2E2] border-[#FECACA]' : status.label === 'Vô hiệu' ? 'text-[#6B7280] bg-[#F3F4F6] border-[#E5E7EB]' : 'text-[#F59E0B] bg-[#FEF3C7] border-[#FDE68A]'}`}>{status.label}</span>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-2 mb-3">
+                                            <div><span className="text-[9px] font-bold text-slate-400 uppercase">Ưu đãi</span><p className="text-xs font-bold text-[#111827]">+ {promo.free_cylinders || 0} bình khí</p></div>
+                                            <div><span className="text-[9px] font-bold text-slate-400 uppercase">Đối tượng</span><p className="text-xs font-medium text-[#111827]">{promo.customer_type || '—'}</p></div>
+                                            <div className="col-span-2"><span className="text-[9px] font-bold text-slate-400 uppercase">Thời hạn</span>
+                                                <div className="flex items-center gap-1.5 mt-0.5"><CalendarDays className="w-3 h-3 text-[#9CA3AF]" /><span className="text-xs text-[#374151]">{formatDate(promo.start_date)} — {formatDate(promo.end_date)}</span></div>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center justify-between pt-3 border-t border-slate-50">
+                                            <label className="relative inline-flex items-center cursor-pointer">
+                                                <input type="checkbox" className="sr-only peer" checked={promo.is_active} onChange={() => handleToggleActive(promo.id, promo.is_active)} />
+                                                <div className="w-9 h-5 bg-[#D1D5DB] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:border-[#E5E7EB] after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#2563EB]"></div>
+                                                <span className="ml-2 text-[10px] font-medium text-[#6B7280]">{promo.is_active ? 'Bật' : 'Tắt'}</span>
+                                            </label>
+                                            <div className="flex items-center gap-3">
+                                                <button onClick={() => handleEditPromo(promo)} className="p-2 text-[#9CA3AF] hover:text-[#2563EB] active:bg-blue-50 rounded-lg transition-colors"><Edit className="w-5 h-5" /></button>
+                                                <button onClick={() => handleDeletePromo(promo.id, promo.code)} className="p-2 text-[#9CA3AF] hover:text-[#DC2626] active:bg-red-50 rounded-lg transition-colors"><Trash2 className="w-5 h-5" /></button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                        {/* Desktop Table View */}
+                        <div className="hidden md:block w-full overflow-x-auto">
                             <table className="w-full border-collapse">
-                                <thead className="bg-[#F9FAFB]">
-                                    <tr>
-                                        <th className="px-4 py-3.5 text-xs font-semibold text-[#374151] text-center uppercase tracking-wider w-16">STT</th>
-                                        {visibleTableColumns.map(col => (
-                                            <th key={col.key} className={`px-4 py-3.5 text-xs font-semibold text-[#374151] ${col.key === 'content' || col.key === 'status' || col.key === 'active' ? 'text-center' : 'text-left'} uppercase tracking-wider`}>
-                                                {col.label}
-                                            </th>
-                                        ))}
-                                        <th className="px-4 py-3.5 text-xs font-semibold text-[#374151] text-center uppercase tracking-wider">Thao tác</th>
-                                    </tr>
-                                </thead>
+                                <thead className="bg-[#F9FAFB]"><tr><th className="px-4 py-3.5 text-xs font-semibold text-[#374151] text-center uppercase tracking-wider w-16">STT</th>{visibleTableColumns.map(col => (<th key={col.key} className={`px-4 py-3.5 text-xs font-semibold text-[#374151] ${col.key === 'content' || col.key === 'status' || col.key === 'active' ? 'text-center' : 'text-left'} uppercase tracking-wider`}>{col.label}</th>))}<th className="px-4 py-3.5 text-xs font-semibold text-[#374151] text-center uppercase tracking-wider">Thao tác</th></tr></thead>
                                 <tbody className="divide-y divide-[#E5E7EB]">
                                     {loading ? (
-                                        <tr>
-                                            <td colSpan={visibleTableColumns.length + 2} className="px-4 py-16 text-center">
-                                                <div className="flex flex-col items-center gap-4">
-                                                    <div className="w-8 h-8 border-4 border-[#2563EB] border-t-transparent rounded-full animate-spin"></div>
-                                                    <p className="text-[#6B7280] text-sm font-medium" style={{ fontFamily: '"Roboto", sans-serif' }}>Đang tải dữ liệu...</p>
-                                                </div>
-                                            </td>
-                                        </tr>
+                                        <tr><td colSpan={visibleTableColumns.length + 2} className="px-4 py-16 text-center"><div className="flex flex-col items-center gap-4"><div className="w-8 h-8 border-4 border-[#2563EB] border-t-transparent rounded-full animate-spin"></div><p className="text-[#6B7280] text-sm font-medium">Đang tải dữ liệu...</p></div></td></tr>
                                     ) : filteredPromotions.length === 0 ? (
-                                        <tr>
-                                            <td colSpan={visibleTableColumns.length + 2} className="px-4 py-16 text-center">
-                                                <div className="flex flex-col items-center gap-4">
-                                                    <Gift className="w-12 h-12 text-[#D1D5DB]" />
-                                                    <p className="text-sm font-medium text-[#6B7280]" style={{ fontFamily: '"Roboto", sans-serif' }}>Không tìm thấy khuyến mãi nào</p>
-                                                </div>
-                                            </td>
-                                        </tr>
+                                        <tr><td colSpan={visibleTableColumns.length + 2} className="px-4 py-16 text-center"><div className="flex flex-col items-center gap-4"><Gift className="w-12 h-12 text-[#D1D5DB]" /><p className="text-sm font-medium text-[#6B7280]">Không tìm thấy khuyến mãi nào</p></div></td></tr>
                                     ) : filteredPromotions.map((promo, index) => {
                                         const status = getPromoStatus(promo);
                                         return (
                                             <tr key={promo.id} className="hover:bg-[#F9FAFB] transition-colors">
-                                                <td className="px-4 py-4 text-center">
-                                                    <span className="text-sm text-[#6B7280]" style={{ fontFamily: '"Roboto", sans-serif' }}>{index + 1}</span>
-                                                </td>
-                                                {isColumnVisible('code') && <td className="px-4 py-4">
-                                                    <div className="flex items-center gap-2">
-                                                        <Tag className="w-4 h-4 text-[#2563EB]" />
-                                                        <span className="text-sm font-medium text-[#111827]" style={{ fontFamily: '"Roboto", sans-serif' }}>{promo.code}</span>
-                                                    </div>
-                                                </td>}
-                                                {isColumnVisible('content') && <td className="px-4 py-4 text-center">
-                                                    <span className="text-sm font-semibold text-[#111827]" style={{ fontFamily: '"Roboto", sans-serif' }}>
-                                                        + {promo.free_cylinders || 0} bình khí
-                                                    </span>
-                                                </td>}
-                                                {isColumnVisible('period') && <td className="px-4 py-4">
-                                                    <div className="flex items-center gap-2 text-sm text-[#374151]" style={{ fontFamily: '"Roboto", sans-serif' }}>
-                                                        <CalendarDays className="w-4 h-4 text-[#9CA3AF]" />
-                                                        <span>{formatDate(promo.start_date)} — {formatDate(promo.end_date)}</span>
-                                                    </div>
-                                                </td>}
-                                                {isColumnVisible('target') && <td className="px-4 py-4">
-                                                    <span className="text-sm font-medium text-[#111827]" style={{ fontFamily: '"Roboto", sans-serif' }}>{promo.customer_type}</span>
-                                                </td>}
-                                                {isColumnVisible('status') && <td className="px-4 py-4 text-center">
-                                                    <span className={`px-3 py-1 text-xs font-medium border ${
-                                                        status.label === 'Đang hoạt động' ? 'text-[#10B981] bg-[#D1FAE5] border-[#A7F3D0]' :
-                                                        status.label === 'Hết hạn' ? 'text-[#EF4444] bg-[#FEE2E2] border-[#FECACA]' :
-                                                        status.label === 'Vô hiệu' ? 'text-[#6B7280] bg-[#F3F4F6] border-[#E5E7EB]' :
-                                                        'text-[#F59E0B] bg-[#FEF3C7] border-[#FDE68A]'
-                                                    }`} style={{ fontFamily: '"Roboto", sans-serif' }}>
-                                                        {status.label}
-                                                    </span>
-                                                </td>}
-                                                {isColumnVisible('active') && <td className="px-4 py-4 text-center">
-                                                    <label className="relative inline-flex items-center cursor-pointer">
-                                                        <input
-                                                            type="checkbox"
-                                                            className="sr-only peer"
-                                                            checked={promo.is_active}
-                                                            onChange={() => handleToggleActive(promo.id, promo.is_active)}
-                                                        />
-                                                        <div className="w-11 h-6 bg-[#D1D5DB] peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-[#2563EB] rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:border-[#E5E7EB] after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#2563EB]"></div>
-                                                    </label>
-                                                </td>}
-                                                <td className="px-4 py-4 text-center">
-                                                    <div className="flex items-center justify-center gap-3">
-                                                        <button
-                                                            onClick={() => handleEditPromo(promo)}
-                                                            className="text-[#9CA3AF] hover:text-[#2563EB] transition-colors p-1 hover:bg-[#EFF6FF]"
-                                                            title="Chỉnh sửa"
-                                                        >
-                                                            <Edit className="w-4 h-4" />
-                                                        </button>
-                                                        <button
-                                                            onClick={() => handleDeletePromo(promo.id, promo.code)}
-                                                            className="text-[#9CA3AF] hover:text-[#DC2626] transition-colors p-1 hover:bg-[#FEF2F2]"
-                                                            title="Xóa"
-                                                        >
-                                                            <Trash2 className="w-4 h-4" />
-                                                        </button>
-                                                    </div>
-                                                </td>
+                                                <td className="px-4 py-4 text-center"><span className="text-sm text-[#6B7280]">{index + 1}</span></td>
+                                                {isColumnVisible('code') && <td className="px-4 py-4"><div className="flex items-center gap-2"><Tag className="w-4 h-4 text-[#2563EB]" /><span className="text-sm font-medium text-[#111827]">{promo.code}</span></div></td>}
+                                                {isColumnVisible('content') && <td className="px-4 py-4 text-center"><span className="text-sm font-semibold text-[#111827]">+ {promo.free_cylinders || 0} bình khí</span></td>}
+                                                {isColumnVisible('period') && <td className="px-4 py-4"><div className="flex items-center gap-2 text-sm text-[#374151]"><CalendarDays className="w-4 h-4 text-[#9CA3AF]" /><span>{formatDate(promo.start_date)} — {formatDate(promo.end_date)}</span></div></td>}
+                                                {isColumnVisible('target') && <td className="px-4 py-4"><span className="text-sm font-medium text-[#111827]">{promo.customer_type}</span></td>}
+                                                {isColumnVisible('status') && <td className="px-4 py-4 text-center"><span className={`px-3 py-1 text-xs font-medium border ${status.label === 'Đang hoạt động' ? 'text-[#10B981] bg-[#D1FAE5] border-[#A7F3D0]' : status.label === 'Hết hạn' ? 'text-[#EF4444] bg-[#FEE2E2] border-[#FECACA]' : status.label === 'Vô hiệu' ? 'text-[#6B7280] bg-[#F3F4F6] border-[#E5E7EB]' : 'text-[#F59E0B] bg-[#FEF3C7] border-[#FDE68A]'}`}>{status.label}</span></td>}
+                                                {isColumnVisible('active') && <td className="px-4 py-4 text-center"><label className="relative inline-flex items-center cursor-pointer"><input type="checkbox" className="sr-only peer" checked={promo.is_active} onChange={() => handleToggleActive(promo.id, promo.is_active)} /><div className="w-11 h-6 bg-[#D1D5DB] peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-[#2563EB] rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:border-[#E5E7EB] after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#2563EB]"></div></label></td>}
+                                                <td className="px-4 py-4 text-center"><div className="flex items-center justify-center gap-3">
+                                                    <button onClick={() => handleEditPromo(promo)} className="text-[#9CA3AF] hover:text-[#2563EB] transition-colors p-1 hover:bg-[#EFF6FF]" title="Chỉnh sửa"><Edit className="w-4 h-4" /></button>
+                                                    <button onClick={() => handleDeletePromo(promo.id, promo.code)} className="text-[#9CA3AF] hover:text-[#DC2626] transition-colors p-1 hover:bg-[#FEF2F2]" title="Xóa"><Trash2 className="w-4 h-4" /></button>
+                                                </div></td>
                                             </tr>
                                         );
                                     })}
@@ -561,25 +506,25 @@ const Promotions = () => {
                 /* Statistics View */
                 <div className="space-y-6">
                     {/* Summary Stats */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div className="bg-white p-6 border border-[#E5E7EB]">
-                            <div className="text-sm text-[#6B7280] mb-2" style={{ fontFamily: '"Roboto", sans-serif' }}>Tổng số khuyến mãi</div>
-                            <div className="text-2xl font-semibold text-[#111827]" style={{ fontFamily: '"Roboto", sans-serif' }}>{filteredPromotionsCount}</div>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
+                        <div className="bg-white p-4 sm:p-6 border border-[#E5E7EB]">
+                            <div className="text-[10px] sm:text-sm text-[#6B7280] mb-1 sm:mb-2 uppercase tracking-wider font-bold">Tổng KM</div>
+                            <div className="text-lg sm:text-2xl font-black text-[#111827]">{filteredPromotionsCount}</div>
                         </div>
-                        <div className="bg-white p-6 border border-[#E5E7EB]">
-                            <div className="text-sm text-[#6B7280] mb-2" style={{ fontFamily: '"Roboto", sans-serif' }}>Đang hoạt động</div>
-                            <div className="text-2xl font-semibold text-[#10B981]" style={{ fontFamily: '"Roboto", sans-serif' }}>{activeCount}</div>
+                        <div className="bg-white p-4 sm:p-6 border border-[#E5E7EB]">
+                            <div className="text-[10px] sm:text-sm text-[#6B7280] mb-1 sm:mb-2 uppercase tracking-wider font-bold">Hoạt động</div>
+                            <div className="text-lg sm:text-2xl font-black text-[#10B981]">{activeCount}</div>
                         </div>
-                        <div className="bg-white p-6 border border-[#E5E7EB]">
-                            <div className="text-sm text-[#6B7280] mb-2" style={{ fontFamily: '"Roboto", sans-serif' }}>Hết hạn / Vô hiệu</div>
-                            <div className="text-2xl font-semibold text-[#EF4444]" style={{ fontFamily: '"Roboto", sans-serif' }}>{expiredCount}</div>
+                        <div className="col-span-2 md:col-span-1 bg-white p-4 sm:p-6 border border-[#E5E7EB]">
+                            <div className="text-[10px] sm:text-sm text-[#6B7280] mb-1 sm:mb-2 uppercase tracking-wider font-bold">Hết hạn / Vô hiệu</div>
+                            <div className="text-lg sm:text-2xl font-black text-[#EF4444]">{expiredCount}</div>
                         </div>
                     </div>
 
                     {/* Charts Grid */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {/* Status Chart */}
-                        <div className="bg-white p-6 border border-[#E5E7EB]">
+                        <div className="bg-white p-4 sm:p-6 border border-[#E5E7EB]">
                             <h3 className="text-lg font-semibold text-[#111827] mb-4" style={{ fontFamily: '"Roboto", sans-serif' }}>Phân bổ theo Trạng thái</h3>
                             <div style={{ height: '300px' }}>
                                 <PieChartJS

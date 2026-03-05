@@ -73,32 +73,34 @@ const CreateCylinder = () => {
         // Dynamic import to avoid SSR issues
         const { Html5Qrcode } = await import('html5-qrcode');
 
-        // Wait for DOM element to be rendered
+        // Wait for DOM element to be rendered (longer delay for mobile)
         setTimeout(async () => {
             try {
                 const html5QrCode = new Html5Qrcode("barcode-reader");
                 html5QrCodeRef.current = html5QrCode;
 
                 await html5QrCode.start(
-                    { facingMode: "environment" }, // Camera sau  
+                    { facingMode: "environment" },
                     {
                         fps: 10,
-                        qrbox: { width: 280, height: 120 },
-                        aspectRatio: 1.5
+                        qrbox: (viewfinderWidth, viewfinderHeight) => ({
+                            width: Math.floor(viewfinderWidth * 0.85),
+                            height: Math.floor(viewfinderHeight * 0.35)
+                        }),
+                        disableFlip: false,
                     },
                     (decodedText) => {
-                        // Quét thành công
                         setFormData(prev => ({ ...prev, serial_number: decodedText }));
                         stopScanner();
                     },
-                    () => { } // Ignore scan errors (continuous scanning)
+                    () => { }
                 );
             } catch (err) {
                 console.error('Camera error:', err);
                 alert('❌ Không thể mở camera. Vui lòng kiểm tra quyền truy cập camera.');
                 setIsScannerOpen(false);
             }
-        }, 100);
+        }, 400);
     }, []);
 
     const stopScanner = useCallback(async () => {
@@ -191,19 +193,19 @@ const CreateCylinder = () => {
 
             {/* Barcode Scanner Overlay */}
             {isScannerOpen && (
-                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[200] flex flex-col items-center justify-center p-4">
-                    <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden">
-                        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-                            <h3 className="font-black text-gray-800 flex items-center gap-2">
-                                <Camera className="w-5 h-5 text-teal-600" /> Quét Barcode
+                <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-[200] flex flex-col">
+                    <div className="flex flex-col h-full md:h-auto md:max-h-[90vh] md:max-w-lg md:w-full md:m-auto md:rounded-3xl md:shadow-2xl bg-black md:bg-white overflow-hidden">
+                        <div className="flex items-center justify-between px-4 py-3 md:px-6 md:py-4 bg-black/50 md:bg-white border-b border-white/10 md:border-gray-100 shrink-0">
+                            <h3 className="font-black text-white md:text-gray-800 flex items-center gap-2 text-sm md:text-base">
+                                <Camera className="w-5 h-5 text-teal-400 md:text-teal-600" /> Quét Barcode
                             </h3>
-                            <button onClick={stopScanner} className="p-2 hover:bg-gray-100 rounded-xl transition-colors">
-                                <X className="w-5 h-5 text-gray-500" />
+                            <button onClick={stopScanner} className="p-2 hover:bg-white/10 md:hover:bg-gray-100 rounded-xl transition-colors">
+                                <X className="w-5 h-5 text-white md:text-gray-500" />
                             </button>
                         </div>
-                        <div id="barcode-reader" ref={scannerRef} className="w-full"></div>
-                        <div className="px-6 py-4 text-center">
-                            <p className="text-sm text-gray-500 font-medium">Hướng camera vào mã barcode trên vỏ bình</p>
+                        <div id="barcode-reader" ref={scannerRef} className="flex-1 w-full min-h-0"></div>
+                        <div className="px-4 py-3 md:px-6 md:py-4 text-center bg-black/50 md:bg-white shrink-0">
+                            <p className="text-xs md:text-sm text-gray-400 md:text-gray-500 font-medium">Hướng camera vào mã barcode trên vỏ bình</p>
                         </div>
                     </div>
                 </div>
@@ -217,9 +219,9 @@ const CreateCylinder = () => {
                             <span className="w-8 h-8 bg-teal-50 text-teal-600 rounded-lg flex items-center justify-center font-bold">1</span>
                             <h3 className="text-base md:text-lg font-bold text-gray-800 uppercase tracking-tight">Thông tin cơ sở vỏ bình</h3>
                         </div>
-                        <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 md:gap-8">
                             {/* Serial RFID + Barcode Scanner */}
-                            <div className="space-y-2 lg:col-span-2">
+                            <div className="space-y-2 sm:col-span-2">
                                 <label className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Serial RFID *</label>
                                 <div className="flex gap-2">
                                     <input
@@ -241,7 +243,7 @@ const CreateCylinder = () => {
                             </div>
 
                             {/* Mã bình (khắc trên vỏ) */}
-                            <div className="space-y-2 lg:col-span-2">
+                            <div className="space-y-2 sm:col-span-2">
                                 <label className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Mã bình (khắc trên vỏ)</label>
                                 <input
                                     value={formData.cylinder_code || ''}
@@ -302,7 +304,7 @@ const CreateCylinder = () => {
                             <span className="w-8 h-8 bg-teal-50 text-teal-600 rounded-lg flex items-center justify-center font-bold">2</span>
                             <h3 className="text-base md:text-lg font-bold text-gray-800 uppercase tracking-tight">Cấu hình & Thông số</h3>
                         </div>
-                        <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-5 gap-6 md:gap-8">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 sm:gap-6 md:gap-8">
                             <div className="space-y-2">
                                 <label className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Khối lượng tịnh (kg)</label>
                                 <input

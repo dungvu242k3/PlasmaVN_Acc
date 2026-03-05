@@ -818,20 +818,20 @@ const CreateOrder = () => {
 
             {/* Barcode Scanner Modal for Cylinder Assignment */}
             {isScannerOpen && (
-                <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[200] flex items-center justify-center p-4">
-                    <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden">
-                        <div className="p-4 flex items-center justify-between bg-gray-50 border-b">
-                            <div className="flex items-center gap-2">
-                                <ScanLine className="w-5 h-5 text-blue-600" />
-                                <span className="font-bold text-gray-800">Quét liên tục</span>
-                                <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-bold">{scanCount} đã quét → bình #{scanTargetIndex + 1}</span>
+                <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-[200] flex flex-col">
+                    <div className="flex flex-col h-full md:h-auto md:max-h-[90vh] md:max-w-lg md:w-full md:m-auto md:rounded-2xl md:shadow-2xl bg-black md:bg-white overflow-hidden">
+                        <div className="flex items-center justify-between px-4 py-3 md:p-4 bg-black/50 md:bg-gray-50 border-b border-white/10 md:border-gray-200 shrink-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                                <ScanLine className="w-5 h-5 text-blue-400 md:text-blue-600" />
+                                <span className="font-bold text-white md:text-gray-800 text-sm">Quét liên tục</span>
+                                <span className="text-[10px] md:text-xs bg-blue-500/30 md:bg-blue-100 text-blue-300 md:text-blue-700 px-2 py-0.5 rounded-full font-bold">{scanCount} đã quét → bình #{scanTargetIndex + 1}</span>
                             </div>
-                            <button onClick={stopCylinderScanner} className="p-1.5 hover:bg-red-50 rounded-lg text-gray-400 hover:text-red-500 transition-colors">
+                            <button onClick={stopCylinderScanner} className="p-2 hover:bg-white/10 md:hover:bg-red-50 rounded-lg text-white md:text-gray-400 md:hover:text-red-500 transition-colors">
                                 <X className="w-5 h-5" />
                             </button>
                         </div>
-                        <div id="order-barcode-reader" className="w-full" />
-                        <p className="text-center text-sm text-gray-500 p-3 font-medium">Quét xong tự nhảy sang bình tiếp theo — Đóng khi đủ</p>
+                        <div id="order-barcode-reader" className="flex-1 w-full min-h-0" />
+                        <p className="text-center text-xs md:text-sm text-gray-400 md:text-gray-500 px-4 py-3 md:p-3 font-medium bg-black/50 md:bg-white shrink-0">Quét xong tự nhảy sang bình tiếp theo — Đóng khi đủ</p>
                     </div>
                 </div>
             )}

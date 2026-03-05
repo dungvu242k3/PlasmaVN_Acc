@@ -340,22 +340,26 @@ const CreateCylinderRecovery = () => {
 
             {/* Barcode Scanner Overlay */}
             {isScannerOpen && (
-                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[200] flex flex-col items-center justify-center p-4">
-                    <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden">
-                        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-                            <h3 className="font-black text-gray-800 flex items-center gap-2">
-                                <ScanLine className="w-5 h-5 text-blue-600" /> Quét liên tục
+                <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-[200] flex flex-col">
+                    {/* Mobile: fullscreen | Desktop: centered card */}
+                    <div className="flex flex-col h-full md:h-auto md:max-h-[90vh] md:max-w-lg md:w-full md:m-auto md:rounded-3xl md:shadow-2xl bg-black md:bg-white overflow-hidden">
+                        {/* Header */}
+                        <div className="flex items-center justify-between px-4 py-3 md:px-6 md:py-4 bg-black/50 md:bg-white border-b border-white/10 md:border-gray-100 shrink-0">
+                            <h3 className="font-black text-white md:text-gray-800 flex items-center gap-2 text-sm md:text-base">
+                                <ScanLine className="w-5 h-5 text-blue-400 md:text-blue-600" /> Quét liên tục
                             </h3>
-                            <div className="flex items-center gap-3">
-                                <span className="text-sm font-bold text-green-600 bg-green-50 px-3 py-1 rounded-lg">{items.length} đã quét</span>
-                                <button onClick={stopScanner} className="p-2 hover:bg-gray-100 rounded-xl transition-colors">
-                                    <X className="w-5 h-5 text-gray-500" />
+                            <div className="flex items-center gap-2 md:gap-3">
+                                <span className="text-xs md:text-sm font-bold text-green-400 md:text-green-600 bg-green-900/30 md:bg-green-50 px-2.5 md:px-3 py-1 rounded-lg">{items.length} đã quét</span>
+                                <button onClick={stopScanner} className="p-2 hover:bg-white/10 md:hover:bg-gray-100 rounded-xl transition-colors">
+                                    <X className="w-5 h-5 text-white md:text-gray-500" />
                                 </button>
                             </div>
                         </div>
-                        <div id="recovery-barcode-reader" className="w-full"></div>
-                        <div className="px-6 py-4 text-center">
-                            <p className="text-sm text-gray-500 font-medium">Hướng camera vào barcode — quét xong tự thêm vào danh sách</p>
+                        {/* Camera viewfinder - takes all available space on mobile */}
+                        <div id="recovery-barcode-reader" className="flex-1 w-full min-h-0"></div>
+                        {/* Footer */}
+                        <div className="px-4 py-3 md:px-6 md:py-4 text-center bg-black/50 md:bg-white shrink-0">
+                            <p className="text-xs md:text-sm text-gray-400 md:text-gray-500 font-medium">Hướng camera vào barcode — quét xong tự thêm vào danh sách</p>
                         </div>
                     </div>
                 </div>

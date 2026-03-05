@@ -97,7 +97,14 @@ export default function CylinderFormModal({ cylinder, onClose, onSuccess }) {
                 html5QrCodeRef.current = qr;
                 await qr.start(
                     { facingMode: 'environment' },
-                    { fps: 10, qrbox: { width: 280, height: 120 }, aspectRatio: 1.5 },
+                    {
+                        fps: 10,
+                        qrbox: (viewfinderWidth, viewfinderHeight) => ({
+                            width: Math.floor(viewfinderWidth * 0.85),
+                            height: Math.floor(viewfinderHeight * 0.35)
+                        }),
+                        disableFlip: false,
+                    },
                     (decodedText) => {
                         setFormData(prev => ({ ...prev, serial_number: decodedText }));
                         qr.stop().catch(() => { });
@@ -110,7 +117,7 @@ export default function CylinderFormModal({ cylinder, onClose, onSuccess }) {
                 alert('❌ Không mở được camera: ' + err);
                 setIsScannerOpen(false);
             }
-        }, 100);
+        }, 400);
     }, []);
 
     const stopScanner = useCallback(async () => {
@@ -207,19 +214,19 @@ export default function CylinderFormModal({ cylinder, onClose, onSuccess }) {
 
                         {/* Scanner Overlay */}
                         {isScannerOpen && (
-                            <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[300] flex flex-col items-center justify-center p-4">
-                                <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden">
-                                    <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-                                        <h3 className="font-black text-gray-800 flex items-center gap-2">
-                                            <ScanLine className="w-5 h-5 text-teal-600" /> Quét Barcode
+                            <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-[300] flex flex-col">
+                                <div className="flex flex-col h-full md:h-auto md:max-h-[90vh] md:max-w-lg md:w-full md:m-auto md:rounded-3xl md:shadow-2xl bg-black md:bg-white overflow-hidden">
+                                    <div className="flex items-center justify-between px-4 py-3 md:px-6 md:py-4 bg-black/50 md:bg-white border-b border-white/10 md:border-gray-100 shrink-0">
+                                        <h3 className="font-black text-white md:text-gray-800 flex items-center gap-2 text-sm md:text-base">
+                                            <ScanLine className="w-5 h-5 text-teal-400 md:text-teal-600" /> Quét Barcode
                                         </h3>
-                                        <button type="button" onClick={stopScanner} className="p-2 hover:bg-gray-100 rounded-xl transition-colors">
-                                            <X className="w-5 h-5 text-gray-500" />
+                                        <button type="button" onClick={stopScanner} className="p-2 hover:bg-white/10 md:hover:bg-gray-100 rounded-xl transition-colors">
+                                            <X className="w-5 h-5 text-white md:text-gray-500" />
                                         </button>
                                     </div>
-                                    <div id="modal-barcode-reader" className="w-full"></div>
-                                    <div className="px-6 py-4 text-center">
-                                        <p className="text-sm text-gray-500 font-medium">Hướng camera vào barcode</p>
+                                    <div id="modal-barcode-reader" className="flex-1 w-full min-h-0"></div>
+                                    <div className="px-4 py-3 md:px-6 md:py-4 text-center bg-black/50 md:bg-white shrink-0">
+                                        <p className="text-xs md:text-sm text-gray-400 md:text-gray-500 font-medium">Hướng camera vào barcode</p>
                                     </div>
                                 </div>
                             </div>
