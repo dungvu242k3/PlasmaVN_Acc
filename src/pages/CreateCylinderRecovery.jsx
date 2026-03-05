@@ -13,6 +13,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { WAREHOUSES } from '../constants/orderConstants';
 import { ITEM_CONDITIONS } from '../constants/recoveryConstants';
 import { supabase } from '../supabase/config';
+import { patchIOSVideoPlaysinline } from '../utils/scannerHelper';
 
 const CreateCylinderRecovery = () => {
     const navigate = useNavigate();
@@ -140,6 +141,7 @@ const CreateCylinderRecovery = () => {
                     verbose: false,
                 });
                 html5QrCodeRef.current = qr;
+                patchIOSVideoPlaysinline('recovery-barcode-reader');
                 await qr.start(
                     { facingMode: "environment" },
                     {

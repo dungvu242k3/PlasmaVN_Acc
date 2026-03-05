@@ -16,6 +16,7 @@ import {
 } from '../constants/orderConstants';
 import usePermissions from '../hooks/usePermissions';
 import { supabase } from '../supabase/config';
+import { patchIOSVideoPlaysinline } from '../utils/scannerHelper';
 
 const CreateOrder = () => {
     const navigate = useNavigate();
@@ -242,6 +243,7 @@ const CreateOrder = () => {
             try {
                 const qr = new Html5Qrcode('order-barcode-reader', { formatsToSupport, verbose: false });
                 html5QrCodeRef.current = qr;
+                patchIOSVideoPlaysinline('order-barcode-reader');
                 await qr.start(
                     { facingMode: 'environment' },
                     {

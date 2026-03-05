@@ -15,6 +15,7 @@ import {
 } from '../constants/machineConstants';
 import { WAREHOUSES } from '../constants/orderConstants';
 import { supabase } from '../supabase/config';
+import { patchIOSVideoPlaysinline } from '../utils/scannerHelper';
 
 const CreateCylinder = () => {
     const navigate = useNavigate();
@@ -79,6 +80,7 @@ const CreateCylinder = () => {
                 const html5QrCode = new Html5Qrcode("barcode-reader");
                 html5QrCodeRef.current = html5QrCode;
 
+                patchIOSVideoPlaysinline('barcode-reader');
                 await html5QrCode.start(
                     { facingMode: "environment" },
                     {

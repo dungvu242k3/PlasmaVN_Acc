@@ -9,6 +9,7 @@ import {
 } from '../../constants/machineConstants';
 import { WAREHOUSES } from '../../constants/orderConstants';
 import { supabase } from '../../supabase/config';
+import { patchIOSVideoPlaysinline } from '../../utils/scannerHelper';
 
 export default function CylinderFormModal({ cylinder, onClose, onSuccess }) {
     const isEdit = !!cylinder;
@@ -95,6 +96,7 @@ export default function CylinderFormModal({ cylinder, onClose, onSuccess }) {
             try {
                 const qr = new Html5Qrcode('modal-barcode-reader');
                 html5QrCodeRef.current = qr;
+                patchIOSVideoPlaysinline('modal-barcode-reader');
                 await qr.start(
                     { facingMode: 'environment' },
                     {
