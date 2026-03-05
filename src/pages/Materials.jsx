@@ -1,27 +1,26 @@
 import {
-    Chart as ChartJS,
-    CategoryScale,
-    LinearScale,
-    BarElement,
     ArcElement,
-    PointElement,
-    LineElement,
-    Title,
+    BarElement,
+    CategoryScale,
+    Chart as ChartJS,
+    Legend as ChartLegend,
     Tooltip as ChartTooltip,
-    Legend as ChartLegend
+    LinearScale,
+    LineElement,
+    PointElement,
+    Title
 } from 'chart.js';
-import { Bar as BarChartJS, Pie as PieChartJS, Line as LineChartJS } from 'react-chartjs-2';
 import {
     ChevronDown,
     Edit,
     Filter,
-    Layers,
     PackageOpen,
     Plus,
     Search,
     Trash2
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { Bar as BarChartJS, Pie as PieChartJS } from 'react-chartjs-2';
 import { useNavigate } from 'react-router-dom';
 import MaterialFormModal from '../components/Materials/MaterialFormModal';
 import { MATERIAL_CATEGORIES } from '../constants/materialConstants';
@@ -50,7 +49,7 @@ const Materials = () => {
     const [loading, setLoading] = useState(true);
     const [isFormModalOpen, setIsFormModalOpen] = useState(false);
     const [selectedMaterial, setSelectedMaterial] = useState(null);
-    
+
     // Filter states
     const [selectedCategories, setSelectedCategories] = useState([]);
 
@@ -153,8 +152,8 @@ const Materials = () => {
                 </button>
                 {isOpen && (
                     <>
-                        <div 
-                            className="fixed inset-0 z-10" 
+                        <div
+                            className="fixed inset-0 z-10"
                             onClick={() => setIsOpen(false)}
                         ></div>
                         <div className="absolute top-full left-0 mt-1 bg-white border border-[#E5E7EB] shadow-lg z-20 min-w-[250px] max-h-80">
@@ -202,10 +201,10 @@ const Materials = () => {
 
     // Calculate totals
     const filteredMaterialsCount = filteredMaterials.length;
-    
+
     // For statistics - filter by selected categories or use all
-    const statsMaterials = selectedCategories.length === 0 
-        ? allMaterials 
+    const statsMaterials = selectedCategories.length === 0
+        ? allMaterials
         : allMaterials.filter(m => selectedCategories.includes(m.category));
 
     // Calculate statistics data for charts
@@ -232,27 +231,25 @@ const Materials = () => {
     ];
 
     return (
-        <div className="p-6 bg-[#F8F9FA] min-h-screen" style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif' }}>
+        <div className="p-4 sm:p-6 bg-[#F8F9FA] min-h-screen" style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif' }}>
             {/* Navigation Tabs */}
-            <div className="flex items-center gap-1 mb-8 border-b border-[#E5E7EB]">
+            <div className="flex items-center gap-1 mb-6 sm:mb-8 border-b border-[#E5E7EB] overflow-x-auto no-scrollbar">
                 <button
                     onClick={() => setActiveView('list')}
-                    className={`px-6 py-3 text-sm font-semibold tracking-wide transition-colors ${
-                        activeView === 'list' 
-                            ? 'text-[#2563EB] border-b-2 border-[#2563EB]' 
+                    className={`px-6 py-3 text-sm font-semibold tracking-wide transition-colors ${activeView === 'list'
+                            ? 'text-[#2563EB] border-b-2 border-[#2563EB]'
                             : 'text-[#6B7280] hover:text-[#374151]'
-                    }`}
+                        }`}
                     style={activeView === 'list' ? { color: '#2563EB', borderBottomColor: '#2563EB' } : { color: '#6B7280' }}
                 >
                     Danh sách
                 </button>
                 <button
                     onClick={() => setActiveView('stats')}
-                    className={`px-6 py-3 text-sm font-semibold tracking-wide transition-colors ${
-                        activeView === 'stats' 
-                            ? 'text-[#2563EB] border-b-2 border-[#2563EB]' 
+                    className={`px-6 py-3 text-sm font-semibold tracking-wide transition-colors ${activeView === 'stats'
+                            ? 'text-[#2563EB] border-b-2 border-[#2563EB]'
                             : 'text-[#6B7280] hover:text-[#374151]'
-                    }`}
+                        }`}
                     style={activeView === 'stats' ? { color: '#2563EB', borderBottomColor: '#2563EB' } : { color: '#6B7280' }}
                 >
                     Thống kê
@@ -262,40 +259,20 @@ const Materials = () => {
             {activeView === 'list' ? (
                 <>
                     {/* Header with Add Button */}
-                    <div className="flex items-center justify-between mb-6">
-                        <h1 className="text-2xl font-semibold text-[#111827] tracking-tight" style={{ color: '#111827' }}>Danh sách vật tư</h1>
-                        <button
-                            onClick={handleCreateNew}
-                            className="flex items-center gap-2 px-5 py-2.5 text-white font-medium text-sm transition-all duration-200 shadow-sm hover:shadow-md"
-                            style={{ backgroundColor: '#2563EB' }}
-                            onMouseEnter={(e) => e.target.style.backgroundColor = '#1D4ED8'}
-                            onMouseLeave={(e) => e.target.style.backgroundColor = '#2563EB'}
-                        >
-                            <Plus className="w-4 h-4" />
-                            Thêm
-                        </button>
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
+                        <h1 className="text-xl sm:text-2xl font-semibold text-[#111827] tracking-tight">Danh sách vật tư</h1>
+                        <button onClick={handleCreateNew} className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 text-white font-medium text-sm transition-all duration-200 shadow-sm hover:shadow-md" style={{ backgroundColor: '#2563EB' }} onMouseEnter={(e) => e.target.style.backgroundColor = '#1D4ED8'} onMouseLeave={(e) => e.target.style.backgroundColor = '#2563EB'}><Plus className="w-4 h-4" /> Thêm mới</button>
                     </div>
 
-                    {/* Search Bar and Summary Stats - Same Row */}
-                    <div className="mb-6 flex items-center gap-4">
-                        {/* Search Bar */}
+                    <div className="mb-6 flex flex-col lg:flex-row lg:items-center gap-4">
                         <div className="flex-1 relative">
                             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#9CA3AF]" />
-                            <input
-                                type="text"
-                                placeholder="Tìm theo tên, mô tả..."
-                                className="w-full pl-12 pr-4 py-3 border border-[#D1D5DB] focus:outline-none focus:ring-2 focus:ring-[#2563EB] focus:border-[#2563EB] bg-white text-[#111827] placeholder-[#9CA3AF] text-sm transition-all"
-                                style={{ fontFamily: '"Roboto", sans-serif' }}
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                            />
+                            <input type="text" placeholder="Tìm theo tên, mô tả..." className="w-full pl-12 pr-4 py-3 border border-[#D1D5DB] focus:outline-none focus:ring-2 focus:ring-[#2563EB] focus:border-[#2563EB] bg-white text-[#111827] placeholder-[#9CA3AF] text-sm transition-all" style={{ fontFamily: '"Roboto", sans-serif' }} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
                         </div>
-
-                        {/* Summary Stats */}
-                        <div className="flex items-center gap-6 px-6 py-3 bg-[#EFF6FF] border border-[#BFDBFE]">
-                            <div className="flex items-center gap-2">
-                                <span className="text-sm text-[#6B7280]" style={{ fontFamily: '"Roboto", sans-serif' }}>Số lượng vật tư:</span>
-                                <span className="text-lg font-semibold text-[#2563EB]" style={{ fontFamily: '"Roboto", sans-serif' }}>{filteredMaterialsCount}</span>
+                        <div className="flex items-center gap-4 px-4 py-3 bg-[#EFF6FF] border border-[#BFDBFE]">
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                                <span className="text-[10px] sm:text-sm text-[#6B7280]">Vật tư:</span>
+                                <span className="text-sm sm:text-lg font-semibold text-[#2563EB]">{filteredMaterialsCount}</span>
                             </div>
                         </div>
                     </div>
@@ -318,83 +295,52 @@ const Materials = () => {
                     </div>
 
                     {/* Main Content Card */}
-                    <div className="bg-white border border-[#E5E7EB] shadow-sm">
-                        {/* Table Section */}
-                        <div className="w-full overflow-x-auto">
+                    <div className="bg-white rounded-lg border border-[#E5E7EB] shadow-sm overflow-hidden">
+                        {/* Mobile Card List */}
+                        <div className="md:hidden divide-y divide-[#E5E7EB]">
+                            {loading ? (
+                                <div className="px-4 py-16 text-center"><div className="flex flex-col items-center gap-4"><div className="w-8 h-8 border-4 border-[#2563EB] border-t-transparent rounded-full animate-spin"></div><p className="text-[#6B7280] text-sm font-medium">Đang tải...</p></div></div>
+                            ) : filteredMaterials.length === 0 ? (
+                                <div className="px-4 py-16 text-center"><div className="flex flex-col items-center gap-4"><PackageOpen className="w-12 h-12 text-[#D1D5DB]" /><p className="text-sm font-medium text-[#6B7280]">Không tìm thấy vật tư nào</p></div></div>
+                            ) : filteredMaterials.map((material, index) => (
+                                <div key={material.id} className="p-4 bg-white hover:bg-gray-50 active:bg-gray-100 transition-colors">
+                                    <div className="flex justify-between items-start mb-3">
+                                        <div className="flex flex-col">
+                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">#{index + 1}</span>
+                                            <h3 className="text-sm font-bold text-[#111827] leading-tight mt-0.5">{material.name}</h3>
+                                            <span className="text-[10px] text-[#6B7280] mt-0.5">ID: {material.id.substring(0, 8)}</span>
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-2 mb-3">
+                                        {currentCategoryDef.hasNumberField && <div><span className="text-[9px] font-bold text-slate-400 uppercase">{currentCategoryDef.numberFieldLabel}</span><p className="text-xs text-[#111827] font-semibold">{material.extra_number || '—'}</p></div>}
+                                        {currentCategoryDef.hasTextField && <div className={currentCategoryDef.hasNumberField ? '' : 'col-span-2'}><span className="text-[9px] font-bold text-slate-400 uppercase">{currentCategoryDef.textFieldLabel}</span><p className="text-xs text-slate-700 font-medium line-clamp-2">{material.extra_text || '—'}</p></div>}
+                                    </div>
+                                    <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-50">
+                                        <button onClick={() => handleEditMaterial(material)} className="p-2 text-[#9CA3AF] hover:text-[#2563EB] active:bg-blue-50 rounded-lg transition-colors"><Edit className="w-5 h-5" /></button>
+                                        <button onClick={() => handleDeleteMaterial(material.id, material.name)} className="p-2 text-[#9CA3AF] hover:text-[#DC2626] active:bg-red-50 rounded-lg transition-colors"><Trash2 className="w-5 h-5" /></button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                        {/* Desktop Table View */}
+                        <div className="hidden md:block w-full overflow-x-auto">
                             <table className="w-full border-collapse">
-                                <thead className="bg-[#F9FAFB]">
-                                    <tr>
-                                        <th className="px-4 py-3.5 text-xs font-semibold text-[#374151] text-center uppercase tracking-wider w-16">STT</th>
-                                        <th className="px-4 py-3.5 text-xs font-semibold text-[#374151] text-left uppercase tracking-wider">{currentCategoryDef.nameLabel || 'Tên vật tư'}</th>
-                                        {currentCategoryDef.hasNumberField && (
-                                            <th className="px-4 py-3.5 text-xs font-semibold text-[#374151] text-center uppercase tracking-wider">{currentCategoryDef.numberFieldLabel}</th>
-                                        )}
-                                        {currentCategoryDef.hasTextField && (
-                                            <th className="px-4 py-3.5 text-xs font-semibold text-[#374151] text-left uppercase tracking-wider">{currentCategoryDef.textFieldLabel}</th>
-                                        )}
-                                        <th className="px-4 py-3.5 text-xs font-semibold text-[#374151] text-center uppercase tracking-wider">Thao tác</th>
-                                    </tr>
-                                </thead>
+                                <thead className="bg-[#F9FAFB]"><tr><th className="px-4 py-3.5 text-xs font-semibold text-[#374151] text-center uppercase tracking-wider w-16">STT</th><th className="px-4 py-3.5 text-xs font-semibold text-[#374151] text-left uppercase tracking-wider">{currentCategoryDef.nameLabel || 'Tên vật tư'}</th>{currentCategoryDef.hasNumberField && (<th className="px-4 py-3.5 text-xs font-semibold text-[#374151] text-center uppercase tracking-wider">{currentCategoryDef.numberFieldLabel}</th>)}{currentCategoryDef.hasTextField && (<th className="px-4 py-3.5 text-xs font-semibold text-[#374151] text-left uppercase tracking-wider">{currentCategoryDef.textFieldLabel}</th>)}<th className="px-4 py-3.5 text-xs font-semibold text-[#374151] text-center uppercase tracking-wider">Thao tác</th></tr></thead>
                                 <tbody className="divide-y divide-[#E5E7EB]">
                                     {loading ? (
-                                        <tr>
-                                            <td colSpan={2 + (currentCategoryDef.hasNumberField ? 1 : 0) + (currentCategoryDef.hasTextField ? 1 : 0) + 1} className="px-4 py-16 text-center">
-                                                <div className="flex flex-col items-center gap-4">
-                                                    <div className="w-8 h-8 border-4 border-[#2563EB] border-t-transparent rounded-full animate-spin"></div>
-                                                    <p className="text-[#6B7280] text-sm font-medium" style={{ fontFamily: '"Roboto", sans-serif' }}>Đang tải dữ liệu...</p>
-                                                </div>
-                                            </td>
-                                        </tr>
+                                        <tr><td colSpan={2 + (currentCategoryDef.hasNumberField ? 1 : 0) + (currentCategoryDef.hasTextField ? 1 : 0) + 1} className="px-4 py-16 text-center"><div className="flex flex-col items-center gap-4"><div className="w-8 h-8 border-4 border-[#2563EB] border-t-transparent rounded-full animate-spin"></div><p className="text-[#6B7280] text-sm font-medium">Đang tải dữ liệu...</p></div></td></tr>
                                     ) : filteredMaterials.length === 0 ? (
-                                        <tr>
-                                            <td colSpan={2 + (currentCategoryDef.hasNumberField ? 1 : 0) + (currentCategoryDef.hasTextField ? 1 : 0) + 1} className="px-4 py-16 text-center">
-                                                <div className="flex flex-col items-center gap-4">
-                                                    <PackageOpen className="w-12 h-12 text-[#D1D5DB]" />
-                                                    <p className="text-sm font-medium text-[#6B7280]" style={{ fontFamily: '"Roboto", sans-serif' }}>Không tìm thấy vật tư nào</p>
-                                                </div>
-                                            </td>
-                                        </tr>
+                                        <tr><td colSpan={2 + (currentCategoryDef.hasNumberField ? 1 : 0) + (currentCategoryDef.hasTextField ? 1 : 0) + 1} className="px-4 py-16 text-center"><div className="flex flex-col items-center gap-4"><PackageOpen className="w-12 h-12 text-[#D1D5DB]" /><p className="text-sm font-medium text-[#6B7280]">Không tìm thấy vật tư nào</p></div></td></tr>
                                     ) : filteredMaterials.map((material, index) => (
                                         <tr key={material.id} className="hover:bg-[#F9FAFB] transition-colors">
-                                            <td className="px-4 py-4 text-center">
-                                                <span className="text-sm text-[#6B7280]" style={{ fontFamily: '"Roboto", sans-serif' }}>{index + 1}</span>
-                                            </td>
-                                            <td className="px-4 py-4">
-                                                <div>
-                                                    <div className="text-sm font-medium text-[#111827]" style={{ fontFamily: '"Roboto", sans-serif' }}>{material.name}</div>
-                                                    <div className="text-xs text-[#6B7280] mt-1" style={{ fontFamily: '"Roboto", sans-serif' }}>ID: {material.id.substring(0, 8)}</div>
-                                                </div>
-                                            </td>
-                                            {currentCategoryDef.hasNumberField && (
-                                                <td className="px-4 py-4 text-center">
-                                                    <span className="text-sm font-semibold text-[#111827]" style={{ fontFamily: '"Roboto", sans-serif' }}>
-                                                        {material.extra_number || '—'}
-                                                    </span>
-                                                </td>
-                                            )}
-                                            {currentCategoryDef.hasTextField && (
-                                                <td className="px-4 py-4 text-sm text-[#374151] font-normal" style={{ fontFamily: '"Roboto", sans-serif' }}>
-                                                    {material.extra_text || '—'}
-                                                </td>
-                                            )}
-                                            <td className="px-4 py-4 text-center">
-                                                <div className="flex items-center justify-center gap-3">
-                                                    <button
-                                                        onClick={() => handleEditMaterial(material)}
-                                                        className="text-[#9CA3AF] hover:text-[#2563EB] transition-colors p-1 hover:bg-[#EFF6FF]"
-                                                        title="Chỉnh sửa"
-                                                    >
-                                                        <Edit className="w-4 h-4" />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleDeleteMaterial(material.id, material.name)}
-                                                        className="text-[#9CA3AF] hover:text-[#DC2626] transition-colors p-1 hover:bg-[#FEF2F2]"
-                                                        title="Xóa"
-                                                    >
-                                                        <Trash2 className="w-4 h-4" />
-                                                    </button>
-                                                </div>
-                                            </td>
+                                            <td className="px-4 py-4 text-center"><span className="text-sm text-[#6B7280]">{index + 1}</span></td>
+                                            <td className="px-4 py-4"><div><div className="text-sm font-medium text-[#111827]">{material.name}</div><div className="text-xs text-[#6B7280] mt-1">ID: {material.id.substring(0, 8)}</div></div></td>
+                                            {currentCategoryDef.hasNumberField && (<td className="px-4 py-4 text-center"><span className="text-sm font-semibold text-[#111827]">{material.extra_number || '—'}</span></td>)}
+                                            {currentCategoryDef.hasTextField && (<td className="px-4 py-4 text-sm text-[#374151] font-normal">{material.extra_text || '—'}</td>)}
+                                            <td className="px-4 py-4 text-center"><div className="flex items-center justify-center gap-3">
+                                                <button onClick={() => handleEditMaterial(material)} className="text-[#9CA3AF] hover:text-[#2563EB] transition-colors p-1 hover:bg-[#EFF6FF]" title="Chỉnh sửa"><Edit className="w-4 h-4" /></button>
+                                                <button onClick={() => handleDeleteMaterial(material.id, material.name)} className="text-[#9CA3AF] hover:text-[#DC2626] transition-colors p-1 hover:bg-[#FEF2F2]" title="Xóa"><Trash2 className="w-4 h-4" /></button>
+                                            </div></td>
                                         </tr>
                                     ))}
                                 </tbody>
@@ -406,11 +352,9 @@ const Materials = () => {
                 /* Statistics View */
                 <div className="space-y-6">
                     {/* Summary Stats */}
-                    <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
-                        <div className="bg-white p-6 border border-[#E5E7EB]">
-                            <div className="text-sm text-[#6B7280] mb-2" style={{ fontFamily: '"Roboto", sans-serif' }}>Tổng số vật tư</div>
-                            <div className="text-2xl font-semibold text-[#111827]" style={{ fontFamily: '"Roboto", sans-serif' }}>{statsMaterials.length}</div>
-                        </div>
+                    <div className="bg-white p-4 sm:p-6 border border-[#E5E7EB]">
+                        <div className="text-[10px] sm:text-sm text-[#6B7280] mb-2 uppercase tracking-wider font-bold">Tổng vật tư</div>
+                        <div className="text-lg sm:text-2xl font-black text-[#111827]">{statsMaterials.length}</div>
                     </div>
 
                     {/* Filter Section for Statistics */}

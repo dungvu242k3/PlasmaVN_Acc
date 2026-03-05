@@ -399,6 +399,15 @@ h6,
     box-shadow: 0 4px 12px -4px rgba(37, 99, 235, 0.3);
     flex-shrink: 0;
   }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
 }
 
 /* Global hidden state for print content in normal view */

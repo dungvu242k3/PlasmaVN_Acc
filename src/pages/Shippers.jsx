@@ -1,16 +1,15 @@
 import {
-    Chart as ChartJS,
-    CategoryScale,
-    LinearScale,
-    BarElement,
     ArcElement,
-    PointElement,
-    LineElement,
-    Title,
+    BarElement,
+    CategoryScale,
+    Chart as ChartJS,
+    Legend as ChartLegend,
     Tooltip as ChartTooltip,
-    Legend as ChartLegend
+    LinearScale,
+    LineElement,
+    PointElement,
+    Title
 } from 'chart.js';
-import { Bar as BarChartJS, Pie as PieChartJS, Line as LineChartJS } from 'react-chartjs-2';
 import {
     ActivitySquare,
     CheckCircle2,
@@ -18,7 +17,6 @@ import {
     Edit,
     Eye,
     Filter,
-    Package,
     Plus,
     Search,
     Trash2,
@@ -26,11 +24,11 @@ import {
     XCircle
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { Bar as BarChartJS, Pie as PieChartJS } from 'react-chartjs-2';
 import { useNavigate } from 'react-router-dom';
-import ColumnToggle from '../components/ColumnToggle';
 import ShipperDetailsModal from '../components/Shippers/ShipperDetailsModal';
 import ShipperFormModal from '../components/Shippers/ShipperFormModal';
-import { SHIPPING_TYPES, SHIPPER_STATUSES } from '../constants/shipperConstants';
+import { SHIPPER_STATUSES, SHIPPING_TYPES } from '../constants/shipperConstants';
 import useColumnVisibility from '../hooks/useColumnVisibility';
 import { supabase } from '../supabase/config';
 
@@ -67,7 +65,7 @@ const Shippers = () => {
     const [selectedShipper, setSelectedShipper] = useState(null);
     const { visibleColumns, toggleColumn, isColumnVisible, resetColumns, visibleCount, totalCount } = useColumnVisibility('columns_shippers', TABLE_COLUMNS);
     const visibleTableColumns = TABLE_COLUMNS.filter(col => isColumnVisible(col.key));
-    
+
     // Filter states
     const [selectedStatuses, setSelectedStatuses] = useState([]);
     const [selectedTypes, setSelectedTypes] = useState([]);
@@ -163,8 +161,8 @@ const Shippers = () => {
                 </button>
                 {isOpen && (
                     <>
-                        <div 
-                            className="fixed inset-0 z-10" 
+                        <div
+                            className="fixed inset-0 z-10"
                             onClick={() => setIsOpen(false)}
                         ></div>
                         <div className="absolute top-full left-0 mt-1 bg-white border border-[#E5E7EB] shadow-lg z-20 min-w-[250px] max-h-80">
@@ -274,15 +272,15 @@ const Shippers = () => {
         );
 
         // Filter by status
-        const matchesStatus = selectedStatuses.length === 0 || 
+        const matchesStatus = selectedStatuses.length === 0 ||
             selectedStatuses.includes(shipper.status);
-        
+
         // Filter by type
-        const matchesType = selectedTypes.length === 0 || 
+        const matchesType = selectedTypes.length === 0 ||
             selectedTypes.includes(shipper.shipping_type);
-        
+
         // Filter by manager
-        const matchesManager = selectedManagers.length === 0 || 
+        const matchesManager = selectedManagers.length === 0 ||
             selectedManagers.includes(shipper.manager_name);
 
         return matchesSearch && matchesStatus && matchesType && matchesManager;
@@ -301,27 +299,25 @@ const Shippers = () => {
     };
 
     return (
-        <div className="p-6 bg-[#F8F9FA] min-h-screen" style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif' }}>
+        <div className="p-4 sm:p-6 bg-[#F8F9FA] min-h-screen" style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif' }}>
             {/* Navigation Tabs */}
-            <div className="flex items-center gap-1 mb-8 border-b border-[#E5E7EB]">
+            <div className="flex items-center gap-1 mb-6 sm:mb-8 border-b border-[#E5E7EB] overflow-x-auto no-scrollbar">
                 <button
                     onClick={() => setActiveView('list')}
-                    className={`px-6 py-3 text-sm font-semibold tracking-wide transition-colors ${
-                        activeView === 'list' 
-                            ? 'text-[#2563EB] border-b-2 border-[#2563EB]' 
-                            : 'text-[#6B7280] hover:text-[#374151]'
-                    }`}
+                    className={`px-6 py-3 text-sm font-semibold tracking-wide transition-colors ${activeView === 'list'
+                        ? 'text-[#2563EB] border-b-2 border-[#2563EB]'
+                        : 'text-[#6B7280] hover:text-[#374151]'
+                        }`}
                     style={activeView === 'list' ? { color: '#2563EB', borderBottomColor: '#2563EB' } : { color: '#6B7280' }}
                 >
                     Danh sách
                 </button>
                 <button
                     onClick={() => setActiveView('stats')}
-                    className={`px-6 py-3 text-sm font-semibold tracking-wide transition-colors ${
-                        activeView === 'stats' 
-                            ? 'text-[#2563EB] border-b-2 border-[#2563EB]' 
-                            : 'text-[#6B7280] hover:text-[#374151]'
-                    }`}
+                    className={`px-6 py-3 text-sm font-semibold tracking-wide transition-colors ${activeView === 'stats'
+                        ? 'text-[#2563EB] border-b-2 border-[#2563EB]'
+                        : 'text-[#6B7280] hover:text-[#374151]'
+                        }`}
                     style={activeView === 'stats' ? { color: '#2563EB', borderBottomColor: '#2563EB' } : { color: '#6B7280' }}
                 >
                     Thống kê
@@ -331,50 +327,33 @@ const Shippers = () => {
             {activeView === 'list' ? (
                 <>
                     {/* Header with Add Button */}
-                    <div className="flex items-center justify-between mb-6">
-                        <h1 className="text-2xl font-semibold text-[#111827] tracking-tight" style={{ color: '#111827' }}>Danh sách đơn vị vận chuyển</h1>
-                        <button
-                            onClick={handleCreateNew}
-                            className="flex items-center gap-2 px-5 py-2.5 text-white font-medium text-sm transition-all duration-200 shadow-sm hover:shadow-md"
-                            style={{ backgroundColor: '#2563EB' }}
-                            onMouseEnter={(e) => e.target.style.backgroundColor = '#1D4ED8'}
-                            onMouseLeave={(e) => e.target.style.backgroundColor = '#2563EB'}
-                        >
-                            <Plus className="w-4 h-4" />
-                            Thêm
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
+                        <h1 className="text-xl sm:text-2xl font-semibold text-[#111827] tracking-tight">Danh sách đơn vị vận chuyển</h1>
+                        <button onClick={handleCreateNew} className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 text-white font-medium text-sm transition-all duration-200 shadow-sm hover:shadow-md" style={{ backgroundColor: '#2563EB' }} onMouseEnter={(e) => e.target.style.backgroundColor = '#1D4ED8'} onMouseLeave={(e) => e.target.style.backgroundColor = '#2563EB'}>
+                            <Plus className="w-4 h-4" /> Thêm mới
                         </button>
                     </div>
 
                     {/* Search Bar and Summary Stats - Same Row */}
-                    <div className="mb-6 flex items-center gap-4">
-                        {/* Search Bar */}
+                    <div className="mb-6 flex flex-col lg:flex-row lg:items-center gap-4">
                         <div className="flex-1 relative">
                             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#9CA3AF]" />
-                            <input
-                                type="text"
-                                placeholder="Tìm theo tên, người quản lý, SĐT, địa chỉ..."
-                                className="w-full pl-12 pr-4 py-3 border border-[#D1D5DB] focus:outline-none focus:ring-2 focus:ring-[#2563EB] focus:border-[#2563EB] bg-white text-[#111827] placeholder-[#9CA3AF] text-sm transition-all"
-                                style={{ fontFamily: '"Roboto", sans-serif' }}
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                            />
+                            <input type="text" placeholder="Tìm theo tên, người quản lý, SĐT, địa chỉ..." className="w-full pl-12 pr-4 py-3 border border-[#D1D5DB] focus:outline-none focus:ring-2 focus:ring-[#2563EB] focus:border-[#2563EB] bg-white text-[#111827] placeholder-[#9CA3AF] text-sm transition-all" style={{ fontFamily: '"Roboto", sans-serif' }} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
                         </div>
-
-                        {/* Summary Stats */}
-                        <div className="flex items-center gap-6 px-6 py-3 bg-[#EFF6FF] border border-[#BFDBFE]">
-                            <div className="flex items-center gap-2">
-                                <span className="text-sm text-[#6B7280]" style={{ fontFamily: '"Roboto", sans-serif' }}>Số lượng DVVC:</span>
-                                <span className="text-lg font-semibold text-[#2563EB]" style={{ fontFamily: '"Roboto", sans-serif' }}>{filteredShippersCount}</span>
+                        <div className="flex items-center justify-around sm:justify-start gap-4 sm:gap-6 px-4 py-3 bg-[#EFF6FF] border border-[#BFDBFE]">
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 text-center sm:text-left">
+                                <span className="text-[10px] sm:text-sm text-[#6B7280]">DVVC:</span>
+                                <span className="text-sm sm:text-lg font-semibold text-[#2563EB]">{filteredShippersCount}</span>
                             </div>
-                            <div className="w-px h-8 bg-[#BFDBFE]"></div>
-                            <div className="flex items-center gap-2">
-                                <span className="text-sm text-[#6B7280]" style={{ fontFamily: '"Roboto", sans-serif' }}>Đang hoạt động:</span>
-                                <span className="text-lg font-semibold text-[#2563EB]" style={{ fontFamily: '"Roboto", sans-serif' }}>{activeCount}</span>
+                            <div className="hidden sm:block w-px h-8 bg-[#BFDBFE]"></div>
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 text-center sm:text-left border-l border-[#BFDBFE] sm:border-none pl-4 sm:pl-0">
+                                <span className="text-[10px] sm:text-sm text-[#6B7280]">Hoạt động:</span>
+                                <span className="text-sm sm:text-lg font-semibold text-[#2563EB]">{activeCount}</span>
                             </div>
-                            <div className="w-px h-8 bg-[#BFDBFE]"></div>
-                            <div className="flex items-center gap-2">
-                                <span className="text-sm text-[#6B7280]" style={{ fontFamily: '"Roboto", sans-serif' }}>Tạm ngưng:</span>
-                                <span className="text-lg font-semibold text-[#2563EB]" style={{ fontFamily: '"Roboto", sans-serif' }}>{suspendedCount}</span>
+                            <div className="hidden sm:block w-px h-8 bg-[#BFDBFE]"></div>
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 text-center sm:text-left border-l border-[#BFDBFE] sm:border-none pl-4 sm:pl-0">
+                                <span className="text-[10px] sm:text-sm text-[#6B7280]">Tạm ngưng:</span>
+                                <span className="text-sm sm:text-lg font-semibold text-[#2563EB]">{suspendedCount}</span>
                             </div>
                         </div>
                     </div>
@@ -485,18 +464,46 @@ const Shippers = () => {
                     </div>
 
                     {/* Main Content Card */}
-                    <div className="bg-white border border-[#E5E7EB] shadow-sm">
-                        {/* Table Section */}
-                        <div className="w-full overflow-x-auto">
+                    <div className="bg-white rounded-lg border border-[#E5E7EB] shadow-sm overflow-hidden">
+                        {/* Mobile Card List */}
+                        <div className="md:hidden divide-y divide-[#E5E7EB]">
+                            {loading ? (
+                                <div className="px-4 py-16 text-center"><div className="flex flex-col items-center gap-4"><div className="w-8 h-8 border-4 border-[#2563EB] border-t-transparent rounded-full animate-spin"></div><p className="text-[#6B7280] text-sm font-medium">Đang tải...</p></div></div>
+                            ) : filteredShippers.length === 0 ? (
+                                <div className="px-4 py-16 text-center"><div className="flex flex-col items-center gap-4"><Truck className="w-12 h-12 text-[#D1D5DB]" /><p className="text-sm font-medium text-[#6B7280]">Không tìm thấy DVVC nào</p></div></div>
+                            ) : filteredShippers.map((shipper, index) => (
+                                <div key={shipper.id} className="p-4 bg-white hover:bg-gray-50 active:bg-gray-100 transition-colors">
+                                    <div className="flex justify-between items-start mb-3">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-9 h-9 bg-gradient-to-tr from-[#374151] to-[#111827] text-white text-[10px] font-semibold flex items-center justify-center shrink-0">{getInitials(shipper.name)}</div>
+                                            <div className="flex flex-col">
+                                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">#{index + 1}</span>
+                                                <h3 className="text-sm font-bold text-[#111827] leading-tight">{shipper.name}</h3>
+                                            </div>
+                                        </div>
+                                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border uppercase shrink-0" style={(() => { const colorMap = { 'Đang hoạt động': { bg: '#D1FAE5', text: '#065F46', border: '#A7F3D0' }, 'Tạm ngưng': { bg: '#FEF3C7', text: '#92400E', border: '#FDE68A' }, 'Ngừng hợp tác': { bg: '#FEE2E2', text: '#991B1B', border: '#FECACA' } }; const colors = colorMap[shipper.status] || { bg: '#F3F4F6', text: '#374151', border: '#E5E7EB' }; return { backgroundColor: colors.bg, color: colors.text, borderColor: colors.border }; })()}>{shipper.status}</span>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-2 mb-3">
+                                        <div><span className="text-[9px] font-bold text-slate-400 uppercase">Loại hình</span><p className="text-xs text-slate-700 font-medium">{getLabel(SHIPPING_TYPES, shipper.shipping_type)}</p></div>
+                                        <div><span className="text-[9px] font-bold text-slate-400 uppercase">Quản lý</span><p className="text-xs text-slate-700 font-medium">{shipper.manager_name || '—'}</p></div>
+                                        <div><span className="text-[9px] font-bold text-slate-400 uppercase">SĐT</span><p className="text-xs text-[#2563EB] font-medium">{shipper.phone || '—'}</p></div>
+                                        <div><span className="text-[9px] font-bold text-slate-400 uppercase">Địa chỉ</span><p className="text-xs text-slate-700 font-medium line-clamp-1">{shipper.address || '—'}</p></div>
+                                    </div>
+                                    <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-50">
+                                        <button onClick={() => handleViewShipper(shipper)} className="p-2 text-[#9CA3AF] hover:text-[#2563EB] active:bg-blue-50 rounded-lg transition-colors"><Eye className="w-5 h-5" /></button>
+                                        <button onClick={() => handleEditShipper(shipper)} className="p-2 text-[#9CA3AF] hover:text-[#2563EB] active:bg-blue-50 rounded-lg transition-colors"><Edit className="w-5 h-5" /></button>
+                                        <button onClick={() => handleDeleteShipper(shipper.id, shipper.name)} className="p-2 text-[#9CA3AF] hover:text-[#DC2626] active:bg-red-50 rounded-lg transition-colors"><Trash2 className="w-5 h-5" /></button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                        {/* Desktop Table View */}
+                        <div className="hidden md:block w-full overflow-x-auto">
                             <table className="w-full border-collapse">
                                 <thead className="bg-[#F9FAFB]">
                                     <tr>
                                         <th className="px-4 py-3.5 text-xs font-semibold text-[#374151] text-center uppercase tracking-wider w-16">STT</th>
-                                        {visibleTableColumns.map(col => (
-                                            <th key={col.key} className="px-4 py-3.5 text-xs font-semibold text-[#374151] text-left uppercase tracking-wider">
-                                                {col.label}
-                                            </th>
-                                        ))}
+                                        {visibleTableColumns.map(col => (<th key={col.key} className="px-4 py-3.5 text-xs font-semibold text-[#374151] text-left uppercase tracking-wider">{col.label}</th>))}
                                         <th className="px-4 py-3.5 text-xs font-semibold text-[#374151] text-center uppercase tracking-wider">Thao tác</th>
                                     </tr>
                                 </thead>
@@ -544,7 +551,7 @@ const Shippers = () => {
                                             </td>}
                                             {isColumnVisible('address') && <td className="px-4 py-4 text-sm text-[#374151] font-normal" style={{ fontFamily: '"Roboto", sans-serif' }} title={shipper.address}>{shipper.address}</td>}
                                             {isColumnVisible('status') && <td className="px-4 py-4">
-                                                <span 
+                                                <span
                                                     className="inline-flex items-center px-3 py-1.5 text-xs font-medium border"
                                                     style={(() => {
                                                         const colorMap = {
@@ -567,27 +574,9 @@ const Shippers = () => {
                                             </td>}
                                             <td className="px-4 py-4 text-center">
                                                 <div className="flex items-center justify-center gap-3">
-                                                    <button
-                                                        onClick={() => handleViewShipper(shipper)}
-                                                        className="text-[#9CA3AF] hover:text-[#2563EB] transition-colors p-1 hover:bg-[#EFF6FF]"
-                                                        title="Xem chi tiết"
-                                                    >
-                                                        <Eye className="w-4 h-4" />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleEditShipper(shipper)}
-                                                        className="text-[#9CA3AF] hover:text-[#2563EB] transition-colors p-1 hover:bg-[#EFF6FF]"
-                                                        title="Chỉnh sửa"
-                                                    >
-                                                        <Edit className="w-4 h-4" />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleDeleteShipper(shipper.id, shipper.name)}
-                                                        className="text-[#9CA3AF] hover:text-[#DC2626] transition-colors p-1 hover:bg-[#FEF2F2]"
-                                                        title="Xóa"
-                                                    >
-                                                        <Trash2 className="w-4 h-4" />
-                                                    </button>
+                                                    <button onClick={() => handleViewShipper(shipper)} className="text-[#9CA3AF] hover:text-[#2563EB] transition-colors p-1 hover:bg-[#EFF6FF]" title="Xem chi tiết"><Eye className="w-4 h-4" /></button>
+                                                    <button onClick={() => handleEditShipper(shipper)} className="text-[#9CA3AF] hover:text-[#2563EB] transition-colors p-1 hover:bg-[#EFF6FF]" title="Chỉnh sửa"><Edit className="w-4 h-4" /></button>
+                                                    <button onClick={() => handleDeleteShipper(shipper.id, shipper.name)} className="text-[#9CA3AF] hover:text-[#DC2626] transition-colors p-1 hover:bg-[#FEF2F2]" title="Xóa"><Trash2 className="w-4 h-4" /></button>
                                                 </div>
                                             </td>
                                         </tr>
@@ -601,18 +590,18 @@ const Shippers = () => {
                 /* Statistics View */
                 <div className="space-y-6">
                     {/* Summary Stats */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div className="bg-white p-6 border border-[#E5E7EB]">
-                            <div className="text-sm text-[#6B7280] mb-2" style={{ fontFamily: '"Roboto", sans-serif' }}>Tổng số DVVC</div>
-                            <div className="text-2xl font-semibold text-[#111827]" style={{ fontFamily: '"Roboto", sans-serif' }}>{filteredShippersCount}</div>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                        <div className="bg-white p-4 sm:p-6 border border-[#E5E7EB]">
+                            <div className="text-[10px] sm:text-sm text-[#6B7280] mb-2 uppercase tracking-wider font-bold">Tổng DVVC</div>
+                            <div className="text-lg sm:text-2xl font-black text-[#111827]">{filteredShippersCount}</div>
                         </div>
-                        <div className="bg-white p-6 border border-[#E5E7EB]">
-                            <div className="text-sm text-[#6B7280] mb-2" style={{ fontFamily: '"Roboto", sans-serif' }}>Đang hoạt động</div>
-                            <div className="text-2xl font-semibold text-[#111827]" style={{ fontFamily: '"Roboto", sans-serif' }}>{activeCount}</div>
+                        <div className="bg-white p-4 sm:p-6 border border-[#E5E7EB]">
+                            <div className="text-[10px] sm:text-sm text-[#6B7280] mb-2 uppercase tracking-wider font-bold">Hoạt động</div>
+                            <div className="text-lg sm:text-2xl font-black text-[#111827]">{activeCount}</div>
                         </div>
-                        <div className="bg-white p-6 border border-[#E5E7EB]">
-                            <div className="text-sm text-[#6B7280] mb-2" style={{ fontFamily: '"Roboto", sans-serif' }}>Tạm ngưng</div>
-                            <div className="text-2xl font-semibold text-[#111827]" style={{ fontFamily: '"Roboto", sans-serif' }}>{suspendedCount}</div>
+                        <div className="bg-white p-4 sm:p-6 border border-[#E5E7EB] col-span-2 sm:col-span-1">
+                            <div className="text-[10px] sm:text-sm text-[#6B7280] mb-2 uppercase tracking-wider font-bold">Tạm ngưng</div>
+                            <div className="text-lg sm:text-2xl font-black text-[#111827]">{suspendedCount}</div>
                         </div>
                     </div>
 

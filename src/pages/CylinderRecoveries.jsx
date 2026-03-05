@@ -189,76 +189,74 @@ const CylinderRecoveries = () => {
                         <p className="text-gray-400 font-bold text-lg">Chưa có phiếu thu hồi nào</p>
                     </div>
                 ) : (
-                    <div className="overflow-x-auto">
-                        <table className="w-full">
-                            <thead>
-                                <tr className="bg-gray-50/50">
-                                    <th className="px-4 py-4 text-center w-12">
-                                        <input
-                                            type="checkbox"
-                                            checked={selectedIds.length === filteredRecoveries.length && filteredRecoveries.length > 0}
-                                            onChange={toggleSelectAll}
-                                            className="w-4 h-4 rounded accent-blue-600"
-                                        />
-                                    </th>
-                                    <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider text-left">Phiếu</th>
-                                    <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider text-left">Ngày</th>
-                                    <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider text-left">Khách hàng</th>
-                                    <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider text-left">Đơn hàng</th>
-                                    <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider text-left">Kho nhận</th>
-                                    <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider text-center">SL vỏ</th>
-                                    <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider text-center">Trạng thái</th>
-                                    <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider text-right">Thao tác</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-50">
-                                {filteredRecoveries.map(r => (
-                                    <tr key={r.id} className={`hover:bg-blue-50/30 transition-colors ${selectedIds.includes(r.id) ? 'bg-blue-50/40' : ''}`}>
-                                        <td className="px-4 py-4 text-center">
-                                            <input
-                                                type="checkbox"
-                                                checked={selectedIds.includes(r.id)}
-                                                onChange={() => toggleSelect(r.id)}
-                                                className="w-4 h-4 rounded accent-blue-600"
-                                            />
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <div className="font-bold text-slate-800">{r.recovery_code}</div>
-                                            {r.driver_name && <div className="text-xs text-slate-500 mt-1">NV: {r.driver_name}</div>}
-                                        </td>
-                                        <td className="px-6 py-4 text-sm font-medium text-slate-600">
-                                            {new Date(r.recovery_date).toLocaleDateString('vi-VN')}
-                                        </td>
-                                        <td className="px-6 py-4 font-medium text-slate-800">{getCustomerName(r.customer_id)}</td>
-                                        <td className="px-6 py-4 text-sm font-medium text-blue-600">{getOrderCode(r.order_id)}</td>
-                                        <td className="px-6 py-4 text-sm text-slate-600">{getWarehouseLabel(r.warehouse_id)}</td>
-                                        <td className="px-6 py-4 text-center font-black text-slate-700">{r.total_items}</td>
-                                        <td className="px-6 py-4 text-center">{getStatusBadge(r.status)}</td>
-                                        <td className="px-6 py-4">
-                                            <div className="flex justify-end gap-2">
-                                                <button
-                                                    onClick={async () => {
-                                                        const { generateRecoveryPDF } = await import('../utils/recoveryPDF');
-                                                        const { data: items } = await supabase.from('cylinder_recovery_items').select('*').eq('recovery_id', r.id);
-                                                        generateRecoveryPDF(r, items || [], getCustomerName(r.customer_id));
-                                                    }}
-                                                    className="p-2 text-slate-400 hover:text-amber-600 transition-colors" title="Xuất PDF"
-                                                >
-                                                    <FileText className="w-4 h-4" />
-                                                </button>
-                                                <button onClick={() => navigate('/tao-phieu-thu-hoi', { state: { recovery: r } })} className="p-2 text-slate-400 hover:text-slate-900 transition-colors">
-                                                    <Edit className="w-4 h-4" />
-                                                </button>
-                                                <button onClick={() => handleDelete(r.id, r.recovery_code)} className="p-2 text-slate-400 hover:text-red-500 transition-colors">
-                                                    <Trash2 className="w-4 h-4" />
-                                                </button>
+                    <>
+                        {/* Mobile Card List */}
+                        <div className="md:hidden divide-y divide-gray-100">
+                            {filteredRecoveries.map(r => (
+                                <div key={r.id} className={`p-4 hover:bg-blue-50/30 active:bg-blue-50/50 transition-colors ${selectedIds.includes(r.id) ? 'bg-blue-50/40' : ''}`}>
+                                    <div className="flex justify-between items-start mb-3">
+                                        <div className="flex items-start gap-3">
+                                            <input type="checkbox" checked={selectedIds.includes(r.id)} onChange={() => toggleSelect(r.id)} className="w-4 h-4 rounded accent-blue-600 mt-1" />
+                                            <div>
+                                                <div className="font-bold text-slate-800">{r.recovery_code}</div>
+                                                {r.driver_name && <div className="text-xs text-slate-500 mt-0.5">NV: {r.driver_name}</div>}
                                             </div>
-                                        </td>
+                                        </div>
+                                        {getStatusBadge(r.status)}
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-2 mb-3">
+                                        <div><span className="text-[9px] font-bold text-gray-400 uppercase">Ngày</span><p className="text-xs font-medium text-slate-600">{new Date(r.recovery_date).toLocaleDateString('vi-VN')}</p></div>
+                                        <div><span className="text-[9px] font-bold text-gray-400 uppercase">SL vỏ</span><p className="text-xs font-black text-slate-700">{r.total_items}</p></div>
+                                        <div><span className="text-[9px] font-bold text-gray-400 uppercase">Khách hàng</span><p className="text-xs font-medium text-slate-800">{getCustomerName(r.customer_id)}</p></div>
+                                        <div><span className="text-[9px] font-bold text-gray-400 uppercase">Đơn hàng</span><p className="text-xs font-medium text-blue-600">{getOrderCode(r.order_id)}</p></div>
+                                        <div className="col-span-2"><span className="text-[9px] font-bold text-gray-400 uppercase">Kho nhận</span><p className="text-xs text-slate-600">{getWarehouseLabel(r.warehouse_id)}</p></div>
+                                    </div>
+                                    <div className="flex items-center justify-end gap-2 pt-3 border-t border-gray-50">
+                                        <button onClick={async () => { const { generateRecoveryPDF } = await import('../utils/recoveryPDF'); const { data: items } = await supabase.from('cylinder_recovery_items').select('*').eq('recovery_id', r.id); generateRecoveryPDF(r, items || [], getCustomerName(r.customer_id)); }} className="p-2 text-slate-400 hover:text-amber-600 rounded-lg transition-colors" title="Xuất PDF"><FileText className="w-5 h-5" /></button>
+                                        <button onClick={() => navigate('/tao-phieu-thu-hoi', { state: { recovery: r } })} className="p-2 text-slate-400 hover:text-slate-900 rounded-lg transition-colors"><Edit className="w-5 h-5" /></button>
+                                        <button onClick={() => handleDelete(r.id, r.recovery_code)} className="p-2 text-slate-400 hover:text-red-500 rounded-lg transition-colors"><Trash2 className="w-5 h-5" /></button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                        {/* Desktop Table */}
+                        <div className="hidden md:block overflow-x-auto">
+                            <table className="w-full">
+                                <thead>
+                                    <tr className="bg-gray-50/50">
+                                        <th className="px-4 py-4 text-center w-12"><input type="checkbox" checked={selectedIds.length === filteredRecoveries.length && filteredRecoveries.length > 0} onChange={toggleSelectAll} className="w-4 h-4 rounded accent-blue-600" /></th>
+                                        <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider text-left">Phiếu</th>
+                                        <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider text-left">Ngày</th>
+                                        <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider text-left">Khách hàng</th>
+                                        <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider text-left">Đơn hàng</th>
+                                        <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider text-left">Kho nhận</th>
+                                        <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider text-center">SL vỏ</th>
+                                        <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider text-center">Trạng thái</th>
+                                        <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider text-right">Thao tác</th>
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
+                                </thead>
+                                <tbody className="divide-y divide-gray-50">
+                                    {filteredRecoveries.map(r => (
+                                        <tr key={r.id} className={`hover:bg-blue-50/30 transition-colors ${selectedIds.includes(r.id) ? 'bg-blue-50/40' : ''}`}>
+                                            <td className="px-4 py-4 text-center"><input type="checkbox" checked={selectedIds.includes(r.id)} onChange={() => toggleSelect(r.id)} className="w-4 h-4 rounded accent-blue-600" /></td>
+                                            <td className="px-6 py-4"><div className="font-bold text-slate-800">{r.recovery_code}</div>{r.driver_name && <div className="text-xs text-slate-500 mt-1">NV: {r.driver_name}</div>}</td>
+                                            <td className="px-6 py-4 text-sm font-medium text-slate-600">{new Date(r.recovery_date).toLocaleDateString('vi-VN')}</td>
+                                            <td className="px-6 py-4 font-medium text-slate-800">{getCustomerName(r.customer_id)}</td>
+                                            <td className="px-6 py-4 text-sm font-medium text-blue-600">{getOrderCode(r.order_id)}</td>
+                                            <td className="px-6 py-4 text-sm text-slate-600">{getWarehouseLabel(r.warehouse_id)}</td>
+                                            <td className="px-6 py-4 text-center font-black text-slate-700">{r.total_items}</td>
+                                            <td className="px-6 py-4 text-center">{getStatusBadge(r.status)}</td>
+                                            <td className="px-6 py-4"><div className="flex justify-end gap-2">
+                                                <button onClick={async () => { const { generateRecoveryPDF } = await import('../utils/recoveryPDF'); const { data: items } = await supabase.from('cylinder_recovery_items').select('*').eq('recovery_id', r.id); generateRecoveryPDF(r, items || [], getCustomerName(r.customer_id)); }} className="p-2 text-slate-400 hover:text-amber-600 transition-colors" title="Xuất PDF"><FileText className="w-4 h-4" /></button>
+                                                <button onClick={() => navigate('/tao-phieu-thu-hoi', { state: { recovery: r } })} className="p-2 text-slate-400 hover:text-slate-900 transition-colors"><Edit className="w-4 h-4" /></button>
+                                                <button onClick={() => handleDelete(r.id, r.recovery_code)} className="p-2 text-slate-400 hover:text-red-500 transition-colors"><Trash2 className="w-4 h-4" /></button>
+                                            </div></td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </>
                 )}
             </div>
         </div>

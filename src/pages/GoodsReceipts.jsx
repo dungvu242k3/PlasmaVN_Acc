@@ -322,82 +322,71 @@ const GoodsReceipts = () => {
                         <p className="text-gray-300 text-sm">Nhấn "Tạo phiếu nhập mới" để bắt đầu</p>
                     </div>
                 ) : (
-                    <div className="overflow-x-auto">
-                        <table className="w-full">
-                            <thead>
-                                <tr className="bg-gradient-to-r from-gray-50 to-gray-100/50 border-b border-gray-100">
-                                    <th className="px-6 py-5 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] text-center w-16">STT</th>
-                                    {visibleTableColumns.map(col => (
-                                        <th key={col.key} className={`px-6 py-5 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] ${col.key === 'items' || col.key === 'status' ? 'text-center' : ''}`}>
-                                            {col.label}
-                                        </th>
-                                    ))}
-                                    <th className="px-6 py-5 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] text-center sticky right-0 bg-white/50 backdrop-blur-sm">Thao tác</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-50">
-                                {filteredReceipts.map((receipt, idx) => (
-                                    <tr key={receipt.id} className="hover:bg-emerald-50/30 transition-colors cursor-pointer">
-                                        <td className="px-6 py-5 text-center text-sm font-bold text-gray-400">{idx + 1}</td>
-                                        {isColumnVisible('code') && <td className="px-6 py-5">
-                                            <span className="text-sm font-black text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-100">
-                                                {receipt.receipt_code}
-                                            </span>
-                                        </td>}
-                                        {isColumnVisible('supplier') && <td className="px-6 py-5 font-bold text-slate-900 text-sm">{receipt.supplier_name}</td>}
-                                        {isColumnVisible('warehouse') && <td className="px-6 py-5">
-                                            <span className="text-sm font-bold text-slate-600 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100">
-                                                {getWarehouseLabel(receipt.warehouse_id)}
-                                            </span>
-                                        </td>}
-                                        {isColumnVisible('date') && <td className="px-6 py-5 text-sm font-bold text-gray-600">
-                                            {receipt.receipt_date ? new Date(receipt.receipt_date).toLocaleDateString('vi-VN') : '—'}
-                                        </td>}
-                                        {isColumnVisible('items') && <td className="px-6 py-5 text-center text-sm font-black text-slate-900">{receipt.total_items}</td>}
-                                        {isColumnVisible('amount') && <td className="px-6 py-5 text-right font-black text-rose-600">
-                                            {new Intl.NumberFormat('vi-VN').format(receipt.total_amount || 0)} ₫
-                                        </td>}
-                                        {isColumnVisible('receiver') && <td className="px-6 py-5 text-sm font-bold text-gray-600">{receipt.received_by || '—'}</td>}
-                                        {isColumnVisible('status') && <td className="px-6 py-5 text-center">{getStatusBadge(receipt.status)}</td>}
-                                        <td className="px-6 py-5 text-center sticky right-0 bg-white/50 backdrop-blur-md group-hover:bg-emerald-50/10 transition-colors">
-                                            <div className="flex items-center justify-center gap-5 transition-all">
-                                                {receipt.status === 'CHO_DUYET' && (
-                                                    <button
-                                                        onClick={(e) => { e.stopPropagation(); handleApproveReceipt(receipt); }}
-                                                        className="text-emerald-500 hover:text-emerald-700 transition-all outline-none"
-                                                        title="Duyệt (Nhập kho)"
-                                                    >
-                                                        <CheckSquare className="w-5 h-5 flex-shrink-0" />
-                                                    </button>
-                                                )}
-                                                <button
-                                                    onClick={(e) => { e.stopPropagation(); handlePrintReceipt(receipt); }}
-                                                    className="text-slate-400 hover:text-blue-600 transition-all outline-none"
-                                                    title="In phiếu nhập"
-                                                >
-                                                    <Printer className="w-5 h-5 flex-shrink-0" />
-                                                </button>
-                                                <button
-                                                    onClick={(e) => { e.stopPropagation(); navigate('/tao-phieu-nhap', { state: { receipt } }); }}
-                                                    className="text-slate-400 hover:text-slate-900 transition-all outline-none"
-                                                    title={receipt.status === 'CHO_DUYET' ? "Chỉnh sửa" : "Xem chi tiết"}
-                                                >
-                                                    <Edit className="w-5 h-5 flex-shrink-0" />
-                                                </button>
-                                                <button
-                                                    onClick={(e) => { e.stopPropagation(); handleDeleteReceipt(receipt.id, receipt.receipt_code); }}
-                                                    className="text-slate-400 hover:text-red-500 transition-all outline-none"
-                                                    title="Xóa"
-                                                >
-                                                    <Trash2 className="w-5 h-5 flex-shrink-0" />
-                                                </button>
-                                            </div>
-                                        </td>
+                    <>
+                        {/* Mobile Card List */}
+                        <div className="md:hidden divide-y divide-gray-100">
+                            {filteredReceipts.map((receipt, idx) => (
+                                <div key={receipt.id} className="p-4 hover:bg-emerald-50/30 active:bg-emerald-50/50 transition-colors">
+                                    <div className="flex justify-between items-start mb-3">
+                                        <div>
+                                            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">#{idx + 1}</span>
+                                            <div className="text-sm font-black text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-100 inline-block mt-1">{receipt.receipt_code}</div>
+                                        </div>
+                                        {getStatusBadge(receipt.status)}
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-2 mb-3">
+                                        <div><span className="text-[9px] font-bold text-gray-400 uppercase">NCC</span><p className="text-xs font-bold text-slate-900">{receipt.supplier_name}</p></div>
+                                        <div><span className="text-[9px] font-bold text-gray-400 uppercase">Kho nhận</span><p className="text-xs font-bold text-slate-600">{getWarehouseLabel(receipt.warehouse_id)}</p></div>
+                                        <div><span className="text-[9px] font-bold text-gray-400 uppercase">Ngày nhập</span><p className="text-xs font-bold text-gray-600">{receipt.receipt_date ? new Date(receipt.receipt_date).toLocaleDateString('vi-VN') : '—'}</p></div>
+                                        <div><span className="text-[9px] font-bold text-gray-400 uppercase">Số MH</span><p className="text-xs font-black text-slate-900">{receipt.total_items}</p></div>
+                                        <div><span className="text-[9px] font-bold text-gray-400 uppercase">Tổng giá trị</span><p className="text-xs font-black text-rose-600">{new Intl.NumberFormat('vi-VN').format(receipt.total_amount || 0)} ₫</p></div>
+                                        <div><span className="text-[9px] font-bold text-gray-400 uppercase">Người nhận</span><p className="text-xs font-bold text-gray-600">{receipt.received_by || '—'}</p></div>
+                                    </div>
+                                    <div className="flex items-center justify-end gap-3 pt-3 border-t border-gray-50">
+                                        {receipt.status === 'CHO_DUYET' && <button onClick={(e) => { e.stopPropagation(); handleApproveReceipt(receipt); }} className="p-2 text-emerald-500 hover:text-emerald-700 rounded-lg transition-colors" title="Duyệt"><CheckSquare className="w-5 h-5" /></button>}
+                                        <button onClick={(e) => { e.stopPropagation(); handlePrintReceipt(receipt); }} className="p-2 text-slate-400 hover:text-blue-600 rounded-lg transition-colors" title="In"><Printer className="w-5 h-5" /></button>
+                                        <button onClick={(e) => { e.stopPropagation(); navigate('/tao-phieu-nhap', { state: { receipt } }); }} className="p-2 text-slate-400 hover:text-slate-900 rounded-lg transition-colors" title={receipt.status === 'CHO_DUYET' ? "Chỉnh sửa" : "Xem chi tiết"}><Edit className="w-5 h-5" /></button>
+                                        <button onClick={(e) => { e.stopPropagation(); handleDeleteReceipt(receipt.id, receipt.receipt_code); }} className="p-2 text-slate-400 hover:text-red-500 rounded-lg transition-colors" title="Xóa"><Trash2 className="w-5 h-5" /></button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                        {/* Desktop Table */}
+                        <div className="hidden md:block overflow-x-auto">
+                            <table className="w-full">
+                                <thead>
+                                    <tr className="bg-gradient-to-r from-gray-50 to-gray-100/50 border-b border-gray-100">
+                                        <th className="px-6 py-5 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] text-center w-16">STT</th>
+                                        {visibleTableColumns.map(col => (<th key={col.key} className={`px-6 py-5 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] ${col.key === 'items' || col.key === 'status' ? 'text-center' : ''}`}>{col.label}</th>))}
+                                        <th className="px-6 py-5 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] text-center sticky right-0 bg-white/50 backdrop-blur-sm">Thao tác</th>
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
+                                </thead>
+                                <tbody className="divide-y divide-gray-50">
+                                    {filteredReceipts.map((receipt, idx) => (
+                                        <tr key={receipt.id} className="hover:bg-emerald-50/30 transition-colors cursor-pointer">
+                                            <td className="px-6 py-5 text-center text-sm font-bold text-gray-400">{idx + 1}</td>
+                                            {isColumnVisible('code') && <td className="px-6 py-5"><span className="text-sm font-black text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-100">{receipt.receipt_code}</span></td>}
+                                            {isColumnVisible('supplier') && <td className="px-6 py-5 font-bold text-slate-900 text-sm">{receipt.supplier_name}</td>}
+                                            {isColumnVisible('warehouse') && <td className="px-6 py-5"><span className="text-sm font-bold text-slate-600 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100">{getWarehouseLabel(receipt.warehouse_id)}</span></td>}
+                                            {isColumnVisible('date') && <td className="px-6 py-5 text-sm font-bold text-gray-600">{receipt.receipt_date ? new Date(receipt.receipt_date).toLocaleDateString('vi-VN') : '—'}</td>}
+                                            {isColumnVisible('items') && <td className="px-6 py-5 text-center text-sm font-black text-slate-900">{receipt.total_items}</td>}
+                                            {isColumnVisible('amount') && <td className="px-6 py-5 text-right font-black text-rose-600">{new Intl.NumberFormat('vi-VN').format(receipt.total_amount || 0)} ₫</td>}
+                                            {isColumnVisible('receiver') && <td className="px-6 py-5 text-sm font-bold text-gray-600">{receipt.received_by || '—'}</td>}
+                                            {isColumnVisible('status') && <td className="px-6 py-5 text-center">{getStatusBadge(receipt.status)}</td>}
+                                            <td className="px-6 py-5 text-center sticky right-0 bg-white/50 backdrop-blur-md">
+                                                <div className="flex items-center justify-center gap-5">
+                                                    {receipt.status === 'CHO_DUYET' && <button onClick={(e) => { e.stopPropagation(); handleApproveReceipt(receipt); }} className="text-emerald-500 hover:text-emerald-700 transition-all outline-none" title="Duyệt (Nhập kho)"><CheckSquare className="w-5 h-5 flex-shrink-0" /></button>}
+                                                    <button onClick={(e) => { e.stopPropagation(); handlePrintReceipt(receipt); }} className="text-slate-400 hover:text-blue-600 transition-all outline-none" title="In phiếu nhập"><Printer className="w-5 h-5 flex-shrink-0" /></button>
+                                                    <button onClick={(e) => { e.stopPropagation(); navigate('/tao-phieu-nhap', { state: { receipt } }); }} className="text-slate-400 hover:text-slate-900 transition-all outline-none" title={receipt.status === 'CHO_DUYET' ? "Chỉnh sửa" : "Xem chi tiết"}><Edit className="w-5 h-5 flex-shrink-0" /></button>
+                                                    <button onClick={(e) => { e.stopPropagation(); handleDeleteReceipt(receipt.id, receipt.receipt_code); }} className="text-slate-400 hover:text-red-500 transition-all outline-none" title="Xóa"><Trash2 className="w-5 h-5 flex-shrink-0" /></button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </>
                 )}
             </div>
 

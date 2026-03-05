@@ -15,6 +15,8 @@ import {
     Edit,
     Eye,
     Filter,
+    MapPin,
+    Phone,
     Plus,
     Search,
     Trash2,
@@ -312,14 +314,14 @@ const Customers = () => {
     ];
 
     return (
-        <div className="p-6 bg-[#F8F9FA] min-h-screen" style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif' }}>
+        <div className="p-4 sm:p-6 bg-[#F8F9FA] min-h-screen" style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif' }}>
             {/* Navigation Tabs */}
-            <div className="flex items-center gap-1 mb-8 border-b border-[#E5E7EB]">
+            <div className="flex items-center gap-1 mb-6 sm:mb-8 border-b border-[#E5E7EB] overflow-x-auto no-scrollbar">
                 <button
                     onClick={() => setActiveView('list')}
                     className={`px-6 py-3 text-sm font-semibold tracking-wide transition-colors ${activeView === 'list'
-                            ? 'text-[#2563EB] border-b-2 border-[#2563EB]'
-                            : 'text-[#6B7280] hover:text-[#374151]'
+                        ? 'text-[#2563EB] border-b-2 border-[#2563EB]'
+                        : 'text-[#6B7280] hover:text-[#374151]'
                         }`}
                     style={activeView === 'list' ? { color: '#2563EB', borderBottomColor: '#2563EB' } : { color: '#6B7280' }}
                 >
@@ -328,8 +330,8 @@ const Customers = () => {
                 <button
                     onClick={() => setActiveView('stats')}
                     className={`px-6 py-3 text-sm font-semibold tracking-wide transition-colors ${activeView === 'stats'
-                            ? 'text-[#2563EB] border-b-2 border-[#2563EB]'
-                            : 'text-[#6B7280] hover:text-[#374151]'
+                        ? 'text-[#2563EB] border-b-2 border-[#2563EB]'
+                        : 'text-[#6B7280] hover:text-[#374151]'
                         }`}
                     style={activeView === 'stats' ? { color: '#2563EB', borderBottomColor: '#2563EB' } : { color: '#6B7280' }}
                 >
@@ -340,22 +342,22 @@ const Customers = () => {
             {activeView === 'list' ? (
                 <>
                     {/* Header with Add Button */}
-                    <div className="flex items-center justify-between mb-6">
-                        <h1 className="text-2xl font-semibold text-[#111827] tracking-tight" style={{ color: '#111827' }}>Danh sách khách hàng</h1>
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
+                        <h1 className="text-xl sm:text-2xl font-semibold text-[#111827] tracking-tight">Danh sách khách hàng</h1>
                         <button
                             onClick={() => setIsFormModalOpen(true)}
-                            className="flex items-center gap-2 px-5 py-2.5 text-white font-medium text-sm transition-all duration-200 shadow-sm hover:shadow-md"
+                            className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 text-white font-medium text-sm transition-all duration-200 shadow-sm hover:shadow-md"
                             style={{ backgroundColor: '#2563EB' }}
                             onMouseEnter={(e) => e.target.style.backgroundColor = '#1D4ED8'}
                             onMouseLeave={(e) => e.target.style.backgroundColor = '#2563EB'}
                         >
                             <Plus className="w-4 h-4" />
-                            Thêm
+                            Thêm mới
                         </button>
                     </div>
 
                     {/* Search Bar and Summary Stats - Same Row */}
-                    <div className="mb-6 flex items-center gap-4">
+                    <div className="mb-6 flex flex-col lg:flex-row lg:items-center gap-4">
                         {/* Search Bar */}
                         <div className="flex-1 relative">
                             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#9CA3AF]" />
@@ -370,20 +372,20 @@ const Customers = () => {
                         </div>
 
                         {/* Summary Stats */}
-                        <div className="flex items-center gap-6 px-6 py-3 bg-[#EFF6FF] border border-[#BFDBFE]">
-                            <div className="flex items-center gap-2">
-                                <span className="text-sm text-[#6B7280]" style={{ fontFamily: '"Roboto", sans-serif' }}>Số lượng khách hàng:</span>
-                                <span className="text-lg font-semibold text-[#2563EB]" style={{ fontFamily: '"Roboto", sans-serif' }}>{filteredCustomersCount}</span>
+                        <div className="flex items-center justify-around sm:justify-start gap-4 sm:gap-6 px-4 py-3 bg-[#EFF6FF] border border-[#BFDBFE]">
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 text-center sm:text-left">
+                                <span className="text-[10px] sm:text-sm text-[#6B7280]" style={{ fontFamily: '"Roboto", sans-serif' }}>Khách hàng:</span>
+                                <span className="text-sm sm:text-lg font-semibold text-[#2563EB]" style={{ fontFamily: '"Roboto", sans-serif' }}>{filteredCustomersCount}</span>
                             </div>
-                            <div className="w-px h-8 bg-[#BFDBFE]"></div>
-                            <div className="flex items-center gap-2">
-                                <span className="text-sm text-[#6B7280]" style={{ fontFamily: '"Roboto", sans-serif' }}>Tổng bình:</span>
-                                <span className="text-lg font-semibold text-[#2563EB]" style={{ fontFamily: '"Roboto", sans-serif' }}>{formatNumber(totalCylinders)}</span>
+                            <div className="hidden sm:block w-px h-8 bg-[#BFDBFE]"></div>
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 text-center sm:text-left border-l border-[#BFDBFE] sm:border-none pl-4 sm:pl-0">
+                                <span className="text-[10px] sm:text-sm text-[#6B7280]" style={{ fontFamily: '"Roboto", sans-serif' }}>Tổng bình:</span>
+                                <span className="text-sm sm:text-lg font-semibold text-[#2563EB]" style={{ fontFamily: '"Roboto", sans-serif' }}>{formatNumber(totalCylinders)}</span>
                             </div>
-                            <div className="w-px h-8 bg-[#BFDBFE]"></div>
-                            <div className="flex items-center gap-2">
-                                <span className="text-sm text-[#6B7280]" style={{ fontFamily: '"Roboto", sans-serif' }}>Tổng máy:</span>
-                                <span className="text-lg font-semibold text-[#2563EB]" style={{ fontFamily: '"Roboto", sans-serif' }}>{formatNumber(totalMachines)}</span>
+                            <div className="hidden sm:block w-px h-8 bg-[#BFDBFE]"></div>
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 text-center sm:text-left border-l border-[#BFDBFE] sm:border-none pl-4 sm:pl-0">
+                                <span className="text-[10px] sm:text-sm text-[#6B7280]" style={{ fontFamily: '"Roboto", sans-serif' }}>Tổng máy:</span>
+                                <span className="text-sm sm:text-lg font-semibold text-[#2563EB]" style={{ fontFamily: '"Roboto", sans-serif' }}>{formatNumber(totalMachines)}</span>
                             </div>
                         </div>
                     </div>
@@ -494,9 +496,99 @@ const Customers = () => {
                     </div>
 
                     {/* Main Content Card */}
-                    <div className="bg-white border border-[#E5E7EB] shadow-sm">
-                        {/* Table Section */}
-                        <div className="w-full overflow-x-auto">
+                    <div className="bg-white rounded-lg border border-[#E5E7EB] shadow-sm overflow-hidden">
+                        {/* Mobile Card List (Visible only on mobile) */}
+                        <div className="md:hidden divide-y divide-[#E5E7EB]">
+                            {isLoading ? (
+                                <div className="px-4 py-16 text-center">
+                                    <div className="flex flex-col items-center gap-4">
+                                        <div className="w-8 h-8 border-4 border-[#2563EB] border-t-transparent rounded-full animate-spin"></div>
+                                        <p className="text-[#6B7280] text-sm font-medium">Đang tải dữ liệu...</p>
+                                    </div>
+                                </div>
+                            ) : filteredCustomers.length === 0 ? (
+                                <div className="px-4 py-16 text-center">
+                                    <div className="flex flex-col items-center gap-4">
+                                        <Users className="w-12 h-12 text-[#D1D5DB]" />
+                                        <p className="text-sm font-medium text-[#6B7280]">Không tìm thấy khách hàng nào</p>
+                                    </div>
+                                </div>
+                            ) : (
+                                filteredCustomers.map((c) => (
+                                    <div key={c.id} className="p-4 bg-white hover:bg-gray-50 active:bg-gray-100 transition-colors">
+                                        <div className="flex justify-between items-start mb-3">
+                                            <div className="flex flex-col">
+                                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{c.code}</span>
+                                                <h3 className="text-base font-bold text-[#111827] leading-tight mt-0.5">{c.name}</h3>
+                                            </div>
+                                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border uppercase bg-[#EFF6FF] text-[#2563EB] border-[#BFDBFE]">
+                                                {getLabel(CUSTOMER_CATEGORIES, c.category)}
+                                            </span>
+                                        </div>
+
+                                        <div className="space-y-2 mb-4">
+                                            {c.phone && (
+                                                <div className="flex items-center gap-2 text-sm text-slate-600">
+                                                    <Phone className="w-3.5 h-3.5 text-slate-400" />
+                                                    <span>{c.phone}</span>
+                                                </div>
+                                            )}
+                                            {c.address && (
+                                                <div className="flex items-start gap-2 text-sm text-slate-600">
+                                                    <MapPin className="w-3.5 h-3.5 text-slate-400 mt-0.5" />
+                                                    <span className="line-clamp-2">{c.address}</span>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <div className="grid grid-cols-3 gap-2 p-3 bg-slate-50 border border-slate-100 rounded-xl mb-4">
+                                            <div className="text-center">
+                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter mb-1">Số vỏ</p>
+                                                <p className="text-sm font-black text-blue-600">{formatNumber(c.current_cylinders || 0)}</p>
+                                            </div>
+                                            <div className="text-center border-x border-slate-200">
+                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter mb-1">Số máy</p>
+                                                <p className="text-sm font-black text-blue-600">{formatNumber(c.current_machines || 0)}</p>
+                                            </div>
+                                            <div className="text-center">
+                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter mb-1">Bình mượn</p>
+                                                <p className="text-sm font-black text-blue-600">{formatNumber(c.borrowed_cylinders || 0)}</p>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex items-center justify-between pt-3 border-t border-slate-50">
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-[10px] font-bold text-slate-400 uppercase">Phụ trách:</span>
+                                                <span className="text-[11px] font-medium text-slate-700">{c.managed_by || '—'}</span>
+                                            </div>
+                                            <div className="flex items-center gap-3">
+                                                <button
+                                                    onClick={() => handleViewCustomer(c)}
+                                                    className="p-2 text-[#9CA3AF] hover:text-[#2563EB] active:bg-blue-50 rounded-lg transition-colors border border-transparent active:border-blue-100"
+                                                >
+                                                    <Eye className="w-5 h-5" />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleEditCustomer(c)}
+                                                    className="p-2 text-[#9CA3AF] hover:text-[#2563EB] active:bg-blue-50 rounded-lg transition-colors border border-transparent active:border-blue-100"
+                                                >
+                                                    <Edit className="w-5 h-5" />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDeleteCustomer(c.id, c.name)}
+                                                    className="p-2 text-[#9CA3AF] hover:text-[#DC2626] active:bg-red-50 rounded-lg transition-colors border border-transparent active:border-red-100"
+                                                >
+                                                    <Trash2 className="w-5 h-5" />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+
+                        {/* Desktop Table View (Hidden on mobile) */}
+                        <div className="hidden md:block w-full overflow-x-auto">
                             <table className="w-full border-collapse">
                                 <thead className="bg-[#F9FAFB]">
                                     <tr>
@@ -589,22 +681,22 @@ const Customers = () => {
                 /* Statistics View */
                 <div className="space-y-6">
                     {/* Summary Stats */}
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                        <div className="bg-white p-6 border border-[#E5E7EB]">
-                            <div className="text-sm text-[#6B7280] mb-2" style={{ fontFamily: '"Roboto", sans-serif' }}>Tổng số khách hàng</div>
-                            <div className="text-2xl font-semibold text-[#111827]" style={{ fontFamily: '"Roboto", sans-serif' }}>{filteredCustomersCount}</div>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div className="bg-white p-4 sm:p-6 border border-[#E5E7EB]">
+                            <div className="text-[10px] sm:text-sm text-[#6B7280] mb-2 uppercase tracking-wider font-bold" style={{ fontFamily: '"Roboto", sans-serif' }}>Khách hàng</div>
+                            <div className="text-lg sm:text-2xl font-black text-[#111827]" style={{ fontFamily: '"Roboto", sans-serif' }}>{filteredCustomersCount}</div>
                         </div>
-                        <div className="bg-white p-6 border border-[#E5E7EB]">
-                            <div className="text-sm text-[#6B7280] mb-2" style={{ fontFamily: '"Roboto", sans-serif' }}>Tổng bình</div>
-                            <div className="text-2xl font-semibold text-[#111827]" style={{ fontFamily: '"Roboto", sans-serif' }}>{formatNumber(totalCylinders)}</div>
+                        <div className="bg-white p-4 sm:p-6 border border-[#E5E7EB]">
+                            <div className="text-[10px] sm:text-sm text-[#6B7280] mb-2 uppercase tracking-wider font-bold" style={{ fontFamily: '"Roboto", sans-serif' }}>Tổng bình</div>
+                            <div className="text-lg sm:text-2xl font-black text-[#111827]" style={{ fontFamily: '"Roboto", sans-serif' }}>{formatNumber(totalCylinders)}</div>
                         </div>
-                        <div className="bg-white p-6 border border-[#E5E7EB]">
-                            <div className="text-sm text-[#6B7280] mb-2" style={{ fontFamily: '"Roboto", sans-serif' }}>Tổng máy</div>
-                            <div className="text-2xl font-semibold text-[#111827]" style={{ fontFamily: '"Roboto", sans-serif' }}>{formatNumber(totalMachines)}</div>
+                        <div className="bg-white p-4 sm:p-6 border border-[#E5E7EB]">
+                            <div className="text-[10px] sm:text-sm text-[#6B7280] mb-2 uppercase tracking-wider font-bold" style={{ fontFamily: '"Roboto", sans-serif' }}>Tổng máy</div>
+                            <div className="text-lg sm:text-2xl font-black text-[#111827]" style={{ fontFamily: '"Roboto", sans-serif' }}>{formatNumber(totalMachines)}</div>
                         </div>
-                        <div className="bg-white p-6 border border-[#E5E7EB]">
-                            <div className="text-sm text-[#6B7280] mb-2" style={{ fontFamily: '"Roboto", sans-serif' }}>Tổng bình mượn</div>
-                            <div className="text-2xl font-semibold text-[#111827]" style={{ fontFamily: '"Roboto", sans-serif' }}>{formatNumber(totalBorrowed)}</div>
+                        <div className="bg-white p-4 sm:p-6 border border-[#E5E7EB]">
+                            <div className="text-[10px] sm:text-sm text-[#6B7280] mb-2 uppercase tracking-wider font-bold" style={{ fontFamily: '"Roboto", sans-serif' }}>Bình mượn</div>
+                            <div className="text-lg sm:text-2xl font-black text-[#111827]" style={{ fontFamily: '"Roboto", sans-serif' }}>{formatNumber(totalBorrowed)}</div>
                         </div>
                     </div>
 

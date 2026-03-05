@@ -162,88 +162,81 @@ const Users = () => {
                         <p className="text-slate-400 font-bold max-w-sm text-sm">Hiện chưa có tài khoản nào khớp với bộ lọc của bạn.</p>
                     </div>
                 ) : (
-                    <div className="w-full overflow-x-auto custom-scrollbar">
-                        <table className="w-full border-collapse text-left min-w-[1000px]">
-                            <thead className="glass-header">
-                                <tr>
-                                    <th className="px-8 py-6 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] text-center w-24">STT</th>
-                                    {visibleTableColumns.map(col => (
-                                        <th key={col.key} className="px-8 py-6 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em]">
-                                            {col.label}
-                                        </th>
-                                    ))}
-                                    <th className="px-8 py-6 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] text-center">Thao tác</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-50/50">
-                                {filteredUsers.map((user, index) => {
-                                    const statusConfig = getStatusConfig(user.status);
-                                    return (
-                                        <tr key={user.id} className="hover-lift transition-all duration-300 group border-l-4 border-l-transparent hover:border-l-indigo-500">
-                                            <td className="px-8 py-7 whitespace-nowrap text-center">
-                                                <span className="font-black text-slate-300 group-hover:text-indigo-500 transition-colors text-lg">{index + 1}</span>
-                                            </td>
-                                            {isColumnVisible('info') && <td className="px-8 py-7">
-                                                <div className="flex items-center gap-4">
-                                                    <div className="avatar-initials group-hover:scale-110 group-hover:rotate-6 transition-all duration-300">
-                                                        {getInitials(user.name)}
-                                                    </div>
-                                                    <div>
-                                                        <div className="font-black text-black text-base group-hover:text-indigo-600 transition-colors uppercase tracking-tight">{user.name}</div>
-                                                        <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1 opacity-60">@{user.username}</div>
-                                                    </div>
+                    <>
+                        {/* Mobile Card List */}
+                        <div className="md:hidden divide-y divide-slate-50">
+                            {filteredUsers.map((user, index) => {
+                                const statusConfig = getStatusConfig(user.status);
+                                return (
+                                    <div key={user.id} className="p-4 hover:bg-indigo-50/30 active:bg-indigo-50/50 transition-colors">
+                                        <div className="flex justify-between items-start mb-3">
+                                            <div className="flex items-center gap-3">
+                                                <div className="avatar-initials flex-shrink-0 w-10 h-10 text-xs">{getInitials(user.name)}</div>
+                                                <div>
+                                                    <div className="font-black text-black text-sm uppercase tracking-tight">{user.name}</div>
+                                                    <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest opacity-60">@{user.username}</div>
                                                 </div>
-                                            </td>}
-                                            {isColumnVisible('contact') && <td className="px-8 py-7 whitespace-nowrap">
-                                                <div className="flex items-center gap-2.5 font-bold text-slate-900 bg-slate-50 px-4 py-2 rounded-xl border border-slate-100 group-hover:bg-white group-hover:shadow-sm transition-all duration-300 w-max">
-                                                    <Phone className="w-4 h-4 text-indigo-400" />
-                                                    {user.phone}
+                                            </div>
+                                            <span className={`px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border flex items-center gap-1.5 ${statusConfig.colorClass}`}>
+                                                <div className={`w-1.5 h-1.5 rounded-full ${statusConfig.id === 'active' ? 'bg-emerald-500' : 'bg-amber-500'} animate-pulse`} />
+                                                {user.status}
+                                            </span>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-2 mb-3">
+                                            <div><span className="text-[9px] font-bold text-slate-400 uppercase">Liên lạc</span>
+                                                <div className="flex items-center gap-1.5 mt-0.5"><Phone className="w-3 h-3 text-indigo-400" /><span className="text-xs font-bold text-slate-900">{user.phone}</span></div>
+                                            </div>
+                                            <div><span className="text-[9px] font-bold text-slate-400 uppercase">Vai trò</span>
+                                                <div className="flex items-center gap-1 mt-0.5 text-[10px] text-indigo-600 font-black uppercase">
+                                                    {user.role === 'Admin' ? <ShieldCheck className="w-3 h-3" /> : <Briefcase className="w-3 h-3 opacity-50" />}
+                                                    {user.role}
                                                 </div>
-                                            </td>}
-                                            {isColumnVisible('role') && <td className="px-8 py-7 whitespace-nowrap">
-                                                <div className="flex flex-col gap-2">
-                                                    <div className="flex items-center gap-2 text-indigo-600 font-black bg-indigo-50 border border-indigo-100 px-4 py-2 rounded-xl w-max group-hover:bg-white transition-all text-[11px] uppercase tracking-widest">
-                                                        {user.role === 'Admin' ? <ShieldCheck className="w-4 h-4" /> : <Briefcase className="w-4 h-4 opacity-50" />}
-                                                        {user.role}
-                                                    </div>
-                                                    {user.permissions && Object.keys(user.permissions).length > 0 && (
-                                                        <div className="flex items-center gap-1.5 text-[9px] font-black text-amber-600 bg-amber-50 border border-amber-100 px-3 py-1 rounded-lg w-max uppercase tracking-widest">
-                                                            <ShieldCheck className="w-3 h-3" />
-                                                            + Phân quyền tùy chỉnh
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </td>}
-                                            {isColumnVisible('status') && <td className="px-8 py-7 whitespace-nowrap text-sm">
-                                                <span className={`px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all shadow-sm flex items-center gap-2 w-max group-hover:bg-white ${statusConfig.colorClass} ${statusConfig.id === 'active' ? 'glow-emerald' : 'glow-amber'}`}>
-                                                    <div className={`w-1.5 h-1.5 rounded-full ${statusConfig.id === 'active' ? 'bg-emerald-500' : 'bg-amber-500'} animate-pulse`} />
-                                                    {user.status}
-                                                </span>
-                                            </td>}
-                                            <td className="px-8 py-7 text-center">
-                                                <div className="flex items-center justify-center gap-5 transition-opacity">
-                                                    <button
-                                                        onClick={() => handleEditUser(user)}
-                                                        className="text-slate-400 hover:text-slate-900 transition-all outline-none"
-                                                        title="Chỉnh sửa"
-                                                    >
-                                                        <Edit className="w-5 h-5" />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleDeleteUser(user.id, user.name)}
-                                                        className="text-slate-400 hover:text-slate-900 transition-all outline-none"
-                                                        title="Xóa"
-                                                    >
-                                                        <Trash2 className="w-5 h-5" />
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
-                    </div>
+                                            </div>
+                                        </div>
+                                        {user.permissions && Object.keys(user.permissions).length > 0 && (
+                                            <div className="flex items-center gap-1.5 text-[9px] font-black text-amber-600 bg-amber-50 border border-amber-100 px-3 py-1 rounded-lg w-max mb-3">
+                                                <ShieldCheck className="w-3 h-3" /> + Phân quyền tùy chỉnh
+                                            </div>
+                                        )}
+                                        <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-50">
+                                            <button onClick={() => handleEditUser(user)} className="p-2 text-slate-400 hover:text-slate-900 rounded-lg transition-all" title="Chỉnh sửa"><Edit className="w-5 h-5" /></button>
+                                            <button onClick={() => handleDeleteUser(user.id, user.name)} className="p-2 text-slate-400 hover:text-red-500 rounded-lg transition-all" title="Xóa"><Trash2 className="w-5 h-5" /></button>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                        {/* Desktop Table */}
+                        <div className="hidden md:block w-full overflow-x-auto custom-scrollbar">
+                            <table className="w-full border-collapse text-left min-w-[1000px]">
+                                <thead className="glass-header">
+                                    <tr>
+                                        <th className="px-8 py-6 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] text-center w-24">STT</th>
+                                        {visibleTableColumns.map(col => (<th key={col.key} className="px-8 py-6 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em]">{col.label}</th>))}
+                                        <th className="px-8 py-6 text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] text-center">Thao tác</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-50/50">
+                                    {filteredUsers.map((user, index) => {
+                                        const statusConfig = getStatusConfig(user.status);
+                                        return (
+                                            <tr key={user.id} className="hover-lift transition-all duration-300 group border-l-4 border-l-transparent hover:border-l-indigo-500">
+                                                <td className="px-8 py-7 whitespace-nowrap text-center"><span className="font-black text-slate-300 group-hover:text-indigo-500 transition-colors text-lg">{index + 1}</span></td>
+                                                {isColumnVisible('info') && <td className="px-8 py-7"><div className="flex items-center gap-4"><div className="avatar-initials group-hover:scale-110 group-hover:rotate-6 transition-all duration-300">{getInitials(user.name)}</div><div><div className="font-black text-black text-base group-hover:text-indigo-600 transition-colors uppercase tracking-tight">{user.name}</div><div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1 opacity-60">@{user.username}</div></div></div></td>}
+                                                {isColumnVisible('contact') && <td className="px-8 py-7 whitespace-nowrap"><div className="flex items-center gap-2.5 font-bold text-slate-900 bg-slate-50 px-4 py-2 rounded-xl border border-slate-100 group-hover:bg-white group-hover:shadow-sm transition-all duration-300 w-max"><Phone className="w-4 h-4 text-indigo-400" />{user.phone}</div></td>}
+                                                {isColumnVisible('role') && <td className="px-8 py-7 whitespace-nowrap"><div className="flex flex-col gap-2"><div className="flex items-center gap-2 text-indigo-600 font-black bg-indigo-50 border border-indigo-100 px-4 py-2 rounded-xl w-max group-hover:bg-white transition-all text-[11px] uppercase tracking-widest">{user.role === 'Admin' ? <ShieldCheck className="w-4 h-4" /> : <Briefcase className="w-4 h-4 opacity-50" />}{user.role}</div>{user.permissions && Object.keys(user.permissions).length > 0 && (<div className="flex items-center gap-1.5 text-[9px] font-black text-amber-600 bg-amber-50 border border-amber-100 px-3 py-1 rounded-lg w-max uppercase tracking-widest"><ShieldCheck className="w-3 h-3" />+ Phân quyền tùy chỉnh</div>)}</div></td>}
+                                                {isColumnVisible('status') && <td className="px-8 py-7 whitespace-nowrap text-sm"><span className={`px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all shadow-sm flex items-center gap-2 w-max group-hover:bg-white ${statusConfig.colorClass} ${statusConfig.id === 'active' ? 'glow-emerald' : 'glow-amber'}`}><div className={`w-1.5 h-1.5 rounded-full ${statusConfig.id === 'active' ? 'bg-emerald-500' : 'bg-amber-500'} animate-pulse`} />{user.status}</span></td>}
+                                                <td className="px-8 py-7 text-center"><div className="flex items-center justify-center gap-5">
+                                                    <button onClick={() => handleEditUser(user)} className="text-slate-400 hover:text-slate-900 transition-all outline-none" title="Chỉnh sửa"><Edit className="w-5 h-5" /></button>
+                                                    <button onClick={() => handleDeleteUser(user.id, user.name)} className="text-slate-400 hover:text-slate-900 transition-all outline-none" title="Xóa"><Trash2 className="w-5 h-5" /></button>
+                                                </div></td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+                    </>
                 )}
             </div>
 

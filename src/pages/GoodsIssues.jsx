@@ -147,55 +147,62 @@ const GoodsIssues = () => {
                         <p className="text-gray-400 font-bold text-lg mb-2">Chưa có phiếu xuất nào</p>
                     </div>
                 ) : (
-                    <div className="overflow-x-auto">
-                        <table className="w-full">
-                            <thead>
-                                <tr className="bg-gray-50/50">
-                                    <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider text-left">Phiếu</th>
-                                    <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider text-left">Ngày</th>
-                                    <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider text-left">Kho & NCC</th>
-                                    <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider text-center">SL</th>
-                                    <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider text-center">Trạng thái</th>
-                                    <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider text-right">Thao tác</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-50">
-                                {filteredIssues.map((issue) => (
-                                    <tr key={issue.id} className="hover:bg-rose-50/30 transition-colors">
-                                        <td className="px-6 py-4">
+                    <>
+                        {/* Mobile Card List */}
+                        <div className="md:hidden divide-y divide-gray-100">
+                            {filteredIssues.map((issue) => (
+                                <div key={issue.id} className="p-4 hover:bg-rose-50/30 active:bg-rose-50/50 transition-colors">
+                                    <div className="flex justify-between items-start mb-3">
+                                        <div>
                                             <div className="font-bold text-slate-800">{issue.issue_code}</div>
-                                            <div className="text-xs text-slate-500 mt-1">{getTypeLabel(issue.issue_type)}</div>
-                                        </td>
-                                        <td className="px-6 py-4 text-sm font-medium text-slate-600">
-                                            {new Date(issue.issue_date).toLocaleDateString()}
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <div className="font-medium text-slate-800">{getWarehouseLabel(issue.warehouse_id)}</div>
-                                            <div className="text-xs text-rose-600 font-bold mt-1">{"➞ " + getSupplierName(issue.supplier_id)}</div>
-                                        </td>
-                                        <td className="px-6 py-4 text-center font-black text-slate-700">{issue.total_items}</td>
-                                        <td className="px-6 py-4 text-center">{getStatusBadge(issue.status)}</td>
-                                        <td className="px-6 py-4">
-                                            <div className="flex justify-end gap-3">
-                                                <button
-                                                    onClick={() => navigate('/tao-phieu-xuat', { state: { issue } })}
-                                                    className="p-2 text-slate-400 hover:text-slate-900 transition-colors"
-                                                >
-                                                    <Edit className="w-4 h-4" />
-                                                </button>
-                                                <button
-                                                    onClick={() => handleDeleteIssue(issue.id, issue.issue_code)}
-                                                    className="p-2 text-slate-400 hover:text-red-500 transition-colors"
-                                                >
-                                                    <Trash2 className="w-4 h-4" />
-                                                </button>
-                                            </div>
-                                        </td>
+                                            <div className="text-xs text-slate-500 mt-0.5">{getTypeLabel(issue.issue_type)}</div>
+                                        </div>
+                                        {getStatusBadge(issue.status)}
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-2 mb-3">
+                                        <div><span className="text-[9px] font-bold text-gray-400 uppercase">Ngày</span><p className="text-xs font-medium text-slate-600">{new Date(issue.issue_date).toLocaleDateString()}</p></div>
+                                        <div><span className="text-[9px] font-bold text-gray-400 uppercase">SL</span><p className="text-xs font-black text-slate-700">{issue.total_items}</p></div>
+                                        <div><span className="text-[9px] font-bold text-gray-400 uppercase">Kho</span><p className="text-xs font-medium text-slate-800">{getWarehouseLabel(issue.warehouse_id)}</p></div>
+                                        <div><span className="text-[9px] font-bold text-gray-400 uppercase">NCC</span><p className="text-xs font-bold text-rose-600">{getSupplierName(issue.supplier_id)}</p></div>
+                                    </div>
+                                    <div className="flex items-center justify-end gap-3 pt-3 border-t border-gray-50">
+                                        <button onClick={() => navigate('/tao-phieu-xuat', { state: { issue } })} className="p-2 text-slate-400 hover:text-slate-900 rounded-lg transition-colors"><Edit className="w-5 h-5" /></button>
+                                        <button onClick={() => handleDeleteIssue(issue.id, issue.issue_code)} className="p-2 text-slate-400 hover:text-red-500 rounded-lg transition-colors"><Trash2 className="w-5 h-5" /></button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                        {/* Desktop Table */}
+                        <div className="hidden md:block overflow-x-auto">
+                            <table className="w-full">
+                                <thead>
+                                    <tr className="bg-gray-50/50">
+                                        <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider text-left">Phiếu</th>
+                                        <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider text-left">Ngày</th>
+                                        <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider text-left">Kho & NCC</th>
+                                        <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider text-center">SL</th>
+                                        <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider text-center">Trạng thái</th>
+                                        <th className="px-6 py-4 text-xs font-bold text-gray-400 uppercase tracking-wider text-right">Thao tác</th>
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
+                                </thead>
+                                <tbody className="divide-y divide-gray-50">
+                                    {filteredIssues.map((issue) => (
+                                        <tr key={issue.id} className="hover:bg-rose-50/30 transition-colors">
+                                            <td className="px-6 py-4"><div className="font-bold text-slate-800">{issue.issue_code}</div><div className="text-xs text-slate-500 mt-1">{getTypeLabel(issue.issue_type)}</div></td>
+                                            <td className="px-6 py-4 text-sm font-medium text-slate-600">{new Date(issue.issue_date).toLocaleDateString()}</td>
+                                            <td className="px-6 py-4"><div className="font-medium text-slate-800">{getWarehouseLabel(issue.warehouse_id)}</div><div className="text-xs text-rose-600 font-bold mt-1">{"➞ " + getSupplierName(issue.supplier_id)}</div></td>
+                                            <td className="px-6 py-4 text-center font-black text-slate-700">{issue.total_items}</td>
+                                            <td className="px-6 py-4 text-center">{getStatusBadge(issue.status)}</td>
+                                            <td className="px-6 py-4"><div className="flex justify-end gap-3">
+                                                <button onClick={() => navigate('/tao-phieu-xuat', { state: { issue } })} className="p-2 text-slate-400 hover:text-slate-900 transition-colors"><Edit className="w-4 h-4" /></button>
+                                                <button onClick={() => handleDeleteIssue(issue.id, issue.issue_code)} className="p-2 text-slate-400 hover:text-red-500 transition-colors"><Trash2 className="w-4 h-4" /></button>
+                                            </div></td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </>
                 )}
             </div>
         </div>

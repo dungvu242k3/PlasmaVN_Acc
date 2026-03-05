@@ -46,7 +46,7 @@ const CreateCylinderRecovery = () => {
     useEffect(() => {
         loadCustomers();
         if (editRecovery) {
-            setFormData(editRecovery);
+            setFormData({ ...editRecovery, order_id: editRecovery.order_id || '' });
             setPhotoUrls(editRecovery.photos || []);
             fetchItems(editRecovery.id);
         } else {

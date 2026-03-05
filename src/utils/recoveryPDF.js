@@ -1,5 +1,6 @@
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import { applyPlugin } from 'jspdf-autotable';
+applyPlugin(jsPDF);
 
 export async function generateRecoveryPDF(recovery, items, customerName) {
     const doc = new jsPDF();
@@ -56,7 +57,7 @@ export async function generateRecoveryPDF(recovery, items, customerName) {
         theme: 'grid'
     });
 
-    const finalY = doc.lastAutoTable.finalY + 10;
+    const finalY = (doc.lastAutoTable?.finalY || doc.previousAutoTable?.finalY || tableStartY + 40) + 10;
 
     // Summary
     doc.setFontSize(10);
