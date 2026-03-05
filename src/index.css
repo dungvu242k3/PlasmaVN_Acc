@@ -486,3 +486,104 @@ h6,
     }
   }
 }
+
+/* ============================================
+   BARCODE SCANNER OVERRIDES
+   Neutralize global !important styles inside
+   html5-qrcode scanner containers so the
+   library renders correctly on mobile.
+   ============================================ */
+
+/* Reset all global overrides inside scanner containers */
+#barcode-reader,
+#barcode-reader *,
+#order-barcode-reader,
+#order-barcode-reader *,
+#recovery-barcode-reader,
+#recovery-barcode-reader *,
+#modal-barcode-reader,
+#modal-barcode-reader * {
+  font-weight: normal !important;
+  color: inherit !important;
+  opacity: 1 !important;
+  letter-spacing: normal !important;
+  white-space: normal !important;
+}
+
+/* Video element: fill container, no borders */
+#barcode-reader video,
+#order-barcode-reader video,
+#recovery-barcode-reader video,
+#modal-barcode-reader video {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  border: none !important;
+  border-radius: 0 !important;
+  display: block !important;
+}
+
+/* html5-qrcode first-child is the viewfinder — keep visible, no overrides needed */
+
+#barcode-reader img,
+#order-barcode-reader img,
+#recovery-barcode-reader img,
+#modal-barcode-reader img {
+  display: none !important;
+}
+
+/* Hide library's internal buttons (switch camera, file scan, etc.) */
+#barcode-reader button,
+#order-barcode-reader button,
+#recovery-barcode-reader button,
+#modal-barcode-reader button {
+  display: none !important;
+}
+
+/* Hide permission/status text from html5-qrcode */
+#barcode-reader>span,
+#order-barcode-reader>span,
+#recovery-barcode-reader>span,
+#modal-barcode-reader>span,
+#barcode-reader>div>span,
+#order-barcode-reader>div>span,
+#recovery-barcode-reader>div>span,
+#modal-barcode-reader>div>span {
+  display: none !important;
+}
+
+/* Style the shaded region (viewfinder border area) */
+#barcode-reader [style*="border-width"],
+#order-barcode-reader [style*="border-width"],
+#recovery-barcode-reader [style*="border-width"],
+#modal-barcode-reader [style*="border-width"] {
+  border-color: rgba(255, 255, 255, 0.5) !important;
+}
+
+/* Ensure scanner container fills flex space on mobile */
+@media (max-width: 767px) {
+
+  #barcode-reader,
+  #order-barcode-reader,
+  #recovery-barcode-reader,
+  #modal-barcode-reader {
+    min-height: 300px !important;
+    height: 100% !important;
+    background: #000 !important;
+  }
+}
+
+/* Scanner scan-line animation */
+@keyframes scanner-line {
+  0% {
+    top: 20%;
+  }
+
+  50% {
+    top: 75%;
+  }
+
+  100% {
+    top: 20%;
+  }
+}
