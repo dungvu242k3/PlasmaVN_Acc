@@ -241,14 +241,18 @@ const CreateOrder = () => {
 
         setTimeout(async () => {
             try {
-                const qr = new Html5Qrcode('order-barcode-reader', { formatsToSupport, verbose: false });
+                const qr = new Html5Qrcode('order-barcode-reader', {
+                    formatsToSupport,
+                    useBarCodeDetectorIfSupported: true,
+                    verbose: false
+                });
                 html5QrCodeRef.current = qr;
                 patchIOSVideoPlaysinline('order-barcode-reader');
                 await qr.start(
                     { facingMode: 'environment' },
                     {
-                        fps: 10,
-                        qrbox: (w, h) => ({ width: Math.floor(w * 0.85), height: Math.floor(h * 0.35) }),
+                        fps: 20,
+                        qrbox: (w, h) => ({ width: Math.floor(w * 0.9), height: Math.floor(h * 0.4) }),
                         disableFlip: false,
                     },
                     (decodedText) => {

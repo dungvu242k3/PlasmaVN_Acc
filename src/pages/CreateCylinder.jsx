@@ -72,22 +72,33 @@ const CreateCylinder = () => {
     const startScanner = useCallback(async () => {
         setIsScannerOpen(true);
         // Dynamic import to avoid SSR issues
-        const { Html5Qrcode } = await import('html5-qrcode');
+        const { Html5Qrcode, Html5QrcodeSupportedFormats } = await import('html5-qrcode');
 
         // Wait for DOM element to be rendered (longer delay for mobile)
         setTimeout(async () => {
             try {
-                const html5QrCode = new Html5Qrcode("barcode-reader");
+                const html5QrCode = new Html5Qrcode("barcode-reader", {
+                    useBarCodeDetectorIfSupported: true,
+                    formatsToSupport: [
+                        Html5QrcodeSupportedFormats.QR_CODE,
+                        Html5QrcodeSupportedFormats.CODE_128,
+                        Html5QrcodeSupportedFormats.CODE_39,
+                        Html5QrcodeSupportedFormats.EAN_13,
+                        Html5QrcodeSupportedFormats.EAN_8,
+                        Html5QrcodeSupportedFormats.UPC_A,
+                        Html5QrcodeSupportedFormats.UPC_E,
+                    ]
+                });
                 html5QrCodeRef.current = html5QrCode;
 
                 patchIOSVideoPlaysinline('barcode-reader');
                 await html5QrCode.start(
                     { facingMode: "environment" },
                     {
-                        fps: 10,
+                        fps: 20,
                         qrbox: (viewfinderWidth, viewfinderHeight) => ({
-                            width: Math.floor(viewfinderWidth * 0.85),
-                            height: Math.floor(viewfinderHeight * 0.35)
+                            width: Math.floor(viewfinderWidth * 0.9),
+                            height: Math.floor(viewfinderHeight * 0.4)
                         }),
                         disableFlip: false,
                     },

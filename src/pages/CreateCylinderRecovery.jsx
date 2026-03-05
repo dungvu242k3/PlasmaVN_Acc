@@ -138,6 +138,7 @@ const CreateCylinderRecovery = () => {
             try {
                 const qr = new Html5Qrcode("recovery-barcode-reader", {
                     formatsToSupport,
+                    useBarCodeDetectorIfSupported: true,
                     verbose: false,
                 });
                 html5QrCodeRef.current = qr;
@@ -145,7 +146,7 @@ const CreateCylinderRecovery = () => {
                 await qr.start(
                     { facingMode: "environment" },
                     {
-                        fps: 10,
+                        fps: 20,
                         // Wide & short box optimized for horizontal 1D barcodes
                         qrbox: (viewfinderWidth, viewfinderHeight) => ({
                             width: Math.floor(viewfinderWidth * 0.85),

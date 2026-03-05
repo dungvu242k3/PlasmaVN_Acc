@@ -91,19 +91,30 @@ export default function CylinderFormModal({ cylinder, onClose, onSuccess }) {
     // Barcode scanner
     const startScanner = useCallback(async () => {
         setIsScannerOpen(true);
-        const { Html5Qrcode } = await import('html5-qrcode');
+        const { Html5Qrcode, Html5QrcodeSupportedFormats } = await import('html5-qrcode');
         setTimeout(async () => {
             try {
-                const qr = new Html5Qrcode('modal-barcode-reader');
+                const qr = new Html5Qrcode('modal-barcode-reader', {
+                    useBarCodeDetectorIfSupported: true,
+                    formatsToSupport: [
+                        Html5QrcodeSupportedFormats.QR_CODE,
+                        Html5QrcodeSupportedFormats.CODE_128,
+                        Html5QrcodeSupportedFormats.CODE_39,
+                        Html5QrcodeSupportedFormats.EAN_13,
+                        Html5QrcodeSupportedFormats.EAN_8,
+                        Html5QrcodeSupportedFormats.UPC_A,
+                        Html5QrcodeSupportedFormats.UPC_E,
+                    ]
+                });
                 html5QrCodeRef.current = qr;
                 patchIOSVideoPlaysinline('modal-barcode-reader');
                 await qr.start(
                     { facingMode: 'environment' },
                     {
-                        fps: 10,
+                        fps: 20,
                         qrbox: (viewfinderWidth, viewfinderHeight) => ({
-                            width: Math.floor(viewfinderWidth * 0.85),
-                            height: Math.floor(viewfinderHeight * 0.35)
+                            width: Math.floor(viewfinderWidth * 0.9),
+                            height: Math.floor(viewfinderHeight * 0.4)
                         }),
                         disableFlip: false,
                     },
