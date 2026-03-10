@@ -57,7 +57,7 @@ const CreateOrder = () => {
     const defaultState = {
         orderCode: getNewOrderCode(),
         customerCategory: 'TM',
-        warehouse: 'HN',
+        warehouse: '',
         customerId: '',
         recipientName: '',
         recipientAddress: '',
@@ -128,6 +128,11 @@ const CreateOrder = () => {
                 // Set default warehouse if not editing
                 if (!editOrder && data.length > 0 && !formData.warehouse) {
                     setFormData(prev => ({ ...prev, warehouse: data[0].id }));
+                } else if (editOrder) {
+                    const exists = data.some(w => w.id === editOrder.warehouse);
+                    if (!exists && data.length > 0) {
+                        setFormData(prev => ({ ...prev, warehouse: '' }));
+                    }
                 }
             }
         };

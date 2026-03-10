@@ -14,9 +14,9 @@ import { useNavigate } from 'react-router-dom';
 import ColumnToggle from '../components/ColumnToggle';
 import GoodsReceiptPrintTemplate from '../components/GoodsReceiptPrintTemplate';
 import { RECEIPT_STATUSES } from '../constants/goodsReceiptConstants';
-import { WAREHOUSES } from '../constants/orderConstants';
 import useColumnVisibility from '../hooks/useColumnVisibility';
 import { supabase } from '../supabase/config';
+
 
 const TABLE_COLUMNS = [
     { key: 'code', label: 'Mã phiếu' },
@@ -37,11 +37,13 @@ const GoodsReceipts = () => {
     const [statusFilter, setStatusFilter] = useState('ALL');
     const [warehouseFilter, setWarehouseFilter] = useState('ALL');
     const [printData, setPrintData] = useState(null);
+    const [warehousesList, setWarehousesList] = useState([]);
     const { visibleColumns, toggleColumn, isColumnVisible, resetColumns, visibleCount, totalCount } = useColumnVisibility('columns_goods_receipts', TABLE_COLUMNS);
     const visibleTableColumns = TABLE_COLUMNS.filter(col => isColumnVisible(col.key));
 
     useEffect(() => {
         fetchReceipts();
+        fetchWarehouses();
     }, []);
 
     const fetchReceipts = async () => {
@@ -57,6 +59,17 @@ const GoodsReceipts = () => {
             console.error('Error loading receipts:', error);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const fetchWarehouses = async () => {
+        try {
+            const { data } = await supabase.from('warehouses').select('id, name').eq('status', 'Đang hoạt động').order('name');
+            if (data) {
+                setWarehousesList(data);
+            }
+        } catch (error) {
+            console.error('Error fetching warehouses:', error);
         }
     };
 
@@ -206,7 +219,7 @@ const GoodsReceipts = () => {
     };
 
     const getWarehouseLabel = (id) => {
-        return WAREHOUSES.find(w => w.id === id)?.label || id;
+        return warehousesList.find(w => w.id === id)?.name || id;
     };
 
     const filteredReceipts = receipts.filter(r => {
@@ -298,7 +311,7 @@ const GoodsReceipts = () => {
                             className="w-full px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl font-bold text-sm outline-none focus:ring-4 focus:ring-emerald-100 focus:border-emerald-400 cursor-pointer appearance-none transition-all"
                         >
                             <option value="ALL">Tất cả kho</option>
-                            {WAREHOUSES.map(w => <option key={w.id} value={w.id}>{w.label}</option>)}
+                            {warehousesList.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
                         </select>
                         <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                     </div>
@@ -393,7 +406,7 @@ const GoodsReceipts = () => {
             {/* Hidden Print Template — rendered via Portal directly under <body> to bypass #root hiding */}
             {printData && createPortal(
                 <div className="print-only-content">
-                    <GoodsReceiptPrintTemplate receipt={printData?.receipt} items={printData?.items} />
+                    <GoodsReceiptPrintTemplate receipt={printData?.receipt} items={printData?.items} warehousesList={warehousesList} />
                 </div>,
                 document.body
             )}

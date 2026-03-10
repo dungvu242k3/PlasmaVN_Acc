@@ -4,8 +4,7 @@ import {
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-    CUSTOMER_CATEGORIES,
-    WAREHOUSES
+    CUSTOMER_CATEGORIES
 } from '../constants/orderConstants';
 import { supabase } from '../supabase/config';
 
@@ -21,7 +20,7 @@ const CreateCustomer = () => {
         address: '',
         legal_rep: '',
         contact_info: '',
-        warehouse_id: 'HN',
+        warehouse_id: '',
         business_group: '',
         care_by: '',
         agency_name: '',
@@ -34,6 +33,7 @@ const CreateCustomer = () => {
     const [formData, setFormData] = useState(initialFormState);
     const [staffList, setStaffList] = useState([]);
     const [agencySuggestions, setAgencySuggestions] = useState([]);
+    const [warehousesList, setWarehousesList] = useState([]);
 
     useEffect(() => {
         const loadStaff = async () => {
@@ -47,8 +47,18 @@ const CreateCustomer = () => {
                 setAgencySuggestions(unique);
             }
         };
+        const loadWarehouses = async () => {
+            const { data } = await supabase.from('warehouses').select('id, name').eq('status', 'Đang hoạt động').order('name');
+            if (data) {
+                setWarehousesList(data);
+                if (data.length > 0) {
+                    setFormData(prev => !prev.warehouse_id ? { ...prev, warehouse_id: data[0].id } : prev);
+                }
+            }
+        };
         loadStaff();
         loadAgencies();
+        loadWarehouses();
     }, []);
 
     // Auto generate Customer Code on mount
@@ -217,7 +227,7 @@ const CreateCustomer = () => {
                                 onChange={(e) => setFormData({ ...formData, warehouse_id: e.target.value })}
                                 className="w-full px-5 py-4 bg-gray-50 border border-gray-200 rounded-2xl outline-none focus:ring-4 focus:ring-pink-100 focus:border-pink-500 font-bold text-base transition-all shadow-sm cursor-pointer"
                             >
-                                {WAREHOUSES.map(w => <option key={w.id} value={w.id}>{w.label}</option>)}
+                                {warehousesList.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
                             </select>
                         </div>
                         <div className="space-y-3">

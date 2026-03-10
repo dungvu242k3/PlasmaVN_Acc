@@ -1,5 +1,4 @@
 import React from 'react';
-import { WAREHOUSES } from '../constants/orderConstants';
 
 const numberToVietnameseWords = (num) => {
     if (!num || num === 0) return 'Không';
@@ -52,7 +51,7 @@ const formatNumber = (val) => {
     return parts.join(',');
 };
 
-const getWarehouseLabel = (id) => WAREHOUSES.find(w => w.id === id)?.label || id;
+const getWarehouseLabel = (warehousesList, id) => warehousesList?.find(w => w.id === id)?.name || id;
 
 // Inline styles to bypass global !important overrides
 const S = {
@@ -281,7 +280,7 @@ const S = {
     },
 };
 
-const ReceiptItem = ({ receipt, items }) => {
+const ReceiptItem = ({ receipt, items, warehousesList }) => {
     if (!receipt) return null;
 
     const today = receipt.receipt_date ? new Date(receipt.receipt_date) : new Date(receipt.created_at || Date.now());
@@ -289,7 +288,7 @@ const ReceiptItem = ({ receipt, items }) => {
     const month = String(today.getMonth() + 1).padStart(2, '0');
     const year = today.getFullYear();
 
-    const warehouseLabel = getWarehouseLabel(receipt.warehouse_id);
+    const warehouseLabel = getWarehouseLabel(warehousesList, receipt.warehouse_id);
 
     // Build table rows from items
     const rows = items.map((item, idx) => ({
@@ -468,7 +467,7 @@ const ReceiptItem = ({ receipt, items }) => {
     );
 };
 
-const GoodsReceiptPrintTemplate = ({ receipt, items }) => {
+const GoodsReceiptPrintTemplate = ({ receipt, items, warehousesList = [] }) => {
     if (!receipt) return null;
     const receiptList = Array.isArray(receipt) ? receipt : [receipt];
     const itemsList = Array.isArray(items) ? items : [];
@@ -477,7 +476,7 @@ const GoodsReceiptPrintTemplate = ({ receipt, items }) => {
         <div className="bulk-print-container">
             {receiptList.map((r, index) => (
                 <React.Fragment key={r.id || index}>
-                    <ReceiptItem receipt={r} items={itemsList} />
+                    <ReceiptItem receipt={r} items={itemsList} warehousesList={warehousesList} />
                     {index < receiptList.length - 1 && <div className="page-break" />}
                 </React.Fragment>
             ))}

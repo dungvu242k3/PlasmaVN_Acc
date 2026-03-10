@@ -68,7 +68,7 @@ export default function OrderStatusUpdater({ order, userRole, onClose, onUpdateS
                 const { data: invData, error: invErr } = await supabase
                     .from('inventory')
                     .select('id, quantity')
-                    .eq('warehouse_id', order.warehouse || 'HN')
+                    .eq('warehouse_id', order.warehouse)
                     .eq('item_type', 'BINH')
                     .eq('item_name', productLabel)
                     .maybeSingle();

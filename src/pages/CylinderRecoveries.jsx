@@ -8,9 +8,9 @@ import {
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { WAREHOUSES } from '../constants/orderConstants';
 import { RECOVERY_STATUSES } from '../constants/recoveryConstants';
 import { supabase } from '../supabase/config';
+
 
 const CylinderRecoveries = () => {
     const navigate = useNavigate();
@@ -21,10 +21,13 @@ const CylinderRecoveries = () => {
     const [statusFilter, setStatusFilter] = useState('ALL');
     const [selectedIds, setSelectedIds] = useState([]);
 
+    const [warehousesList, setWarehousesList] = useState([]);
+
     useEffect(() => {
         fetchRecoveries();
         loadCustomers();
         loadOrders();
+        fetchWarehouses();
     }, []);
 
     const loadCustomers = async () => {
@@ -53,6 +56,17 @@ const CylinderRecoveries = () => {
         }
     };
 
+    const fetchWarehouses = async () => {
+        try {
+            const { data } = await supabase.from('warehouses').select('id, name').eq('status', 'Đang hoạt động').order('name');
+            if (data) {
+                setWarehousesList(data);
+            }
+        } catch (error) {
+            console.error('Error fetching warehouses:', error);
+        }
+    };
+
     const handleDelete = async (id, code) => {
         if (!window.confirm(`Xóa phiếu "${code}"?`)) return;
         try {
@@ -64,7 +78,7 @@ const CylinderRecoveries = () => {
     };
 
     const getCustomerName = (id) => customers.find(c => c.id === id)?.name || id || '—';
-    const getWarehouseLabel = (id) => WAREHOUSES.find(w => w.id === id)?.label || id;
+    const getWarehouseLabel = (id) => warehousesList.find(w => w.id === id)?.name || id;
     const getSupplierName = (id) => customers.find(c => c.id === id)?.name || id || '—';
     const getOrderCode = (id) => {
         if (!id) return '—';

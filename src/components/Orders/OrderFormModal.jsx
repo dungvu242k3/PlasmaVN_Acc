@@ -3,8 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import {
     CUSTOMER_CATEGORIES,
     MOCK_CUSTOMERS,
-    PRODUCT_TYPES,
-    WAREHOUSES
+    PRODUCT_TYPES
 } from '../../constants/orderConstants';
 import usePermissions from '../../hooks/usePermissions';
 import { supabase } from '../../supabase/config';
@@ -42,7 +41,7 @@ export default function OrderFormModal({ order, onClose, onSuccess }) {
     const defaultState = {
         orderCode: getNewOrderCode(),
         customerCategory: 'TM',
-        warehouse: 'HN',
+        warehouse: '',
         customerId: '',
         recipientName: '',
         recipientAddress: '',
@@ -56,10 +55,26 @@ export default function OrderFormModal({ order, onClose, onSuccess }) {
     };
 
     const [formData, setFormData] = useState(defaultState);
+    const [warehousesList, setWarehousesList] = useState([]);
 
     useEffect(() => {
         fetchRealCustomers();
+        fetchWarehouses();
     }, []);
+
+    const fetchWarehouses = async () => {
+        try {
+            const { data } = await supabase.from('warehouses').select('id, name').eq('status', 'Đang hoạt động').order('name');
+            if (data) {
+                setWarehousesList(data);
+                if (!isEdit && data.length > 0) {
+                    setFormData(prev => prev.warehouse ? prev : { ...prev, warehouse: data[0].id });
+                }
+            }
+        } catch (error) {
+            console.error('Error fetching warehouses:', error);
+        }
+    };
 
     const fetchRealCustomers = async () => {
         setIsFetchingCustomers(true);
@@ -433,7 +448,8 @@ export default function OrderFormModal({ order, onClose, onSuccess }) {
                                             onChange={handleChange}
                                             className="w-full px-5 py-3 bg-white border border-slate-200 rounded-2xl outline-none focus:ring-4 focus:ring-blue-50 focus:border-blue-500 font-bold text-sm shadow-sm transition-all cursor-pointer appearance-none"
                                         >
-                                            {WAREHOUSES.map(w => <option key={w.id} value={w.id}>{w.label}</option>)}
+                                            <option value="">-- Chọn kho --</option>
+                                            {warehousesList.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
                                         </select>
                                         <div className="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
                                             <ChevronDown className="w-4 h-4" />

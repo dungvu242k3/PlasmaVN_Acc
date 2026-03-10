@@ -27,10 +27,10 @@ import { Bar as BarChartJS, Pie as PieChartJS } from 'react-chartjs-2';
 import { useNavigate } from 'react-router-dom';
 import CustomerDetailsModal from '../components/Customers/CustomerDetailsModal';
 import CustomerFormModal from '../components/Customers/CustomerFormModal';
-import { WAREHOUSES } from '../constants/orderConstants';
 import useColumnVisibility from '../hooks/useColumnVisibility';
 import usePermissions from '../hooks/usePermissions';
 import { supabase } from '../supabase/config';
+
 
 // Register Chart.js components
 ChartJS.register(
@@ -62,6 +62,7 @@ const Customers = () => {
     const [selectedCareBy, setSelectedCareBy] = useState([]);
     const [uniqueManagedBy, setUniqueManagedBy] = useState([]);
     const [uniqueCareBy, setUniqueCareBy] = useState([]);
+    const [warehousesList, setWarehousesList] = useState([]);
 
     const TABLE_COLUMNS_DEF = [
         { key: 'code', label: 'Mã khách hàng' },
@@ -90,6 +91,7 @@ const Customers = () => {
 
     useEffect(() => {
         fetchCustomers();
+        fetchWarehouses();
     }, []);
 
     useEffect(() => {
@@ -115,6 +117,17 @@ const Customers = () => {
             alert('❌ Không thể tải danh sách khách hàng: ' + error.message);
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    const fetchWarehouses = async () => {
+        try {
+            const { data } = await supabase.from('warehouses').select('id, name').eq('status', 'Đang hoạt động').order('name');
+            if (data) {
+                setWarehousesList(data);
+            }
+        } catch (error) {
+            console.error('Error fetching warehouses:', error);
         }
     };
 
@@ -863,7 +876,7 @@ const Customers = () => {
                     onClose={() => setIsFormModalOpen(false)}
                     onSuccess={handleFormSubmitSuccess}
                     categories={CUSTOMER_CATEGORIES}
-                    warehouses={WAREHOUSES}
+                    warehouses={warehousesList}
                 />
             )}
 

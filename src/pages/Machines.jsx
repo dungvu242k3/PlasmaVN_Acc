@@ -26,7 +26,6 @@ import { useNavigate } from 'react-router-dom';
 import MachineDetailsModal from '../components/Machines/MachineDetailsModal';
 import MachineFormModal from '../components/Machines/MachineFormModal';
 import { MACHINE_STATUSES, MACHINE_TYPES } from '../constants/machineConstants';
-import { WAREHOUSES } from '../constants/orderConstants';
 import useColumnVisibility from '../hooks/useColumnVisibility';
 import usePermissions from '../hooks/usePermissions';
 import { supabase } from '../supabase/config';
@@ -77,9 +76,11 @@ const Machines = () => {
     const [selectedWarehouses, setSelectedWarehouses] = useState([]);
     const [uniqueCustomers, setUniqueCustomers] = useState([]);
     const [uniqueDepartments, setUniqueDepartments] = useState([]);
+    const [warehousesList, setWarehousesList] = useState([]);
 
     useEffect(() => {
         fetchMachines();
+        fetchWarehouses();
     }, []);
 
     useEffect(() => {
@@ -106,6 +107,17 @@ const Machines = () => {
             // alert('❌ Lỗi tải thiết bị: ' + error.message);
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    const fetchWarehouses = async () => {
+        try {
+            const { data } = await supabase.from('warehouses').select('id, name').eq('status', 'Đang hoạt động').order('name');
+            if (data) {
+                setWarehousesList(data);
+            }
+        } catch (error) {
+            console.error('Error fetching warehouses:', error);
         }
     };
 
@@ -535,17 +547,17 @@ const Machines = () => {
                         <FilterDropdown
                             label="Kho quản lý"
                             selectedCount={selectedWarehouses.length}
-                            totalCount={WAREHOUSES.length}
+                            totalCount={warehousesList.length}
                             onSelectAll={() => {
-                                if (selectedWarehouses.length === WAREHOUSES.length) {
+                                if (selectedWarehouses.length === warehousesList.length) {
                                     setSelectedWarehouses([]);
                                 } else {
-                                    setSelectedWarehouses(WAREHOUSES.map(w => w.id));
+                                    setSelectedWarehouses(warehousesList.map(w => w.id));
                                 }
                             }}
                         >
                             <div className="space-y-1 p-2">
-                                {WAREHOUSES.map(wh => (
+                                {warehousesList.map(wh => (
                                     <label key={wh.id} className="flex items-center gap-2 cursor-pointer hover:bg-[#F3F4F6] p-2">
                                         <input
                                             type="checkbox"
@@ -559,7 +571,7 @@ const Machines = () => {
                                             }}
                                             className="w-4 h-4 text-[#2563EB] border-[#D1D5DB] focus:ring-[#2563EB]"
                                         />
-                                        <span className="text-sm text-[#374151]" style={{ fontFamily: '"Roboto", sans-serif' }}>{wh.label}</span>
+                                        <span className="text-sm text-[#374151]" style={{ fontFamily: '"Roboto", sans-serif' }}>{wh.name}</span>
                                     </label>
                                 ))}
                             </div>
@@ -676,7 +688,7 @@ const Machines = () => {
                                                 </span>
                                             </td>}
                                             {isColumnVisible('machine_type') && <td className="px-4 py-4 text-sm text-[#374151] font-normal" style={{ fontFamily: '"Roboto", sans-serif' }}>{getLabel(MACHINE_TYPES, m.machine_type)}</td>}
-                                            {isColumnVisible('warehouse') && <td className="px-4 py-4 text-sm text-[#374151] font-normal" style={{ fontFamily: '"Roboto", sans-serif' }}>{getLabel(WAREHOUSES, m.warehouse) || '—'}</td>}
+                                            {isColumnVisible('warehouse') && <td className="px-4 py-4 text-sm text-[#374151] font-normal" style={{ fontFamily: '"Roboto", sans-serif' }}>{getLabel(warehousesList, m.warehouse) || '—'}</td>}
                                             {isColumnVisible('customer_name') && <td className="px-4 py-4">
                                                 <span className="text-sm font-medium text-[#111827]" style={{ fontFamily: '"Roboto", sans-serif' }}>
                                                     {m.customer_name || 'Sẵn sàng xuất kho'}

@@ -7,7 +7,7 @@ import {
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ISSUE_TYPES } from '../constants/goodsIssueConstants';
-import { PRODUCT_TYPES, WAREHOUSES } from '../constants/orderConstants';
+import { PRODUCT_TYPES } from '../constants/orderConstants';
 import { supabase } from '../supabase/config';
 
 const CreateGoodsIssue = () => {
@@ -23,7 +23,7 @@ const CreateGoodsIssue = () => {
         issue_date: new Date().toISOString().split('T')[0],
         issue_type: 'TRA_NCC',
         supplier_id: '',
-        warehouse_id: 'HN',
+        warehouse_id: '',
         notes: '',
         total_items: 0,
         status: 'HOAN_THANH'
@@ -33,11 +33,25 @@ const CreateGoodsIssue = () => {
         { id: Date.now(), item_type: 'BINH', item_id: '', item_code: '', quantity: 1, _search: '' }
     ]);
 
+    const [warehousesList, setWarehousesList] = useState([]);
+
     useEffect(() => {
         loadSuppliers();
+        fetchWarehouses();
         if (editIssue) {
-            setFormData(editIssue);
-            // Fetch items if needed here in real logic
+            const { id, created_at, ...editData } = editIssue;
+            setFormData(editData);
+            // Fetch items for edit
+            const fetchItems = async () => {
+                const { data } = await supabase
+                    .from('goods_issue_items')
+                    .select('*')
+                    .eq('issue_id', editIssue.id);
+                if (data && data.length > 0) {
+                    setItems(data.map(item => ({ ...item, _search: '' })));
+                }
+            };
+            fetchItems();
         } else {
             generateCode();
         }
@@ -83,6 +97,25 @@ const CreateGoodsIssue = () => {
         }
     };
 
+    const fetchWarehouses = async () => {
+        try {
+            const { data } = await supabase.from('warehouses').select('id, name').eq('status', 'Đang hoạt động').order('name');
+            if (data) {
+                setWarehousesList(data);
+                if (!editIssue && data.length > 0) {
+                    setFormData(prev => !prev.warehouse_id ? { ...prev, warehouse_id: data[0].id } : prev);
+                } else if (editIssue) {
+                    const exists = data.some(w => w.id === editIssue.warehouse_id);
+                    if (!exists && data.length > 0) {
+                        setFormData(prev => ({ ...prev, warehouse_id: '' }));
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Error fetching warehouses:', error);
+        }
+    };
+
     const addItem = () => {
         setItems([...items, { id: Date.now(), item_type: 'BINH', item_id: '', item_code: '', quantity: 1, _search: '' }]);
     };
@@ -117,21 +150,41 @@ const CreateGoodsIssue = () => {
 
         setIsLoading(true);
         try {
-            // Lưu phiếu xuất 
             const issuePayload = { ...formData };
-            const { data: issueData, error: issueError } = await supabase
-                .from('goods_issues')
-                .insert([issuePayload])
-                .select()
-                .single();
+            delete issuePayload.id; // Không gửi id trong payload
+            delete issuePayload.created_at;
 
-            if (issueError) throw issueError;
+            let issueId;
 
-            // Log details & cập nhật tồn kho (Ví dụ: trigger hoặc gọi RPC)
+            if (editIssue) {
+                // Cập nhật phiếu xuất
+                const { error: issueError } = await supabase
+                    .from('goods_issues')
+                    .update(issuePayload)
+                    .eq('id', editIssue.id);
+
+                if (issueError) throw issueError;
+                issueId = editIssue.id;
+
+                // Xóa items cũ trước khi insert lại
+                await supabase.from('goods_issue_items').delete().eq('issue_id', issueId);
+            } else {
+                // Tạo mới phiếu xuất
+                const { data: issueData, error: issueError } = await supabase
+                    .from('goods_issues')
+                    .insert([issuePayload])
+                    .select()
+                    .single();
+
+                if (issueError) throw issueError;
+                issueId = issueData.id;
+            }
+
+            // Insert items
             const itemPayloads = validItems.map(item => ({
-                issue_id: issueData.id,
+                issue_id: issueId,
                 item_type: item.item_type,
-                item_id: item.item_id || null, // UUID reference nếu có
+                item_id: item.item_id || null,
                 item_code: item.item_code || '',
                 quantity: Number(item.quantity) || 1
             }));
@@ -142,7 +195,7 @@ const CreateGoodsIssue = () => {
 
             if (itemsError) throw itemsError;
 
-            alert('🎉 Đã lập phiếu xuất trả thành công!');
+            alert(editIssue ? '🎉 Cập nhật phiếu xuất thành công!' : '🎉 Đã lập phiếu xuất trả thành công!');
             navigate('/xuat-kho');
         } catch (error) {
             console.error('Error creating goods issue:', error);
@@ -216,7 +269,7 @@ const CreateGoodsIssue = () => {
                                 onChange={(e) => setFormData({ ...formData, warehouse_id: e.target.value })}
                                 className="w-full px-4 py-3 bg-white border border-gray-200 rounded-2xl font-bold text-gray-900 focus:ring-4 focus:ring-rose-100 focus:border-rose-500 transition-all outline-none cursor-pointer"
                             >
-                                {WAREHOUSES.map(w => <option key={w.id} value={w.id}>{w.label}</option>)}
+                                {warehousesList.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
                             </select>
                         </div>
                         <div className="space-y-2 lg:col-span-2">

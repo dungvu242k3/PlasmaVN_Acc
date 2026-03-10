@@ -277,7 +277,7 @@ export default function CustomerFormModal({ customer, onClose, onSuccess, catego
                                         required
                                     >
                                         {warehouses && warehouses.map(wh => (
-                                            <option key={wh.id} value={wh.id}>{wh.label}</option>
+                                            <option key={wh.id} value={wh.id}>{wh.name}</option>
                                         ))}
                                     </select>
                                 </div>

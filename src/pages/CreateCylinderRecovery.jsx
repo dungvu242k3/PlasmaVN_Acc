@@ -10,10 +10,10 @@ import {
 } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { WAREHOUSES } from '../constants/orderConstants';
 import { ITEM_CONDITIONS } from '../constants/recoveryConstants';
 import { supabase } from '../supabase/config';
 import { patchIOSVideoPlaysinline } from '../utils/scannerHelper';
+
 
 const CreateCylinderRecovery = () => {
     const navigate = useNavigate();
@@ -33,7 +33,7 @@ const CreateCylinderRecovery = () => {
         recovery_date: new Date().toISOString().split('T')[0],
         customer_id: '',
         order_id: '',
-        warehouse_id: 'HN',
+        warehouse_id: '',
         driver_name: '',
         notes: '',
         total_items: 0,
@@ -44,8 +44,11 @@ const CreateCylinderRecovery = () => {
     const itemsRef = useRef(items);
     useEffect(() => { itemsRef.current = items; }, [items]);
 
+    const [warehousesList, setWarehousesList] = useState([]);
+
     useEffect(() => {
         loadCustomers();
+        fetchWarehouses();
         if (editRecovery) {
             setFormData({ ...editRecovery, order_id: editRecovery.order_id || '' });
             setPhotoUrls(editRecovery.photos || []);
@@ -58,6 +61,25 @@ const CreateCylinderRecovery = () => {
     const loadCustomers = async () => {
         const { data } = await supabase.from('customers').select('id, name').order('name');
         if (data) setCustomers(data);
+    };
+
+    const fetchWarehouses = async () => {
+        try {
+            const { data } = await supabase.from('warehouses').select('id, name').eq('status', 'Đang hoạt động').order('name');
+            if (data) {
+                setWarehousesList(data);
+                if (!editRecovery && data.length > 0) {
+                    setFormData(prev => !prev.warehouse_id ? { ...prev, warehouse_id: data[0].id } : prev);
+                } else if (editRecovery) {
+                    const exists = data.some(w => w.id === editRecovery.warehouse_id);
+                    if (!exists && data.length > 0) {
+                        setFormData(prev => ({ ...prev, warehouse_id: '' }));
+                    }
+                }
+            }
+        } catch (error) {
+            console.error('Error fetching warehouses:', error);
+        }
     };
 
     // Load orders for selected customer
@@ -408,7 +430,7 @@ const CreateCylinderRecovery = () => {
                         <div className="space-y-2">
                             <label className="text-xs font-black text-gray-500 uppercase tracking-widest ml-1">Kho nhận về *</label>
                             <select value={formData.warehouse_id} onChange={(e) => setFormData({ ...formData, warehouse_id: e.target.value })} className="w-full px-4 py-3 bg-white border border-gray-200 rounded-2xl font-bold text-gray-900 focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all outline-none cursor-pointer">
-                                {WAREHOUSES.map(w => <option key={w.id} value={w.id}>{w.label}</option>)}
+                                {warehousesList.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
                             </select>
                         </div>
                         <div className="space-y-2">

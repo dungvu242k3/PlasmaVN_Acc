@@ -27,7 +27,7 @@ export default function CylinderFormModal({ cylinder, onClose, onSuccess }) {
         valve_type: 'Van Messer/Phi 6/ CB Trắng',
         handle_type: 'Có quai',
         customer_id: '',
-        warehouse_id: 'HN'
+        warehouse_id: ''
     };
 
     const [formData, setFormData] = useState(defaultState);
@@ -59,8 +59,8 @@ export default function CylinderFormModal({ cylinder, onClose, onSuccess }) {
                 if (!error && data) {
                     setWarehousesList(data);
                     // Default to first warehouse if not editing
-                    if (!isEdit && data.length > 0 && !formData.warehouse_id) {
-                        setFormData(prev => ({ ...prev, warehouse_id: data[0].id }));
+                    if (!isEdit && data.length > 0) {
+                        setFormData(prev => !prev.warehouse_id ? { ...prev, warehouse_id: data[0].id } : prev);
                     }
                 }
             } catch (err) {
@@ -84,7 +84,7 @@ export default function CylinderFormModal({ cylinder, onClose, onSuccess }) {
                 valve_type: cylinder.valve_type || 'Van Messer/Phi 6/ CB Trắng',
                 handle_type: cylinder.handle_type || 'Có quai',
                 customer_id: cylinder.customer_id || '',
-                warehouse_id: cylinder.warehouse_id || 'HN'
+                warehouse_id: cylinder.warehouse_id || ''
             });
         }
     }, [cylinder, isEdit]);

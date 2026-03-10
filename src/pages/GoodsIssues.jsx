@@ -6,7 +6,6 @@ import {
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ISSUE_STATUSES, ISSUE_TABLE_COLUMNS, ISSUE_TYPES } from '../constants/goodsIssueConstants';
-import { WAREHOUSES } from '../constants/orderConstants';
 import useColumnVisibility from '../hooks/useColumnVisibility';
 import { supabase } from '../supabase/config';
 
@@ -18,6 +17,7 @@ const GoodsIssues = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('ALL');
     const [warehouseFilter, setWarehouseFilter] = useState('ALL');
+    const [warehousesList, setWarehousesList] = useState([]);
 
     // We reuse logical columns hook
     const { visibleColumns, toggleColumn, isColumnVisible, resetColumns, visibleCount, totalCount } = useColumnVisibility('columns_goods_issues', ISSUE_TABLE_COLUMNS);
@@ -26,6 +26,7 @@ const GoodsIssues = () => {
     useEffect(() => {
         loadSuppliers();
         fetchIssues();
+        fetchWarehouses();
     }, []);
 
     const loadSuppliers = async () => {
@@ -48,6 +49,17 @@ const GoodsIssues = () => {
             console.error('Error loading issues:', error);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const fetchWarehouses = async () => {
+        try {
+            const { data } = await supabase.from('warehouses').select('id, name').eq('status', 'Đang hoạt động').order('name');
+            if (data) {
+                setWarehousesList(data);
+            }
+        } catch (error) {
+            console.error('Error fetching warehouses:', error);
         }
     };
 
@@ -83,7 +95,7 @@ const GoodsIssues = () => {
         );
     };
 
-    const getWarehouseLabel = (id) => WAREHOUSES.find(w => w.id === id)?.label || id;
+    const getWarehouseLabel = (id) => warehousesList.find(w => w.id === id)?.name || id;
     const getSupplierName = (id) => suppliers.find(s => s.id === id)?.name || id;
     const getTypeLabel = (typeId) => ISSUE_TYPES.find(t => t.id === typeId)?.label || typeId;
 

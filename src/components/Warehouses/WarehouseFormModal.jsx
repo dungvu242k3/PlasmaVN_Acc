@@ -193,8 +193,8 @@ export default function WarehouseFormModal({ warehouse, onClose, onSuccess }) {
                                         type="button"
                                         onClick={() => setFormData(p => ({ ...p, status: status.label }))}
                                         className={`px-6 py-2.5 rounded-xl font-bold text-sm border transition-all ${formData.status === status.label
-                                                ? 'bg-amber-500 text-white border-amber-600 shadow-lg shadow-amber-100'
-                                                : 'bg-white text-slate-500 border-slate-100 hover:bg-slate-50'
+                                            ? 'bg-amber-500 text-white border-amber-600 shadow-lg shadow-amber-100'
+                                            : 'bg-white text-slate-500 border-slate-100 hover:bg-slate-50'
                                             }`}
                                     >
                                         {status.label}

@@ -6,12 +6,6 @@ export const MOCK_CUSTOMERS = [
     { id: 3, name: 'Phòng khám Đa khoa Medlatec', address: '42 Nghĩa Dũng, Ba Đình, Hà Nội', recipient: 'Trần Văn C', phone: '0911222333', category: 'PK' },
 ];
 
-export const WAREHOUSES = [
-    { id: 'HN', label: 'Hà Nội' },
-    { id: 'TP.HCM', label: 'TP. Hồ Chí Minh' },
-    { id: 'TH', label: 'Thanh Hóa' },
-    { id: 'DN', label: 'Đà Nẵng' },
-];
 
 export const ORDER_TYPES = [
     { id: 'THUONG', label: 'Đơn thường' },

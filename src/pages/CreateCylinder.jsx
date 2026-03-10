@@ -35,7 +35,7 @@ const CreateCylinder = () => {
         valve_type: 'Van Messer/Phi 6/ CB Trắng',
         handle_type: 'Có quai',
         customer_id: '',
-        warehouse_id: 'HN'
+        warehouse_id: ''
     };
 
     const initialFormState = editCylinder || defaultState;
@@ -63,7 +63,7 @@ const CreateCylinder = () => {
                     setWarehousesList(warehouses);
                     // If not editing and we have warehouses, set default to first one
                     if (!editCylinder && warehouses.length > 0) {
-                        setFormData(prev => ({ ...prev, warehouse_id: warehouses[0].id }));
+                        setFormData(prev => !prev.warehouse_id ? { ...prev, warehouse_id: warehouses[0].id } : prev);
                     }
                 }
             } catch (err) {

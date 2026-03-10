@@ -36,8 +36,7 @@ import {
     ORDER_STATUSES,
     ORDER_TYPES,
     PRODUCT_TYPES,
-    TABLE_COLUMNS,
-    WAREHOUSES
+    TABLE_COLUMNS
 } from '../constants/orderConstants';
 import useColumnVisibility from '../hooks/useColumnVisibility';
 import usePermissions from '../hooks/usePermissions';
@@ -69,6 +68,7 @@ const Orders = () => {
     const [isFormModalOpen, setIsFormModalOpen] = useState(false);
     const [orderToEdit, setOrderToEdit] = useState(null);
     const [serialsModalOrder, setSerialsModalOrder] = useState(null);
+    const [warehousesList, setWarehousesList] = useState([]);
     const { visibleColumns, toggleColumn, isColumnVisible, resetColumns, visibleCount, totalCount } = useColumnVisibility('columns_orders', TABLE_COLUMNS);
     const visibleTableColumns = TABLE_COLUMNS.filter(col => isColumnVisible(col.key));
 
@@ -90,6 +90,7 @@ const Orders = () => {
 
     useEffect(() => {
         fetchOrders();
+        fetchWarehouses();
     }, []);
 
     useEffect(() => {
@@ -113,6 +114,17 @@ const Orders = () => {
             alert('❌ Không thể tải danh sách đơn hàng: ' + error.message);
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    const fetchWarehouses = async () => {
+        try {
+            const { data } = await supabase.from('warehouses').select('id, name').eq('status', 'Đang hoạt động').order('name');
+            if (data) {
+                setWarehousesList(data);
+            }
+        } catch (error) {
+            console.error('Error fetching warehouses:', error);
         }
     };
 
@@ -700,7 +712,7 @@ const Orders = () => {
                                                     <div className="space-y-1 pl-2 border-l border-slate-100">
                                                         <p className="text-[#6B7280] font-medium flex items-center gap-1.5">
                                                             <MapPin className="w-3.5 h-3.5 text-slate-400" />
-                                                            Kho: {getLabel(WAREHOUSES, order.warehouse)}
+                                                            Kho: {getLabel(warehousesList, order.warehouse)}
                                                         </p>
                                                         <p className="text-[#6B7280] font-medium flex items-center gap-1.5">
                                                             <Filter className="w-3.5 h-3.5 text-slate-400" />
@@ -1011,7 +1023,7 @@ const Orders = () => {
                     {/* Hidden Print Template — rendered via Portal directly under <body> to bypass #root hiding */}
                     {ordersToPrint && createPortal(
                         <div className="print-only-content">
-                            <OrderPrintTemplate orders={ordersToPrint} />
+                            <OrderPrintTemplate orders={ordersToPrint} warehousesList={warehousesList} />
                             {handoverToPrint && <div className="page-break" />}
                             {handoverToPrint && <MachineHandoverPrintTemplate orders={handoverToPrint} />}
                         </div>,

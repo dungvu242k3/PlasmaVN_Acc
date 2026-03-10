@@ -37,7 +37,7 @@ const CreateGoodsReceipt = () => {
     const [formData, setFormData] = useState({
         receipt_code: '',
         supplier_name: '',
-        warehouse_id: 'HN',
+        warehouse_id: '',
         receipt_date: new Date().toISOString().split('T')[0],
         received_by: '',
         note: ''
@@ -109,8 +109,14 @@ const CreateGoodsReceipt = () => {
                 if (data) {
                     setWarehousesList(data);
                     // Default to first warehouse if creating new
-                    if (!editReceipt && data.length > 0 && !formData.warehouse_id) {
-                        setFormData(prev => ({ ...prev, warehouse_id: data[0].id }));
+                    if (!editReceipt && data.length > 0) {
+                        setFormData(prev => !prev.warehouse_id ? { ...prev, warehouse_id: data[0].id } : prev);
+                    } else if (editReceipt) {
+                        // Check if editReceipt's warehouse_id exists in the new UUID list. If not, reset to first.
+                        const exists = data.some(w => w.id === editReceipt.warehouse_id);
+                        if (!exists && data.length > 0) {
+                            setFormData(prev => ({ ...prev, warehouse_id: '' }));
+                        }
                     }
                 }
             } catch (err) {

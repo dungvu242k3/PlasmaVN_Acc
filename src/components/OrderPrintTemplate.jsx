@@ -1,7 +1,6 @@
 import React from 'react';
 import {
     PRODUCT_TYPES,
-    WAREHOUSES
 } from '../constants/orderConstants';
 
 const numberToVietnameseWords = (num) => {
@@ -274,11 +273,11 @@ const S = {
     },
 };
 
-const OrderItem = ({ order }) => {
+const OrderItem = ({ order, warehousesList }) => {
     if (!order) return null;
 
     const getProductLabel = (id) => PRODUCT_TYPES.find(p => p.id === id)?.label || id;
-    const getWarehouseLabel = (id) => WAREHOUSES.find(w => w.id === id)?.label || id;
+    const getWarehouseLabel = (id) => warehousesList?.find(w => w.id === id)?.name || id;
 
     const serials = order.assigned_cylinders?.filter(Boolean) || [];
     const productLabel = getProductLabel(order.product_type);
@@ -496,7 +495,7 @@ const OrderItem = ({ order }) => {
     );
 };
 
-const OrderPrintTemplate = ({ orders }) => {
+const OrderPrintTemplate = ({ orders, warehousesList = [] }) => {
     if (!orders) return null;
     const orderList = Array.isArray(orders) ? orders : [orders];
 
@@ -504,7 +503,7 @@ const OrderPrintTemplate = ({ orders }) => {
         <div className="bulk-print-container">
             {orderList.map((order, index) => (
                 <React.Fragment key={order.id || index}>
-                    <OrderItem order={order} />
+                    <OrderItem order={order} warehousesList={warehousesList} />
                     {index < orderList.length - 1 && <div className="page-break" />}
                 </React.Fragment>
             ))}
