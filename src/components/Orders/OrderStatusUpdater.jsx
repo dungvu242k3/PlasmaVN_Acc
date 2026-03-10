@@ -1,5 +1,5 @@
 import { AlertCircle, AlertTriangle, CheckCircle, Clock, Plus, Truck, UploadCloud } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ORDER_STATE_TRANSITIONS, PRODUCT_TYPES } from '../../constants/orderConstants';
 import { supabase } from '../../supabase/config';
 import OrderHistoryTimeline from './OrderHistoryTimeline';
@@ -11,6 +11,19 @@ export default function OrderStatusUpdater({ order, userRole, onClose, onUpdateS
     const [errorMsg, setErrorMsg] = useState('');
     const [scannedSerials, setScannedSerials] = useState('');
     const [activeTab, setActiveTab] = useState('actions');
+    const [shippers, setShippers] = useState([]);
+
+    useEffect(() => {
+        const fetchShippers = async () => {
+            const { data } = await supabase
+                .from('shippers')
+                .select('id, name')
+                .eq('status', 'Đang hoạt động')
+                .order('name');
+            setShippers(data || []);
+        };
+        fetchShippers();
+    }, []);
 
     if (!order) return null;
 
@@ -48,6 +61,32 @@ export default function OrderStatusUpdater({ order, userRole, onClose, onUpdateS
 
                 if (!updatedCylinders || updatedCylinders.length !== order.quantity) {
                     throw new Error(`Phát hiện mã bình không tồn tại! Chỉ cập nhật được ${updatedCylinders?.length || 0}/${order.quantity} bình. Vui lòng kiểm tra lại.`);
+                }
+
+                // Trừ tồn kho khi xuất bình
+                const productLabel = order.product_type; // e.g. BINH_4L
+                const { data: invData, error: invErr } = await supabase
+                    .from('inventory')
+                    .select('id, quantity')
+                    .eq('warehouse_id', order.warehouse || 'HN')
+                    .eq('item_type', 'BINH')
+                    .eq('item_name', productLabel)
+                    .maybeSingle();
+
+                if (!invErr && invData) {
+                    await supabase
+                        .from('inventory')
+                        .update({ quantity: Math.max(0, invData.quantity - order.quantity) })
+                        .eq('id', invData.id);
+
+                    await supabase.from('inventory_transactions').insert([{
+                        inventory_id: invData.id,
+                        transaction_type: 'OUT',
+                        reference_id: order.id,
+                        reference_code: order.order_code,
+                        quantity_changed: order.quantity,
+                        note: `Xuất kho ${order.quantity} ${productLabel} - Đơn ${order.order_code}`
+                    }]);
                 }
             }
 
@@ -204,14 +243,17 @@ export default function OrderStatusUpdater({ order, userRole, onClose, onUpdateS
                                 </label>
                                 <div className="relative">
                                     <Truck className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                                    <input
-                                        type="text"
-                                        placeholder="Ví dụ: Giao Hàng Tiết Kiệm, Viettel Post"
-                                        className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg font-medium outline-none focus:border-blue-500"
+                                    <select
+                                        className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg font-medium outline-none focus:border-blue-500 appearance-none bg-white cursor-pointer"
                                         value={deliveryUnit}
                                         onChange={e => setDeliveryUnit(e.target.value)}
                                         disabled={order.status !== 'DA_DUYET' && order.status !== 'CHO_GIAO_HANG'}
-                                    />
+                                    >
+                                        <option value="">-- Chọn đơn vị vận chuyển --</option>
+                                        {shippers.map(s => (
+                                            <option key={s.id} value={s.name}>{s.name}</option>
+                                        ))}
+                                    </select>
                                 </div>
                             </div>
                         )}

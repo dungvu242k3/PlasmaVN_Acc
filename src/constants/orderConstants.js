@@ -67,6 +67,7 @@ export const TABLE_COLUMNS = [
 export const ORDER_ROLES = {
     ADMIN: 'admin',
     SALE: 'sale',
+    LEAD_SALE: 'lead_sale',
     THU_KHO: 'thu_kho',
     SHIPPER: 'shipper',
     CUSTOMER: 'customer'
@@ -74,9 +75,9 @@ export const ORDER_ROLES = {
 
 export const ORDER_STATE_TRANSITIONS = {
     'CHO_DUYET': [
-        { nextStatus: 'DIEU_CHINH', allowedRoles: [ORDER_ROLES.ADMIN, ORDER_ROLES.SALE], label: 'Yêu cầu điều chỉnh' },
-        { nextStatus: 'CHO_CTY_DUYET', allowedRoles: [ORDER_ROLES.ADMIN, ORDER_ROLES.SALE], label: 'Lead KD Duyệt' },
-        { nextStatus: 'HUY_DON', allowedRoles: [ORDER_ROLES.ADMIN, ORDER_ROLES.SALE, ORDER_ROLES.CUSTOMER], label: 'Hủy đơn' }
+        { nextStatus: 'DIEU_CHINH', allowedRoles: [ORDER_ROLES.ADMIN, ORDER_ROLES.LEAD_SALE], label: 'Yêu cầu điều chỉnh' },
+        { nextStatus: 'CHO_CTY_DUYET', allowedRoles: [ORDER_ROLES.ADMIN, ORDER_ROLES.LEAD_SALE], label: 'Lead KD Duyệt' },
+        { nextStatus: 'HUY_DON', allowedRoles: [ORDER_ROLES.ADMIN, ORDER_ROLES.LEAD_SALE, ORDER_ROLES.SALE], label: 'Hủy đơn' }
     ],
     'CHO_CTY_DUYET': [
         { nextStatus: 'DIEU_CHINH', allowedRoles: [ORDER_ROLES.ADMIN], label: 'Yêu cầu KD điều chỉnh' },

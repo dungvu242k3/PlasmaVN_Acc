@@ -755,6 +755,13 @@ const Orders = () => {
                                                 </div>
                                                 <div className="flex items-center gap-4">
                                                     <button
+                                                        onClick={() => { setSelectedOrder(order); setIsActionModalOpen(true); }}
+                                                        className="p-2 text-[#9CA3AF] hover:text-[#10B981] active:bg-emerald-50 rounded-lg transition-colors border border-transparent active:border-emerald-100"
+                                                        title="Thao tác đơn hàng"
+                                                    >
+                                                        <Package className="w-5 h-5" />
+                                                    </button>
+                                                    <button
                                                         onClick={() => handlePrint(order)}
                                                         className="p-2 text-[#9CA3AF] hover:text-[#2563EB] active:bg-blue-50 rounded-lg transition-colors border border-transparent active:border-blue-100"
                                                     >
@@ -907,6 +914,13 @@ const Orders = () => {
                                                 </td>}
                                                 <td className="px-4 py-4 text-center">
                                                     <div className="flex items-center justify-center gap-3">
+                                                        <button
+                                                            onClick={() => { setSelectedOrder(order); setIsActionModalOpen(true); }}
+                                                            className="text-[#9CA3AF] hover:text-[#10B981] transition-colors p-1 rounded hover:bg-[#ECFDF5]"
+                                                            title="Thao tác đơn hàng"
+                                                        >
+                                                            <Package className="w-4 h-4" />
+                                                        </button>
                                                         <button
                                                             onClick={() => handlePrint(order)}
                                                             className="text-[#9CA3AF] hover:text-[#2563EB] transition-colors p-1 rounded hover:bg-[#EFF6FF]"
