@@ -91,7 +91,7 @@ const CreateCylinder = () => {
         setTimeout(async () => {
             try {
                 const html5QrCode = new Html5Qrcode("barcode-reader", {
-                    useBarCodeDetectorIfSupported: true,
+                    useBarCodeDetectorIfSupported: false,
                     formatsToSupport: [
                         Html5QrcodeSupportedFormats.QR_CODE,
                         Html5QrcodeSupportedFormats.CODE_128,

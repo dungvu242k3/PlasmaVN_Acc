@@ -116,7 +116,7 @@ export default function CylinderFormModal({ cylinder, onClose, onSuccess }) {
         setTimeout(async () => {
             try {
                 const qr = new Html5Qrcode('modal-barcode-reader', {
-                    useBarCodeDetectorIfSupported: true,
+                    useBarCodeDetectorIfSupported: false,
                     formatsToSupport: [
                         Html5QrcodeSupportedFormats.QR_CODE,
                         Html5QrcodeSupportedFormats.CODE_128,

@@ -160,7 +160,7 @@ const CreateCylinderRecovery = () => {
             try {
                 const qr = new Html5Qrcode("recovery-barcode-reader", {
                     formatsToSupport,
-                    useBarCodeDetectorIfSupported: true,
+                    useBarCodeDetectorIfSupported: false,
                     verbose: false,
                 });
                 html5QrCodeRef.current = qr;

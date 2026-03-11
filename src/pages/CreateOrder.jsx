@@ -259,7 +259,7 @@ const CreateOrder = () => {
             try {
                 const qr = new Html5Qrcode('order-barcode-reader', {
                     formatsToSupport,
-                    useBarCodeDetectorIfSupported: true,
+                    useBarCodeDetectorIfSupported: false,
                     verbose: false
                 });
                 html5QrCodeRef.current = qr;
