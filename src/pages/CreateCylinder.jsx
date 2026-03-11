@@ -15,6 +15,7 @@ import {
 } from '../constants/machineConstants';
 import { supabase } from '../supabase/config';
 import { patchIOSVideoPlaysinline } from '../utils/scannerHelper';
+import { getAllBarcodeFormats } from '../utils/barcodeFormats';
 
 const CreateCylinder = () => {
     const navigate = useNavigate();
@@ -90,17 +91,10 @@ const CreateCylinder = () => {
         // Wait for DOM element to be rendered (longer delay for mobile)
         setTimeout(async () => {
             try {
+                const formatsToSupport = await getAllBarcodeFormats();
                 const html5QrCode = new Html5Qrcode("barcode-reader", {
                     useBarCodeDetectorIfSupported: false,
-                    formatsToSupport: [
-                        Html5QrcodeSupportedFormats.QR_CODE,
-                        Html5QrcodeSupportedFormats.CODE_128,
-                        Html5QrcodeSupportedFormats.CODE_39,
-                        Html5QrcodeSupportedFormats.EAN_13,
-                        Html5QrcodeSupportedFormats.EAN_8,
-                        Html5QrcodeSupportedFormats.UPC_A,
-                        Html5QrcodeSupportedFormats.UPC_E,
-                    ]
+                    formatsToSupport
                 });
                 html5QrCodeRef.current = html5QrCode;
 
