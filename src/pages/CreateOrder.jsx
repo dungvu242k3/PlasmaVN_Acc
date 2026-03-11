@@ -16,7 +16,7 @@ import {
 import usePermissions from '../hooks/usePermissions';
 import { supabase } from '../supabase/config';
 import { patchIOSVideoPlaysinline } from '../utils/scannerHelper';
-import { getAllBarcodeFormats } from '../utils/barcodeFormats';
+import { SCANNER_CONFIG } from '../utils/barcodeFormats';
 
 const CreateOrder = () => {
     const navigate = useNavigate();
@@ -245,17 +245,11 @@ const CreateOrder = () => {
         setIsScannerOpen(true);
         const { Html5Qrcode } = await import('html5-qrcode');
 
-        const formatsToSupport = await getAllBarcodeFormats();
-
         let currentIdx = targetIndex;
 
         setTimeout(async () => {
             try {
-                const qr = new Html5Qrcode('order-barcode-reader', {
-                    formatsToSupport,
-                    useBarCodeDetectorIfSupported: false,
-                    verbose: false
-                });
+                const qr = new Html5Qrcode('order-barcode-reader', SCANNER_CONFIG);
                 html5QrCodeRef.current = qr;
                 patchIOSVideoPlaysinline('order-barcode-reader');
                 await qr.start(

@@ -13,7 +13,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { ITEM_CONDITIONS } from '../constants/recoveryConstants';
 import { supabase } from '../supabase/config';
 import { patchIOSVideoPlaysinline } from '../utils/scannerHelper';
-import { getAllBarcodeFormats } from '../utils/barcodeFormats';
+import { SCANNER_CONFIG } from '../utils/barcodeFormats';
 
 
 const CreateCylinderRecovery = () => {
@@ -143,15 +143,9 @@ const CreateCylinderRecovery = () => {
         setIsScannerOpen(true);
         const { Html5Qrcode } = await import('html5-qrcode');
 
-        const formatsToSupport = await getAllBarcodeFormats();
-
         setTimeout(async () => {
             try {
-                const qr = new Html5Qrcode("recovery-barcode-reader", {
-                    formatsToSupport,
-                    useBarCodeDetectorIfSupported: false,
-                    verbose: false,
-                });
+                const qr = new Html5Qrcode("recovery-barcode-reader", SCANNER_CONFIG);
                 html5QrCodeRef.current = qr;
                 patchIOSVideoPlaysinline('recovery-barcode-reader');
                 await qr.start(

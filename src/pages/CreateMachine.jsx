@@ -16,7 +16,7 @@ import {
 } from '../constants/machineConstants';
 import { supabase } from '../supabase/config';
 import { patchIOSVideoPlaysinline } from '../utils/scannerHelper';
-import { getAllBarcodeFormats } from '../utils/barcodeFormats';
+import { SCANNER_CONFIG } from '../utils/barcodeFormats';
 
 const CreateMachine = () => {
     const navigate = useNavigate();
@@ -129,14 +129,9 @@ const CreateMachine = () => {
         }
         setIsScannerOpen(true);
         const { Html5Qrcode } = await import('html5-qrcode');
-        const formatsToSupport = await getAllBarcodeFormats();
         setTimeout(async () => {
             try {
-                const qr = new Html5Qrcode('machine-barcode-reader', {
-                    formatsToSupport,
-                    useBarCodeDetectorIfSupported: false,
-                    verbose: false
-                });
+                const qr = new Html5Qrcode('machine-barcode-reader', SCANNER_CONFIG);
                 html5QrCodeRef.current = qr;
                 patchIOSVideoPlaysinline('machine-barcode-reader');
                 await qr.start(

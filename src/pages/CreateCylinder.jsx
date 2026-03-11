@@ -15,7 +15,7 @@ import {
 } from '../constants/machineConstants';
 import { supabase } from '../supabase/config';
 import { patchIOSVideoPlaysinline } from '../utils/scannerHelper';
-import { getAllBarcodeFormats } from '../utils/barcodeFormats';
+import { SCANNER_CONFIG } from '../utils/barcodeFormats';
 
 const CreateCylinder = () => {
     const navigate = useNavigate();
@@ -86,16 +86,12 @@ const CreateCylinder = () => {
     const startScanner = useCallback(async () => {
         setIsScannerOpen(true);
         // Dynamic import to avoid SSR issues
-        const { Html5Qrcode, Html5QrcodeSupportedFormats } = await import('html5-qrcode');
+        const { Html5Qrcode } = await import('html5-qrcode');
 
         // Wait for DOM element to be rendered (longer delay for mobile)
         setTimeout(async () => {
             try {
-                const formatsToSupport = await getAllBarcodeFormats();
-                const html5QrCode = new Html5Qrcode("barcode-reader", {
-                    useBarCodeDetectorIfSupported: false,
-                    formatsToSupport
-                });
+                const html5QrCode = new Html5Qrcode("barcode-reader", SCANNER_CONFIG);
                 html5QrCodeRef.current = html5QrCode;
 
                 patchIOSVideoPlaysinline('barcode-reader');

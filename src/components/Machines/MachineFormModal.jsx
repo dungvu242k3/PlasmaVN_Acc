@@ -10,7 +10,7 @@ import {
 } from '../../constants/machineConstants';
 import { supabase } from '../../supabase/config';
 import { patchIOSVideoPlaysinline } from '../../utils/scannerHelper';
-import { getAllBarcodeFormats } from '../../utils/barcodeFormats';
+import { SCANNER_CONFIG } from '../../utils/barcodeFormats';
 
 export default function MachineFormModal({ machine, onClose, onSuccess }) {
     const isEdit = !!machine;
@@ -94,14 +94,9 @@ export default function MachineFormModal({ machine, onClose, onSuccess }) {
         }
         setIsScannerOpen(true);
         const { Html5Qrcode } = await import('html5-qrcode');
-        const formatsToSupport = await getAllBarcodeFormats();
         setTimeout(async () => {
             try {
-                const qr = new Html5Qrcode('modal-machine-barcode-reader', {
-                    formatsToSupport,
-                    useBarCodeDetectorIfSupported: false,
-                    verbose: false
-                });
+                const qr = new Html5Qrcode('modal-machine-barcode-reader', SCANNER_CONFIG);
                 html5QrCodeRef.current = qr;
                 patchIOSVideoPlaysinline('modal-machine-barcode-reader');
                 await qr.start(

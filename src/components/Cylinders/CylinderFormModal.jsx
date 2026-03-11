@@ -9,7 +9,7 @@ import {
 } from '../../constants/machineConstants';
 import { supabase } from '../../supabase/config';
 import { patchIOSVideoPlaysinline } from '../../utils/scannerHelper';
-import { getAllBarcodeFormats } from '../../utils/barcodeFormats';
+import { SCANNER_CONFIG } from '../../utils/barcodeFormats';
 
 export default function CylinderFormModal({ cylinder, onClose, onSuccess }) {
     const isEdit = !!cylinder;
@@ -113,14 +113,10 @@ export default function CylinderFormModal({ cylinder, onClose, onSuccess }) {
     // Barcode scanner
     const startScanner = useCallback(async () => {
         setIsScannerOpen(true);
-        const { Html5Qrcode, Html5QrcodeSupportedFormats } = await import('html5-qrcode');
+        const { Html5Qrcode } = await import('html5-qrcode');
         setTimeout(async () => {
             try {
-                const formatsToSupport = await getAllBarcodeFormats();
-                const qr = new Html5Qrcode('modal-barcode-reader', {
-                    useBarCodeDetectorIfSupported: false,
-                    formatsToSupport
-                });
+                const qr = new Html5Qrcode('modal-barcode-reader', SCANNER_CONFIG);
                 html5QrCodeRef.current = qr;
                 patchIOSVideoPlaysinline('modal-barcode-reader');
                 await qr.start(
