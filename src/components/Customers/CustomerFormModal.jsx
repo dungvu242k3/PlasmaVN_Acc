@@ -218,6 +218,9 @@ export default function CustomerFormModal({ customer, onClose, onSuccess, catego
                                     >
                                         <option value="BV">Bệnh viện (BV)</option>
                                         <option value="TM">Thẩm mỹ viện (TM)</option>
+                                        <option value="PK">Phòng khám (PK)</option>
+                                        <option value="NG">Khách ngoại giao (NG)</option>
+                                        <option value="SP">Spa / Khác (SP)</option>
                                     </select>
                                 </div>
                                 <div>

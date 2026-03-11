@@ -1,8 +1,10 @@
 import {
     CheckCircle2,
-    MonitorIcon
+    MonitorIcon,
+    ScanLine,
+    X
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
     CYLINDER_VOLUMES,
@@ -13,6 +15,7 @@ import {
     VALVE_TYPES
 } from '../constants/machineConstants';
 import { supabase } from '../supabase/config';
+import { patchIOSVideoPlaysinline } from '../utils/scannerHelper';
 
 const CreateMachine = () => {
     const navigate = useNavigate();
@@ -20,6 +23,8 @@ const CreateMachine = () => {
     const editMachine = state?.machine;
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [warehousesList, setWarehousesList] = useState([]);
+    const [isScannerOpen, setIsScannerOpen] = useState(false);
+    const html5QrCodeRef = useRef(null);
 
     const defaultState = {
         serial_number: '',
@@ -116,8 +121,83 @@ const CreateMachine = () => {
         setFormData(initialFormState);
     };
 
+    const startScanner = useCallback(async () => {
+        if (html5QrCodeRef.current) {
+            try { await html5QrCodeRef.current.stop(); } catch { }
+            html5QrCodeRef.current = null;
+        }
+        setIsScannerOpen(true);
+        const { Html5Qrcode, Html5QrcodeSupportedFormats } = await import('html5-qrcode');
+        const formatsToSupport = [
+            Html5QrcodeSupportedFormats.CODE_128,
+            Html5QrcodeSupportedFormats.CODE_39,
+            Html5QrcodeSupportedFormats.EAN_13,
+            Html5QrcodeSupportedFormats.EAN_8,
+            Html5QrcodeSupportedFormats.UPC_A,
+            Html5QrcodeSupportedFormats.QR_CODE,
+        ];
+        setTimeout(async () => {
+            try {
+                const qr = new Html5Qrcode('machine-barcode-reader', {
+                    formatsToSupport,
+                    useBarCodeDetectorIfSupported: false,
+                    verbose: false
+                });
+                html5QrCodeRef.current = qr;
+                patchIOSVideoPlaysinline('machine-barcode-reader');
+                await qr.start(
+                    { facingMode: 'environment' },
+                    {
+                        fps: 15,
+                        qrbox: (w, h) => ({ width: Math.floor(w * 0.85), height: Math.floor(h * 0.4) }),
+                        disableFlip: false,
+                    },
+                    (decodedText) => {
+                        setFormData(prev => ({
+                            ...prev,
+                            serial_number: decodedText,
+                            machine_account: decodedText
+                        }));
+                        stopScanner();
+                    },
+                    () => { }
+                );
+            } catch (err) {
+                console.error('Scanner error:', err);
+                alert('📷 Thiết bị không có camera hoặc chưa cấp quyền.\nVui lòng dùng điện thoại để quét mã, hoặc nhập mã thủ công.');
+                setIsScannerOpen(false);
+            }
+        }, 300);
+    }, []);
+
+    const stopScanner = useCallback(async () => {
+        if (html5QrCodeRef.current) {
+            try { await html5QrCodeRef.current.stop(); } catch { }
+            html5QrCodeRef.current = null;
+        }
+        setIsScannerOpen(false);
+    }, []);
+
     return (
-        <div className="p-4 md:p-8 max-w-[1400px] mx-auto font-sans min-h-screen noise-bg">
+        <>
+            {/* Barcode Scanner Overlay */}
+            {isScannerOpen && (
+                <div className="fixed inset-0 bg-black/90 z-[200] flex flex-col">
+                    <div className="flex items-center justify-between p-4 bg-gray-900/80">
+                        <div className="flex items-center gap-2">
+                            <ScanLine className="w-5 h-5 text-indigo-400" />
+                            <span className="font-bold text-white text-sm">Quét mã Serial máy</span>
+                        </div>
+                        <button onClick={stopScanner} className="p-2 bg-white/10 rounded-full text-white hover:bg-white/20">
+                            <X className="w-5 h-5" />
+                        </button>
+                    </div>
+                    <div className="flex-1 flex items-center justify-center">
+                        <div id="machine-barcode-reader" className="w-full max-w-lg" />
+                    </div>
+                </div>
+            )}
+            <div className="p-4 md:p-8 max-w-[1400px] mx-auto font-sans min-h-screen noise-bg">
             {/* Animated Blobs */}
             <div className="blob blob-violet w-[400px] h-[400px] -top-20 -left-20 opacity-20"></div>
             <div className="blob blob-indigo w-[350px] h-[350px] bottom-1/4 -right-20 opacity-15"></div>
@@ -141,12 +221,22 @@ const CreateMachine = () => {
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
                             <div className="space-y-2">
                                 <label className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Serial (Mã máy) *</label>
-                                <input
-                                    value={formData.serial_number}
-                                    onChange={handleSerialChange}
-                                    placeholder="PLT-25D1-50-TM"
-                                    className="w-full px-5 py-4 bg-white border border-gray-200 rounded-2xl outline-none focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 font-bold text-base shadow-sm transition-all"
-                                />
+                                <div className="flex gap-2">
+                                    <input
+                                        value={formData.serial_number}
+                                        onChange={handleSerialChange}
+                                        placeholder="PLT-25D1-50-TM"
+                                        className="flex-1 px-5 py-4 bg-white border border-gray-200 rounded-2xl outline-none focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 font-bold text-base shadow-sm transition-all"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={startScanner}
+                                        className="px-4 py-4 bg-indigo-600 text-white rounded-2xl hover:bg-indigo-700 transition-all flex items-center gap-1.5 shadow-sm"
+                                        title="Quét barcode"
+                                    >
+                                        <ScanLine className="w-5 h-5" />
+                                    </button>
+                                </div>
                             </div>
                             <div className="space-y-2">
                                 <label className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Tài khoản máy</label>
@@ -293,7 +383,8 @@ const CreateMachine = () => {
                     </div>
                 </div>
             </div>
-        </div>
+            </div>
+        </>
     );
 };
 

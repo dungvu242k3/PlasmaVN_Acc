@@ -148,7 +148,7 @@ export default function CylinderFormModal({ cylinder, onClose, onSuccess }) {
                     () => { }
                 );
             } catch (err) {
-                alert('❌ Không mở được camera: ' + err);
+                alert('📷 Thiết bị không có camera hoặc chưa cấp quyền.\nVui lòng dùng điện thoại để quét mã, hoặc nhập mã thủ công.');
                 setIsScannerOpen(false);
             }
         }, 400);
