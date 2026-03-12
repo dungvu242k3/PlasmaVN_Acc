@@ -58,7 +58,7 @@ const S = {
     page: {
         fontFamily: '"Times New Roman", Times, serif',
         fontSize: '10pt',
-        lineHeight: '1.4',
+        lineHeight: '1.1',
         color: '#000',
         background: '#fff',
         width: '100%',
@@ -68,7 +68,7 @@ const S = {
     header: {
         display: 'flex',
         justifyContent: 'space-between',
-        marginBottom: '5mm',
+        marginBottom: '3mm',
     },
     headerLeft: {
         flex: '0 0 56%',
@@ -100,7 +100,7 @@ const S = {
     },
     titleSection: {
         textAlign: 'center',
-        margin: '6mm 0 3mm',
+        margin: '4mm 0 2mm',
     },
     titleH1: {
         fontSize: '17pt',
@@ -129,12 +129,12 @@ const S = {
         minWidth: '100px',
     },
     infoSection: {
-        margin: '3mm 0',
+        margin: '2mm 0',
     },
     infoRow: {
         display: 'flex',
         alignItems: 'baseline',
-        marginBottom: '2mm',
+        marginBottom: '1mm',
         fontSize: '10pt',
     },
     infoLabel: {
@@ -143,7 +143,6 @@ const S = {
     },
     infoValue: {
         flex: '1',
-        borderBottom: '1px dotted #000',
         fontFamily: '"Times New Roman", Times, serif',
         fontSize: '10pt',
         padding: '0 4px',
@@ -151,7 +150,6 @@ const S = {
         fontWeight: 'normal',
     },
     infoFixedValue: {
-        borderBottom: '1px dotted #000',
         fontFamily: '"Times New Roman", Times, serif',
         fontSize: '10pt',
         padding: '0 4px',
@@ -162,7 +160,7 @@ const S = {
     infoRowSplit: {
         display: 'flex',
         alignItems: 'baseline',
-        marginBottom: '2mm',
+        marginBottom: '1mm',
         fontSize: '10pt',
     },
     splitHalf: {
@@ -174,7 +172,7 @@ const S = {
     table: {
         width: '100%',
         borderCollapse: 'collapse',
-        margin: '3mm 0',
+        margin: '2mm 0',
         fontSize: '10pt',
     },
     th: {
@@ -253,7 +251,7 @@ const S = {
         display: 'flex',
         justifyContent: 'space-between',
         textAlign: 'center',
-        marginTop: '5mm',
+        marginTop: '3mm',
         fontSize: '10pt',
     },
     sigBlock: {
@@ -269,7 +267,7 @@ const S = {
         fontWeight: 'normal',
     },
     sigSpace: {
-        height: '50px',
+        height: '40px',
     },
     dots: {
         borderBottom: '1px dotted #000',
@@ -315,8 +313,6 @@ const ReceiptItem = ({ receipt, items, warehousesList }) => {
                     <div style={S.companyName}>CÔNG TY TNHH DỊCH VỤ Y TẾ CỘNG ĐỒNG CHS</div>
                     <div style={S.companyInfo}>Hải âu 02 - 57 Vinhomes Ocean Park, Xã Gia Lâm, Thành phố Hà Nội, Việt Nam</div>
                     <div style={S.companyInfo}>Mã số thuế: 0110517351</div>
-                    <div style={S.companyInfo}>TK ngân hàng: 8186222999 - Ngân hàng TMCP Quân đội</div>
-                    <div style={S.companyInfo}>Tel: 0981878423</div>
                 </div>
                 <div style={S.headerRight}>
                     <div style={S.formNumber}>Mẫu số: 01 - VT</div>
