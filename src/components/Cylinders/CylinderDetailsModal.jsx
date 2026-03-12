@@ -73,15 +73,34 @@ export default function CylinderDetailsModal({ cylinder, onClose }) {
             (orderData || []).forEach(o => {
                 const type = o.order_type?.toLowerCase() || '';
                 const isOutgoing = type.includes('thuê') || type.includes('bán') || type.includes('giao');
+                const isInternal = o.customer_name === 'Vỏ bình' || type.includes('điều chuyển') || type.includes('thay đổi kho');
+
+                let eventLabel = 'Thu hồi về kho';
+                let eventIcon = 'incoming';
+                let eventColor = 'teal';
+                let eventType = 'THU_HOI';
+
+                if (isOutgoing) {
+                    eventLabel = 'Giao cho khách';
+                    eventIcon = 'outgoing';
+                    eventColor = 'rose';
+                    eventType = 'GIAO_KHACH';
+                } else if (isInternal) {
+                    eventLabel = 'Thay đổi kho';
+                    eventIcon = 'warehouse';
+                    eventColor = 'blue';
+                    eventType = 'DIEU_CHUYEN';
+                }
+
                 events.push({
                     date: o.created_at,
-                    type: isOutgoing ? 'GIAO_KHACH' : 'THU_HOI',
-                    label: isOutgoing ? 'Giao cho khách' : 'Thu hồi về kho',
-                    location: o.customer_name || 'Khách hàng',
+                    type: eventType,
+                    label: eventLabel,
+                    location: isInternal ? 'Kho hệ thống' : (o.customer_name || 'Khách hàng'),
                     code: o.order_code,
                     status: o.status,
-                    icon: isOutgoing ? 'outgoing' : 'incoming',
-                    color: isOutgoing ? 'rose' : 'teal',
+                    icon: eventIcon,
+                    color: eventColor,
                     source: 'order'
                 });
             });
@@ -162,7 +181,8 @@ export default function CylinderDetailsModal({ cylinder, onClose }) {
         rose: { dot: 'bg-rose-500', bg: 'bg-rose-50', text: 'text-rose-600', border: 'border-rose-200', iconBg: 'bg-rose-100' },
         teal: { dot: 'bg-teal-500', bg: 'bg-teal-50', text: 'text-teal-600', border: 'border-teal-200', iconBg: 'bg-teal-100' },
         emerald: { dot: 'bg-emerald-500', bg: 'bg-emerald-50', text: 'text-emerald-600', border: 'border-emerald-200', iconBg: 'bg-emerald-100' },
-        amber: { dot: 'bg-amber-500', bg: 'bg-amber-50', text: 'text-amber-600', border: 'border-amber-200', iconBg: 'bg-amber-100' }
+        amber: { dot: 'bg-amber-500', bg: 'bg-amber-50', text: 'text-amber-600', border: 'border-amber-200', iconBg: 'bg-amber-100' },
+        blue: { dot: 'bg-blue-500', bg: 'bg-blue-50', text: 'text-blue-600', border: 'border-blue-200', iconBg: 'bg-blue-100' }
     };
 
     const displayedTimeline = showFullTimeline ? timeline : timeline.slice(0, 3);
@@ -376,38 +396,41 @@ export default function CylinderDetailsModal({ cylinder, onClose }) {
                                     </div>
                                 </div>
 
-                                {/* Cột 2: Thu hồi / Trả */}
+                                {/* Cột 2: Thu hồi / Trả / Thay đổi */}
                                 <div className="flex-1 p-6 overflow-y-auto">
-                                    <h3 className="text-sm font-black text-teal-600 uppercase tracking-widest mb-4 flex items-center gap-2"><LogIn className="w-4 h-4" /> Đơn Nhập Bình Về Kho</h3>
+                                    <h3 className="text-sm font-black text-teal-600 uppercase tracking-widest mb-4 flex items-center gap-2"><LogIn className="w-4 h-4" /> Đơn Nhập Bình / Thu Hồi</h3>
                                     <div className="space-y-4">
                                         {orders.filter(o => {
                                             const t = o.order_type?.toLowerCase() || '';
-                                            return t.includes('thu hồi') || t.includes('trả') || t.includes('nhập');
+                                            return t.includes('thu hồi') || t.includes('trả') || t.includes('nhập') || o.customer_name === 'Vỏ bình';
                                         }).length === 0 ? (
                                             <div className="p-10 text-center flex flex-col items-center border border-dashed border-slate-200 rounded-3xl bg-white">
                                                 <Package className="w-10 h-10 text-slate-200 mb-3" />
-                                                <p className="text-slate-400 font-bold text-sm">Chưa có giao dịch thu hồi</p>
+                                                <p className="text-slate-400 font-bold text-sm">Chưa có giao dịch nhập/thu hồi</p>
                                             </div>
                                         ) : (
                                             orders.filter(o => {
                                                 const t = o.order_type?.toLowerCase() || '';
-                                                return t.includes('thu hồi') || t.includes('trả') || t.includes('nhập');
-                                            }).map(o => (
-                                                <div key={o.id} className="bg-white p-5 rounded-2xl border border-teal-100 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
-                                                    <div className="absolute top-0 left-0 w-1 h-full bg-teal-400"></div>
-                                                    <div className="flex justify-between items-start mb-3">
-                                                        <div>
-                                                            <span className="text-[10px] font-black text-slate-400 bg-slate-100 px-2 py-1 rounded-md uppercase tracking-wider">{o.order_code}</span>
-                                                            <div className="text-[10px] font-bold text-slate-400 mt-2">{formatDate(o.created_at)}</div>
+                                                return t.includes('thu hồi') || t.includes('trả') || t.includes('nhập') || o.customer_name === 'Vỏ bình';
+                                            }).map(o => {
+                                                const isInternal = o.customer_name === 'Vỏ bình';
+                                                return (
+                                                    <div key={o.id} className={`bg-white p-5 rounded-2xl border ${isInternal ? 'border-blue-100' : 'border-teal-100'} shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group`}>
+                                                        <div className={`absolute top-0 left-0 w-1 h-full ${isInternal ? 'bg-blue-400' : 'bg-teal-400'}`}></div>
+                                                        <div className="flex justify-between items-start mb-3">
+                                                            <div>
+                                                                <span className="text-[10px] font-black text-slate-400 bg-slate-100 px-2 py-1 rounded-md uppercase tracking-wider">{o.order_code}</span>
+                                                                <div className="text-[10px] font-bold text-slate-400 mt-2">{formatDate(o.created_at)}</div>
+                                                            </div>
+                                                            <span className={`px-2 py-0.5 text-[9px] font-black tracking-widest uppercase rounded flex items-center gap-1 ${getStatusStyle(o.status)}`}>
+                                                                {o.status}
+                                                            </span>
                                                         </div>
-                                                        <span className={`px-2 py-0.5 text-[9px] font-black tracking-widest uppercase rounded flex items-center gap-1 ${getStatusStyle(o.status)}`}>
-                                                            {o.status}
-                                                        </span>
+                                                        <h4 className="font-black text-slate-800 text-base mb-1">{isInternal ? 'Kho hệ thống' : o.customer_name}</h4>
+                                                        <p className={`text-xs font-bold ${isInternal ? 'text-blue-500' : 'text-teal-500'} uppercase tracking-wider`}>{isInternal ? 'Thay đổi kho' : o.order_type}</p>
                                                     </div>
-                                                    <h4 className="font-black text-slate-800 text-base mb-1">{o.customer_name}</h4>
-                                                    <p className="text-xs font-bold text-teal-500 uppercase tracking-wider">{o.order_type}</p>
-                                                </div>
-                                            ))
+                                                );
+                                            })
                                         )}
                                     </div>
                                 </div>

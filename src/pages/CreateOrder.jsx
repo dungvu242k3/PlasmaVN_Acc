@@ -307,6 +307,73 @@ const CreateOrder = () => {
                 initialStatus = 'DA_DUYET';
             }
 
+            const assignedSerials = formData.productType.startsWith('BINH') ? assignedCylinders.filter(Boolean) : [];
+
+            // 1. VALIDATION: Check if cylinders exist and are in the correct warehouse
+            if (assignedSerials.length > 0) {
+                const { data: validCylinders, error: checkError } = await supabase
+                    .from('cylinders')
+                    .select('serial_number, warehouse_id, status')
+                    .in('serial_number', assignedSerials);
+
+                if (checkError) throw new Error('Lỗi kiểm tra mã bình: ' + checkError.message);
+
+                if (!validCylinders || validCylinders.length !== assignedSerials.length) {
+                    const foundSerials = validCylinders?.map(c => c.serial_number) || [];
+                    const missing = assignedSerials.filter(s => !foundSerials.includes(s));
+                    throw new Error(`Mã bình không tồn tại trong hệ thống: ${missing.join(', ')}`);
+                }
+
+                // Check warehouse consistency
+                const wrongWarehouse = validCylinders.filter(c => c.warehouse_id !== formData.warehouse);
+                if (wrongWarehouse.length > 0) {
+                    throw new Error(`Mã bình sau không thuộc kho đã chọn: ${wrongWarehouse.map(c => c.serial_number).join(', ')}`);
+                }
+            }
+
+            // 2. INVENTORY DEDUCTION (If direct DA_DUYET)
+            if (!editOrder && initialStatus === 'DA_DUYET') {
+                const productConfig = PRODUCT_TYPES.find(p => p.id === formData.productType);
+                const productLabel = productConfig ? productConfig.label : formData.productType;
+
+                // Check Inventory
+                const { data: invData, error: invErr } = await supabase
+                    .from('inventory')
+                    .select('id, quantity')
+                    .eq('warehouse_id', formData.warehouse)
+                    .ilike('item_name', productLabel.trim())
+                    .maybeSingle();
+
+                if (invErr) throw new Error('Lỗi kiểm tra tồn kho: ' + invErr.message);
+                if (!invData || invData.quantity < formData.quantity) {
+                    throw new Error(`Tồn kho không đủ! Hiện tại chỉ còn ${invData?.quantity || 0} ${productLabel}.`);
+                }
+
+                // Start updates (Cylinders and Inventory)
+                if (assignedSerials.length > 0) {
+                    const { error: cylUpdErr } = await supabase
+                        .from('cylinders')
+                        .update({ status: 'đang vận chuyển', customer_name: customerName })
+                        .in('serial_number', assignedSerials);
+                    if (cylUpdErr) throw new Error('Lỗi cập nhật trạng thái bình: ' + cylUpdErr.message);
+                }
+
+                // Update inventory
+                const { error: invUpdErr } = await supabase
+                    .from('inventory')
+                    .update({ quantity: invData.quantity - formData.quantity })
+                    .eq('id', invData.id);
+                if (invUpdErr) throw new Error('Lỗi trừ tồn kho: ' + invUpdErr.message);
+
+                // Log transaction
+                await supabase.from('inventory_transactions').insert([{
+                    inventory_id: invData.id,
+                    transaction_type: 'OUT',
+                    quantity_changed: formData.quantity,
+                    note: `Xuất kho trực tiếp - Đơn ${formData.orderCode}`
+                }]);
+            }
+
             const payload = {
                 order_code: formData.orderCode,
                 customer_category: formData.customerCategory,
@@ -325,7 +392,7 @@ const CreateOrder = () => {
                 promotion_code: formData.promotion,
                 shipper_id: formData.shipperId || null,
                 shipping_fee: formData.shippingFee || 0,
-                assigned_cylinders: formData.productType.startsWith('BINH') ? assignedCylinders.filter(Boolean) : null,
+                assigned_cylinders: assignedSerials.length > 0 ? assignedSerials : null,
                 status: editOrder ? editOrder.status : initialStatus,
                 ordered_by: editOrder ? editOrder.ordered_by : currentUser
             };
