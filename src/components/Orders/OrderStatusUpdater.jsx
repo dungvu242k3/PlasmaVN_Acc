@@ -44,36 +44,52 @@ export default function OrderStatusUpdater({ order, userRole, onClose, onUpdateS
             let imageUrl = order.delivery_image_url;
 
             // Extra checks based on transitions
-            if (transition.nextStatus === 'DA_DUYET' && order.status === 'KHO_XU_LY' && order.product_type?.startsWith('BINH')) {
-                const serials = scannedSerials.split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
-                if (serials.length !== order.quantity) {
-                    throw new Error(`Bạn cần quét đúng ${order.quantity} mã bình. Hiện tại đã quét: ${serials.length}`);
+            if (transition.nextStatus === 'DA_DUYET' && order.status === 'KHO_XU_LY') {
+                const productTypeId = order.product_type || '';
+                const isCylinder = productTypeId.startsWith('BINH');
+                
+                // Get the human readable label from PRODUCT_TYPES since inventory table uses "item_name" like "Bình 4L", not "BINH_4L"
+                const productConfig = PRODUCT_TYPES.find(p => p.id === productTypeId);
+                const productLabel = productConfig ? productConfig.label : productTypeId;
+                
+                // For cylinders, we need scanned serials
+                if (isCylinder) {
+                    const serials = scannedSerials.split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
+                    if (serials.length !== order.quantity) {
+                        throw new Error(`Bạn cần quét đúng ${order.quantity} mã bình. Hiện tại đã quét: ${serials.length}`);
+                    }
+
+                    // Cập nhật trạng thái vỏ bình sang đang vận chuyển
+                    const { data: updatedCylinders, error: cylError } = await supabase
+                        .from('cylinders')
+                        .update({ status: 'đang vận chuyển', customer_name: order.customer_name })
+                        .in('serial_number', serials)
+                        .select('id, serial_number');
+
+                    if (cylError) throw new Error('Cập nhật mã bình trên kho thất bại: ' + cylError.message);
+
+                    if (!updatedCylinders || updatedCylinders.length !== order.quantity) {
+                        throw new Error(`Phát hiện mã bình không tồn tại! Chỉ cập nhật được ${updatedCylinders?.length || 0}/${order.quantity} bình. Vui lòng kiểm tra lại.`);
+                    }
                 }
 
-                // Cập nhật trạng thái vỏ bình sang đang vận chuyển
-                const { data: updatedCylinders, error: cylError } = await supabase
-                    .from('cylinders')
-                    .update({ status: 'đang vận chuyển', customer_name: order.customer_name })
-                    .in('serial_number', serials)
-                    .select('id, serial_number');
-
-                if (cylError) throw new Error('Cập nhật mã bình trên kho thất bại: ' + cylError.message);
-
-                if (!updatedCylinders || updatedCylinders.length !== order.quantity) {
-                    throw new Error(`Phát hiện mã bình không tồn tại! Chỉ cập nhật được ${updatedCylinders?.length || 0}/${order.quantity} bình. Vui lòng kiểm tra lại.`);
-                }
-
-                // Trừ tồn kho khi xuất bình
-                const productLabel = order.product_type; // e.g. BINH_4L
+                // Trừ tồn kho khi xuất hàng (cho cả BINH và MAY)
+                const itemType = isCylinder ? 'BINH' : (productLabel.toLowerCase().includes('máy') || productLabel.toLowerCase().includes('may') ? 'MAY' : 'KHAC');
+                
                 const { data: invData, error: invErr } = await supabase
                     .from('inventory')
-                    .select('id, quantity')
+                    .select('id, quantity, item_name')
                     .eq('warehouse_id', order.warehouse)
-                    .eq('item_type', 'BINH')
-                    .eq('item_name', productLabel)
+                    .ilike('item_name', productLabel.trim())
                     .maybeSingle();
 
-                if (!invErr && invData) {
+                if (invErr) throw new Error('Lỗi kiểm tra tồn kho: ' + invErr.message);
+
+                if (invData) {
+                    if (invData.quantity < order.quantity) {
+                         throw new Error(`Tồn kho không đủ! Hiện tại chỉ còn ${invData.quantity} ${productLabel}.`);
+                    }
+
                     await supabase
                         .from('inventory')
                         .update({ quantity: Math.max(0, invData.quantity - order.quantity) })
@@ -87,6 +103,8 @@ export default function OrderStatusUpdater({ order, userRole, onClose, onUpdateS
                         quantity_changed: order.quantity,
                         note: `Xuất kho ${order.quantity} ${productLabel} - Đơn ${order.order_code}`
                     }]);
+                } else {
+                     throw new Error(`Hàng hoá "${productLabel}" không có trong kho báo cáo (chưa từng nhập hoặc dữ liệu không khớp).`);
                 }
             }
 

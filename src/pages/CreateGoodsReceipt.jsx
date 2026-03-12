@@ -11,6 +11,7 @@ import {
     CYLINDER_STATUSES,
     MACHINE_STATUSES
 } from '../constants/machineConstants';
+import { PRODUCT_TYPES } from '../constants/orderConstants';
 import { supabase } from '../supabase/config';
 
 const CreateGoodsReceipt = () => {
@@ -346,14 +347,37 @@ const CreateGoodsReceipt = () => {
                                     <div className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6">
                                         {/* Row 1/Col 1: Basic Info */}
                                         <div className="md:col-span-4 space-y-4">
-                                            <div className="space-y-1.5">
+                                            <div className="space-y-1.5 col-span-2">
                                                 <label className="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-wider">Tên hàng hóa *</label>
-                                                <input
-                                                    value={item.item_name}
-                                                    onChange={(e) => updateItem(idx, 'item_name', e.target.value)}
-                                                    placeholder="Nhập tên hàng hóa..."
-                                                    className="w-full px-4 py-3 bg-gray-50/50 border border-gray-200 rounded-xl text-sm font-bold outline-none focus:ring-4 focus:ring-emerald-100 focus:border-emerald-400 transition-all"
-                                                />
+                                                <div className="flex flex-col sm:flex-row gap-2">
+                                                    <select
+                                                        value={PRODUCT_TYPES.some(p => p.label === item.item_name) ? item.item_name : (item.item_name === '' ? '' : 'KHAC')}
+                                                        onChange={(e) => {
+                                                            if (e.target.value === 'KHAC') {
+                                                                updateItem(idx, 'item_name', 'Sản phẩm khác...');
+                                                            } else {
+                                                                updateItem(idx, 'item_name', e.target.value);
+                                                            }
+                                                        }}
+                                                        disabled={isReadOnly}
+                                                        className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm font-bold outline-none focus:ring-4 focus:ring-emerald-100 focus:border-emerald-400 transition-all cursor-pointer"
+                                                    >
+                                                        <option value="">-- Chọn tên hàng hóa --</option>
+                                                        {PRODUCT_TYPES.map(p => (
+                                                            <option key={p.id} value={p.label}>{p.label}</option>
+                                                        ))}
+                                                        <option value="KHAC">Sản phẩm khác (Nhập tay)...</option>
+                                                    </select>
+                                                    {!PRODUCT_TYPES.some(p => p.label === item.item_name) && item.item_name !== '' && (
+                                                        <input
+                                                            value={item.item_name === 'Sản phẩm khác...' ? '' : item.item_name}
+                                                            onChange={(e) => updateItem(idx, 'item_name', e.target.value)}
+                                                            placeholder="Nhập tên sản phẩm..."
+                                                            disabled={isReadOnly}
+                                                            className="w-full px-4 py-3 bg-gray-50/50 border border-gray-200 rounded-xl text-sm font-bold outline-none focus:ring-4 focus:ring-emerald-100 focus:border-emerald-400 transition-all"
+                                                        />
+                                                    )}
+                                                </div>
                                             </div>
                                             <div className="grid grid-cols-2 gap-4">
                                                 <div className="space-y-1.5">

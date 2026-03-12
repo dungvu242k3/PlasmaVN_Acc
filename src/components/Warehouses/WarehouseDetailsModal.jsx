@@ -5,7 +5,9 @@ import {
     MapPin,
     Package,
     Warehouse,
-    X
+    X,
+    Database,
+    History
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { supabase } from '../../supabase/config';
@@ -13,6 +15,8 @@ import { supabase } from '../../supabase/config';
 export default function WarehouseDetailsModal({ warehouse, onClose }) {
     const [loading, setLoading] = useState(true);
     const [orders, setOrders] = useState([]);
+    const [inventory, setInventory] = useState([]);
+    const [activeTab, setActiveTab] = useState('history');
 
     useEffect(() => {
         if (!warehouse) return;
@@ -23,17 +27,28 @@ export default function WarehouseDetailsModal({ warehouse, onClose }) {
         setLoading(true);
         try {
             // Lấy các Đơn hàng (Orders) có đề cập đến Kho này
-            const { data, error } = await supabase
+            const { data: ordersData, error: ordersError } = await supabase
                 .from('orders')
                 .select('*')
-                .eq('warehouse', warehouse.name)
+                .eq('warehouse', warehouse.id)
                 .order('created_at', { ascending: false });
 
-            if (error) throw error;
-            setOrders(data || []);
+            if (ordersError) throw ordersError;
+            setOrders(ordersData || []);
+
+            // Lấy thông tin Tồn Kho
+            const { data: invData, error: invError } = await supabase
+                .from('inventory')
+                .select('*')
+                .eq('warehouse_id', warehouse.id)
+                .order('item_type', { ascending: true })
+                .order('item_name', { ascending: true });
+
+            if (invError) throw invError;
+            setInventory(invData || []);
         } catch (error) {
-            console.error('Error fetching warehouse history:', error);
-            alert('Lỗi tải dữ liệu lịch sử kho hàng!');
+            console.error('Error fetching warehouse details:', error);
+            alert('Lỗi tải dữ liệu chi tiết kho hàng!');
         } finally {
             setLoading(false);
         }
@@ -83,23 +98,26 @@ export default function WarehouseDetailsModal({ warehouse, onClose }) {
                         </button>
                     </div>
 
-                    <div className="flex items-center gap-12 mt-8 border-b border-slate-200 relative z-10">
-                        <div className="pb-4 px-2 text-sm font-black uppercase tracking-wider border-b-2 text-rose-600 border-rose-600">
-                            <div className="flex items-center gap-2">
-                                <LogOut className="w-4 h-4" /> Lịch sử Xuất Kho
-                                <span className="bg-rose-100 text-rose-600 py-0.5 px-2 rounded-full text-[10px] ml-1">
-                                    {orders.filter(o => o.order_type.toLowerCase().includes('thuê') || o.order_type.toLowerCase().includes('bán') || o.order_type.toLowerCase().includes('giao')).length}
+                    <div className="flex items-center gap-8 mt-8 border-b border-slate-200 relative z-10">
+                        <button
+                            onClick={() => setActiveTab('history')}
+                            className={`pb-4 px-2 text-sm font-black uppercase tracking-wider border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'history' ? 'text-blue-600 border-blue-600' : 'text-slate-400 border-transparent hover:text-slate-600'}`}
+                        >
+                            <History className="w-4 h-4" />
+                            Lịch sử Nhập / Xuất
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('inventory')}
+                            className={`pb-4 px-2 text-sm font-black uppercase tracking-wider border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'inventory' ? 'text-emerald-600 border-emerald-600' : 'text-slate-400 border-transparent hover:text-slate-600'}`}
+                        >
+                            <Database className="w-4 h-4" />
+                            Tồn Kho Hiện Tại
+                            {inventory.length > 0 && (
+                                <span className={`py-0.5 px-2 rounded-full text-[10px] ml-1 ${activeTab === 'inventory' ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-500'}`}>
+                                    {inventory.reduce((sum, item) => sum + (item.quantity || 0), 0)}
                                 </span>
-                            </div>
-                        </div>
-                        <div className="pb-4 px-2 text-sm font-black uppercase tracking-wider border-b-2 text-teal-600 border-teal-600">
-                            <div className="flex items-center gap-2">
-                                <LogIn className="w-4 h-4" /> Lịch sử Nhập Kho
-                                <span className="bg-teal-100 text-teal-600 py-0.5 px-2 rounded-full text-[10px] ml-1">
-                                    {orders.filter(o => o.order_type.toLowerCase().includes('thu hồi') || o.order_type.toLowerCase().includes('trả') || o.order_type.toLowerCase().includes('nhập')).length}
-                                </span>
-                            </div>
-                        </div>
+                            )}
+                        </button>
                     </div>
                 </div>
 
@@ -112,65 +130,116 @@ export default function WarehouseDetailsModal({ warehouse, onClose }) {
                         </div>
                     ) : (
                         <>
-                            {/* Cột 1: Xuất Kho */}
-                            <div className="flex-1 p-6 overflow-y-auto border-r border-slate-200 custom-scrollbar">
-                                <h3 className="text-sm font-black text-rose-600 uppercase tracking-widest mb-4 flex items-center gap-2"><LogOut className="w-4 h-4" /> Đơn Xuất Kho / Bán / Cho Thuê</h3>
-                                <div className="space-y-4">
-                                    {orders.filter(o => o.order_type.toLowerCase().includes('thuê') || o.order_type.toLowerCase().includes('bán') || o.order_type.toLowerCase().includes('giao')).length === 0 ? (
-                                        <div className="p-10 text-center flex flex-col items-center border border-dashed border-slate-200 rounded-3xl bg-white">
-                                            <Package className="w-10 h-10 text-slate-200 mb-3" />
-                                            <p className="text-slate-400 font-bold text-sm">Chưa có giao dịch xuất kho</p>
+                            {activeTab === 'history' ? (
+                                <>
+                                    {/* Cột 1: Xuất Kho */}
+                                    <div className="flex-1 p-6 overflow-y-auto border-r border-slate-200 custom-scrollbar">
+                                        <div className="flex items-center justify-between mb-4">
+                                            <h3 className="text-sm font-black text-rose-600 uppercase tracking-widest flex items-center gap-2"><LogOut className="w-4 h-4" /> Đơn Xuất Kho / Bán / Cho Thuê</h3>
+                                            <span className="bg-rose-100 text-rose-600 py-0.5 px-2 rounded-full text-[10px] font-bold">
+                                                {orders.filter(o => o.order_type?.toLowerCase().includes('thuê') || o.order_type?.toLowerCase().includes('bán') || o.order_type?.toLowerCase().includes('giao')).length}
+                                            </span>
                                         </div>
-                                    ) : (
-                                        orders.filter(o => o.order_type.toLowerCase().includes('thuê') || o.order_type.toLowerCase().includes('bán') || o.order_type.toLowerCase().includes('giao')).map(o => (
-                                            <div key={o.id} className="bg-white p-5 rounded-2xl border border-rose-100 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
-                                                <div className="absolute top-0 left-0 w-1 h-full bg-rose-400"></div>
-                                                <div className="flex justify-between items-start mb-3">
-                                                    <div>
-                                                        <span className="text-[10px] font-black text-slate-400 bg-slate-100 px-2 py-1 rounded-md uppercase tracking-wider">{o.order_code}</span>
-                                                        <div className="text-[10px] font-bold text-slate-400 mt-2">{formatDate(o.created_at)}</div>
-                                                    </div>
-                                                    <span className={`px-2 py-0.5 text-[9px] font-black tracking-widest uppercase rounded flex items-center gap-1 ${getStatusStyle(o.status)}`}>
-                                                        {o.status}
-                                                    </span>
+                                        <div className="space-y-4">
+                                            {orders.filter(o => o.order_type?.toLowerCase().includes('thuê') || o.order_type?.toLowerCase().includes('bán') || o.order_type?.toLowerCase().includes('giao')).length === 0 ? (
+                                                <div className="p-10 text-center flex flex-col items-center border border-dashed border-slate-200 rounded-3xl bg-white">
+                                                    <Package className="w-10 h-10 text-slate-200 mb-3" />
+                                                    <p className="text-slate-400 font-bold text-sm">Chưa có giao dịch xuất kho</p>
                                                 </div>
-                                                <h4 className="font-black text-slate-800 text-base mb-1">{o.customer_name}</h4>
-                                                <p className="text-xs font-bold text-rose-500 uppercase tracking-wider">{o.order_type} - {o.product_type}</p>
-                                            </div>
-                                        ))
-                                    )}
-                                </div>
-                            </div>
+                                            ) : (
+                                                orders.filter(o => o.order_type?.toLowerCase().includes('thuê') || o.order_type?.toLowerCase().includes('bán') || o.order_type?.toLowerCase().includes('giao')).map(o => (
+                                                    <div key={o.id} className="bg-white p-5 rounded-2xl border border-rose-100 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
+                                                        <div className="absolute top-0 left-0 w-1 h-full bg-rose-400"></div>
+                                                        <div className="flex justify-between items-start mb-3">
+                                                            <div>
+                                                                <span className="text-[10px] font-black text-slate-400 bg-slate-100 px-2 py-1 rounded-md uppercase tracking-wider">{o.order_code}</span>
+                                                                <div className="text-[10px] font-bold text-slate-400 mt-2">{formatDate(o.created_at)}</div>
+                                                            </div>
+                                                            <span className={`px-2 py-0.5 text-[9px] font-black tracking-widest uppercase rounded flex items-center gap-1 ${getStatusStyle(o.status)}`}>
+                                                                {o.status}
+                                                            </span>
+                                                        </div>
+                                                        <h4 className="font-black text-slate-800 text-base mb-1">{o.customer_name}</h4>
+                                                        <p className="text-xs font-bold text-rose-500 uppercase tracking-wider">{o.order_type} - {o.product_type}</p>
+                                                    </div>
+                                                ))
+                                            )}
+                                        </div>
+                                    </div>
 
-                            {/* Cột 2: Nhập Kho */}
-                            <div className="flex-1 p-6 overflow-y-auto custom-scrollbar">
-                                <h3 className="text-sm font-black text-teal-600 uppercase tracking-widest mb-4 flex items-center gap-2"><LogIn className="w-4 h-4" /> Đơn Nhập Kho / Thu Hồi</h3>
-                                <div className="space-y-4">
-                                    {orders.filter(o => o.order_type.toLowerCase().includes('thu hồi') || o.order_type.toLowerCase().includes('trả') || o.order_type.toLowerCase().includes('nhập')).length === 0 ? (
-                                        <div className="p-10 text-center flex flex-col items-center border border-dashed border-slate-200 rounded-3xl bg-white">
-                                            <Package className="w-10 h-10 text-slate-200 mb-3" />
-                                            <p className="text-slate-400 font-bold text-sm">Chưa có giao dịch nhập kho</p>
+                                    {/* Cột 2: Nhập Kho */}
+                                    <div className="flex-1 p-6 overflow-y-auto custom-scrollbar">
+                                        <div className="flex items-center justify-between mb-4">
+                                            <h3 className="text-sm font-black text-teal-600 uppercase tracking-widest flex items-center gap-2"><LogIn className="w-4 h-4" /> Đơn Nhập Kho / Thu Hồi</h3>
+                                            <span className="bg-teal-100 text-teal-600 py-0.5 px-2 rounded-full text-[10px] font-bold">
+                                                {orders.filter(o => o.order_type?.toLowerCase().includes('thu hồi') || o.order_type?.toLowerCase().includes('trả') || o.order_type?.toLowerCase().includes('nhập')).length}
+                                            </span>
+                                        </div>
+                                        <div className="space-y-4">
+                                            {orders.filter(o => o.order_type?.toLowerCase().includes('thu hồi') || o.order_type?.toLowerCase().includes('trả') || o.order_type?.toLowerCase().includes('nhập')).length === 0 ? (
+                                                <div className="p-10 text-center flex flex-col items-center border border-dashed border-slate-200 rounded-3xl bg-white">
+                                                    <Package className="w-10 h-10 text-slate-200 mb-3" />
+                                                    <p className="text-slate-400 font-bold text-sm">Chưa có giao dịch nhập kho</p>
+                                                </div>
+                                            ) : (
+                                                orders.filter(o => o.order_type?.toLowerCase().includes('thu hồi') || o.order_type?.toLowerCase().includes('trả') || o.order_type?.toLowerCase().includes('nhập')).map(o => (
+                                                    <div key={o.id} className="bg-white p-5 rounded-2xl border border-teal-100 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
+                                                        <div className="absolute top-0 left-0 w-1 h-full bg-teal-400"></div>
+                                                        <div className="flex justify-between items-start mb-3">
+                                                            <div>
+                                                                <span className="text-[10px] font-black text-slate-400 bg-slate-100 px-2 py-1 rounded-md uppercase tracking-wider">{o.order_code}</span>
+                                                                <div className="text-[10px] font-bold text-slate-400 mt-2">{formatDate(o.created_at)}</div>
+                                                            </div>
+                                                            <span className={`px-2 py-0.5 text-[9px] font-black tracking-widest uppercase rounded flex items-center gap-1 ${getStatusStyle(o.status)}`}>
+                                                                {o.status}
+                                                            </span>
+                                                        </div>
+                                                        <h4 className="font-black text-slate-800 text-base mb-1">{o.customer_name}</h4>
+                                                        <p className="text-xs font-bold text-teal-500 uppercase tracking-wider">{o.order_type} - {o.product_type}</p>
+                                                    </div>
+                                                ))
+                                            )}
+                                        </div>
+                                    </div>
+                                </>
+                            ) : (
+                                <div className="flex-1 overflow-y-auto p-6 lg:p-8 custom-scrollbar bg-white">
+                                    <div className="flex items-center gap-3 mb-6">
+                                        <Database className="w-6 h-6 text-emerald-500" />
+                                        <h3 className="text-lg font-black text-slate-800 tracking-tight">Chi tiết Tồn Kho</h3>
+                                    </div>
+                                    
+                                    {inventory.length === 0 ? (
+                                        <div className="p-12 text-center flex flex-col items-center border-2 border-dashed border-slate-100 rounded-3xl">
+                                            <Package className="w-12 h-12 text-slate-200 mb-4" />
+                                            <p className="text-slate-500 font-bold text-base">Kho hiện đang trống</p>
+                                            <p className="text-slate-400 font-medium text-sm mt-1">Chưa có mặt hàng nào được nhập vào kho này.</p>
                                         </div>
                                     ) : (
-                                        orders.filter(o => o.order_type.toLowerCase().includes('thu hồi') || o.order_type.toLowerCase().includes('trả') || o.order_type.toLowerCase().includes('nhập')).map(o => (
-                                            <div key={o.id} className="bg-white p-5 rounded-2xl border border-teal-100 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
-                                                <div className="absolute top-0 left-0 w-1 h-full bg-teal-400"></div>
-                                                <div className="flex justify-between items-start mb-3">
-                                                    <div>
-                                                        <span className="text-[10px] font-black text-slate-400 bg-slate-100 px-2 py-1 rounded-md uppercase tracking-wider">{o.order_code}</span>
-                                                        <div className="text-[10px] font-bold text-slate-400 mt-2">{formatDate(o.created_at)}</div>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            {inventory.map(item => (
+                                                <div key={item.id} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between hover:border-emerald-300 transition-colors group">
+                                                    <div className="flex items-center gap-4">
+                                                        <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center font-bold">
+                                                            <Package className="w-6 h-6" />
+                                                        </div>
+                                                        <div>
+                                                            <h4 className="font-black text-slate-800 text-base">{item.item_name}</h4>
+                                                            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mt-1">{item.item_type}</p>
+                                                        </div>
                                                     </div>
-                                                    <span className={`px-2 py-0.5 text-[9px] font-black tracking-widest uppercase rounded flex items-center gap-1 ${getStatusStyle(o.status)}`}>
-                                                        {o.status}
-                                                    </span>
+                                                    <div className="text-right">
+                                                        <div className="text-2xl font-black text-emerald-600 leading-none">
+                                                            {item.quantity}
+                                                        </div>
+                                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Hàng có sẵn</p>
+                                                    </div>
                                                 </div>
-                                                <h4 className="font-black text-slate-800 text-base mb-1">{o.customer_name}</h4>
-                                                <p className="text-xs font-bold text-teal-500 uppercase tracking-wider">{o.order_type} - {o.product_type}</p>
-                                            </div>
-                                        ))
+                                            ))}
+                                        </div>
                                     )}
                                 </div>
-                            </div>
+                            )}
                         </>
                     )}
                 </div>

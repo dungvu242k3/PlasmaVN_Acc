@@ -129,6 +129,35 @@ const GoodsReceipts = () => {
                 return;
             }
 
+            // --- CAPACITY CHECK ---
+            const { data: warehouseData, error: warehouseError } = await supabase
+                .from('warehouses')
+                .select('name, capacity')
+                .eq('id', receipt.warehouse_id)
+                .single();
+
+            if (warehouseError) throw warehouseError;
+
+            if (warehouseData && warehouseData.capacity > 0) {
+                const incomingTotal = items.reduce((sum, item) => sum + (item.quantity || 0), 0);
+
+                const { data: currentInvData, error: currentInvError } = await supabase
+                    .from('inventory')
+                    .select('quantity')
+                    .eq('warehouse_id', receipt.warehouse_id);
+
+                if (currentInvError) throw currentInvError;
+
+                const currentTotal = (currentInvData || []).reduce((sum, item) => sum + (item.quantity || 0), 0);
+                const projectedTotal = currentTotal + incomingTotal;
+
+                if (projectedTotal > warehouseData.capacity) {
+                    alert(`❌ Không thể duyệt phiếu nhập do vượt quá sức chứa kho!\n\nKho: ${warehouseData.name}\nSức chứa tối đa: ${warehouseData.capacity}\n\nĐang tồn kho: ${currentTotal}\nChuẩn bị nhập thêm: ${incomingTotal}\nTổng sau lập phiếu: ${projectedTotal} (Vượt ${projectedTotal - warehouseData.capacity})`);
+                    return;
+                }
+            }
+            // --- END CAPACITY CHECK ---
+
             // 2. Loop through items to update inventory
             for (const item of items) {
                 // Upsert inventory

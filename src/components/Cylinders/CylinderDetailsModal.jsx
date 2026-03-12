@@ -57,7 +57,7 @@ export default function CylinderDetailsModal({ cylinder, onClose }) {
                 .from('cylinder_qc_records')
                 .select('*')
                 .eq('serial_number', cylinder.serial_number)
-                .single();
+                .maybeSingle();
 
             // Ignore 406 (Not Found) or 42P01 (Table not found)
             if (qcDataRes) {
