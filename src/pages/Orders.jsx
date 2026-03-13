@@ -1030,9 +1030,9 @@ const Orders = () => {
                 </div>
 
                 {/* Table Content Area */}
-                <div className="hidden md:block flex-1 overflow-x-auto bg-white">
+                <div className="hidden md:block flex-1 overflow-x-auto bg-white isolate">
                     <table className="w-full border-collapse">
-                        <thead className="bg-primary/5">
+                        <thead className="bg-[#F1F5FF]">
                             <tr>
                                 <th className="px-4 py-3.5 w-10">
                                     <div className="flex items-center justify-center">
@@ -1055,7 +1055,7 @@ const Orders = () => {
                                         {col.label}
                                     </th>
                                 ))}
-                                <th className="px-4 py-3.5 text-[12px] font-bold text-muted-foreground text-center uppercase tracking-wide border-l border-r border-primary/10">Thao tác</th>
+                                <th className="sticky right-0 z-[9999] bg-[#F1F5FF] px-4 py-3.5 text-[12px] font-bold text-muted-foreground text-center uppercase tracking-wide shadow-[-6px_0_10px_-8px_rgba(15,23,42,0.35)] before:content-[''] before:absolute before:left-0 before:top-0 before:bottom-0 before:w-[3px] before:bg-slate-300">Thao tác</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-primary/10">
@@ -1146,7 +1146,7 @@ const Orders = () => {
                                         {isColumnVisible('date') && <td className="px-4 py-4 text-[13px] text-muted-foreground font-normal">
                                             {order.created_at ? new Date(order.created_at).toLocaleDateString('vi-VN') : '---'}
                                         </td>}
-                                        <td className="px-4 py-4 text-center border-l border-r border-primary/10">
+                                        <td className="sticky right-0 z-20 bg-white px-4 py-4 text-center shadow-[-6px_0_10px_-8px_rgba(15,23,42,0.25)] before:content-[''] before:absolute before:left-0 before:top-0 before:bottom-0 before:w-[3px] before:bg-slate-300">
                                             <div className="flex items-center justify-center gap-3">
                                                 <button
                                                     onClick={() => { setSelectedOrder(order); setIsActionModalOpen(true); }}
