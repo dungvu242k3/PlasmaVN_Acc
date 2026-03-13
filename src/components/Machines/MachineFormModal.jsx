@@ -28,7 +28,9 @@ export default function MachineFormModal({ machine, onClose, onSuccess }) {
         cylinder_volume: 'không',
         gas_type: 'Air',
         valve_type: 'không',
-        emission_head_type: 'không'
+        emission_head_type: 'không',
+        customer_name: '',
+        department_in_charge: ''
     };
 
     const [formData, setFormData] = useState(defaultState);
@@ -69,7 +71,9 @@ export default function MachineFormModal({ machine, onClose, onSuccess }) {
                 cylinder_volume: machine.cylinder_volume || 'không',
                 gas_type: machine.gas_type || 'Air',
                 valve_type: machine.valve_type || 'không',
-                emission_head_type: machine.emission_head_type || 'không'
+                emission_head_type: machine.emission_head_type || 'không',
+                customer_name: machine.customer_name || '',
+                department_in_charge: machine.department_in_charge || ''
             });
         }
     }, [machine, isEdit]);
@@ -339,6 +343,37 @@ export default function MachineFormModal({ machine, onClose, onSuccess }) {
                                         >
                                             {EMISSION_HEAD_TYPES.map(h => <option key={h.id} value={h.id}>{h.label}</option>)}
                                         </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Section 4: Thông tin sử dụng */}
+                            <div className="space-y-4">
+                                <h4 className="flex items-center gap-2 text-sm font-black text-slate-800 uppercase tracking-widest border-b border-slate-100 pb-2">
+                                    THÔNG TIN SỬ DỤNG
+                                </h4>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-700 mb-1 uppercase tracking-wider">Khách hàng đang dùng</label>
+                                        <input
+                                            type="text"
+                                            name="customer_name"
+                                            value={formData.customer_name}
+                                            onChange={handleChange}
+                                            placeholder="Tên khách hàng hoặc Bệnh viện..."
+                                            className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 outline-none transition-all font-bold text-slate-900"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-700 mb-1 uppercase tracking-wider">Bộ phận phụ trách</label>
+                                        <input
+                                            type="text"
+                                            name="department_in_charge"
+                                            value={formData.department_in_charge}
+                                            onChange={handleChange}
+                                            placeholder="Khoa/Phòng phụ trách..."
+                                            className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 outline-none transition-all font-bold text-slate-900"
+                                        />
                                     </div>
                                 </div>
                             </div>

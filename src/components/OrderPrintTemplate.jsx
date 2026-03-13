@@ -327,12 +327,18 @@ const OrderItem = ({ order, warehousesList }) => {
                     <div style={S.companyName}>CÔNG TY TNHH DỊCH VỤ Y TẾ CỘNG ĐỒNG CHS</div>
                     <div style={S.companyInfo}>Hải âu 02 - 57 Vinhomes Ocean Park, Xã Gia Lâm, Thành phố Hà Nội, Việt Nam</div>
                     <div style={S.companyInfo}>Mã số thuế: 0110517351</div>
+                    <div style={S.companyInfo}>Tel: 0981 878 423</div>
                 </div>
                 <div style={S.headerRight}>
                     <div style={S.formNumber}>Mẫu số: 02 - VT</div>
                     <div style={S.formLegal}>
                         (Ban hành theo Thông tư số 133/2016/TT-BTC<br />
                         ngày 26/08/2016 của Bộ Tài chính)
+                    </div>
+                    <div style={{ textAlign: 'left', marginTop: '5px', fontSize: '11pt' }}>
+                        <div>Đại Lý: {order.customer_name || ''}</div>
+                        <div>NV KD: {order.sales_person || ''}</div>
+                        <div>Kho QLY: {warehouseLabel || ''}</div>
                     </div>
                 </div>
             </div>
@@ -358,41 +364,25 @@ const OrderItem = ({ order, warehousesList }) => {
             {/* ===== INFO FIELDS ===== */}
             <div style={S.infoSection}>
                 <div style={S.infoRow}>
-                    <span style={S.infoLabel}>- Họ và tên cơ sở phụ trách:</span>
-                    <span style={S.infoValue}>{order.customer_name || ''}</span>
-                </div>
-                <div style={S.infoRow}>
-                    <span style={S.infoLabel}>- Nhân viên KD:</span>
-                    <span style={S.infoValue}>{order.sales_person || ''}</span>
-                </div>
-                <div style={S.infoRow}>
-                    <span style={S.infoLabel}>- Họ và tên người nhận hàng:</span>
+                    <span style={S.infoLabel}>Tên khách hàng:</span>
                     <span style={S.infoValue}>{order.recipient_name || ''}</span>
                 </div>
                 <div style={S.infoRow}>
-                    <span style={S.infoLabel}>- Địa chỉ (bộ phận):</span>
+                    <span style={S.infoLabel}>Địa chỉ:</span>
                     <span style={S.infoValue}>{order.recipient_address || ''}</span>
                 </div>
                 <div style={S.infoRow}>
-                    <span style={S.infoLabel}>- Số điện thoại:</span>
+                    <span style={S.infoLabel}>Số điện thoại:</span>
                     <span style={S.infoValue}>{order.recipient_phone || ''}</span>
                 </div>
                 <div style={S.infoRow}>
-                    <span style={S.infoLabel}>- Lý do xuất kho:</span>
+                    <span style={S.infoLabel}>Lý do xuất kho:</span>
                     <span style={S.infoValue}>
                         Xuất {String(totalQty).padStart(2, '0')} {productLabel}
                         {order.department ? ` - ${order.department}` : ''}
                     </span>
                 </div>
                 <div style={S.infoRowSplit}>
-                    <div style={S.splitHalf}>
-                        <span style={S.infoLabel}>- Xuất tại kho (ngăn lô):</span>
-                        <span style={S.infoValue}>{warehouseLabel || ''}</span>
-                    </div>
-                    <div style={S.splitHalf}>
-                        <span style={S.infoLabel}>Địa điểm:</span>
-                        <span style={S.infoValue}>{warehouseLabel || ''}</span>
-                    </div>
                 </div>
             </div>
 

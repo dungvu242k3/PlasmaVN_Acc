@@ -9,9 +9,9 @@ export const ISSUE_STATUSES = [
 ];
 
 export const ISSUE_TYPES = [
-    { id: 'TRA_NCC', label: 'Trả vỏ/máy về NCC' },
-    { id: 'HUY_XUAT', label: 'Xuất hủy' },
-    { id: 'KHAC', label: 'Xuất khác' }
+    { id: 'TRA_VO', label: 'Xuất trả vỏ' },
+    { id: 'TRA_BINH_LOI', label: 'Xuất trả bình lỗi' },
+    { id: 'TRA_MAY', label: 'Xuất trả máy' }
 ];
 
 export const ISSUE_TABLE_COLUMNS = [

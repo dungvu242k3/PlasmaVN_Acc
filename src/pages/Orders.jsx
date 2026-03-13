@@ -16,6 +16,7 @@ import {
     ChevronLeft,
     ChevronRight,
     Clock,
+    ClipboardCheck,
     Edit,
     Filter,
     List,
@@ -417,12 +418,15 @@ const Orders = () => {
 
     const handlePrint = (order) => {
         setOrdersToPrint(order);
-        // Auto-include machine handover for MAY orders
-        if (order.product_type?.startsWith('MAY')) {
-            setHandoverToPrint(order);
-        } else {
-            setHandoverToPrint(null);
-        }
+        setHandoverToPrint(null);
+        setTimeout(() => {
+            window.print();
+        }, 150);
+    };
+
+    const handleHandoverPrint = (order) => {
+        setOrdersToPrint(null);
+        setHandoverToPrint(order);
         setTimeout(() => {
             window.print();
         }, 150);
@@ -738,10 +742,19 @@ const Orders = () => {
                                             </button>
                                             <button
                                                 onClick={() => handlePrint(order)}
-                                                className="p-2 text-blue-700 bg-blue-50 border border-blue-100 rounded-lg"
+                                                className="p-2 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
                                             >
                                                 <Printer className="w-4 h-4" />
                                             </button>
+                                            {order.product_type?.startsWith('MAY') && (
+                                                <button
+                                                    onClick={() => handleHandoverPrint(order)}
+                                                    className="p-2 text-muted-foreground hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                                                    title="In biên bản bàn giao (BBBG)"
+                                                >
+                                                    <ClipboardCheck className="w-4 h-4" />
+                                                </button>
+                                            )}
                                             <button
                                                 onClick={() => handleEditOrder(order)}
                                                 className="p-2 text-amber-700 bg-amber-50 border border-amber-100 rounded-lg"
@@ -1144,11 +1157,20 @@ const Orders = () => {
                                                 </button>
                                                 <button
                                                     onClick={() => handlePrint(order)}
-                                                    className="text-blue-600/80 hover:text-blue-700 transition-colors p-1 rounded hover:bg-blue-50"
+                                                    className="text-muted-foreground hover:text-primary transition-colors p-1 rounded hover:bg-primary/10"
                                                     title={order.product_type?.startsWith('MAY') ? 'In phiếu xuất kho + biên bản bàn giao máy' : 'In phiếu xuất kho'}
                                                 >
                                                     <Printer className="w-4 h-4" />
                                                 </button>
+                                                {order.product_type?.startsWith('MAY') && (
+                                                    <button
+                                                        onClick={() => handleHandoverPrint(order)}
+                                                        className="text-muted-foreground hover:text-green-600 transition-colors p-1 rounded hover:bg-green-50"
+                                                        title="In biên bản bàn giao (BBBG)"
+                                                    >
+                                                        <ClipboardCheck className="w-4 h-4" />
+                                                    </button>
+                                                )}
                                                 <button
                                                     onClick={() => handleEditOrder(order)}
                                                     className="text-amber-600/80 hover:text-amber-700 transition-colors p-1 rounded hover:bg-amber-50"
@@ -1752,10 +1774,10 @@ const Orders = () => {
             )}
 
             {/* Hidden Print Template — rendered via Portal directly under <body> to bypass #root hiding */}
-            {ordersToPrint && createPortal(
+            {createPortal(
                 <div className="print-only-content">
-                    <OrderPrintTemplate orders={ordersToPrint} warehousesList={warehousesList} />
-                    {handoverToPrint && <div className="page-break" />}
+                    {ordersToPrint && <OrderPrintTemplate orders={ordersToPrint} warehousesList={warehousesList} />}
+                    {ordersToPrint && handoverToPrint && <div className="page-break" />}
                     {handoverToPrint && <MachineHandoverPrintTemplate orders={handoverToPrint} />}
                 </div>,
                 document.body
