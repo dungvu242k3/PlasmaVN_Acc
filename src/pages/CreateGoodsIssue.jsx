@@ -21,7 +21,7 @@ const CreateGoodsIssue = () => {
     const [formData, setFormData] = useState({
         issue_code: '',
         issue_date: new Date().toISOString().split('T')[0],
-        issue_type: 'TRA_NCC',
+        issue_type: 'TRA_VO',
         supplier_id: '',
         warehouse_id: '',
         notes: '',
@@ -137,8 +137,9 @@ const CreateGoodsIssue = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        if (!formData.supplier_id && formData.issue_type === 'TRA_NCC') {
-            alert('Vui lòng chọn Nhà cung cấp khi trả vỏ!');
+        const isReturnToSupplier = ['TRA_VO', 'TRA_BINH_LOI', 'TRA_MAY'].includes(formData.issue_type);
+        if (!formData.supplier_id && isReturnToSupplier) {
+            alert('Vui lòng chọn Nhà cung cấp khi trả hàng!');
             return;
         }
 

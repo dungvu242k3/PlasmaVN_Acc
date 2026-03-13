@@ -58,7 +58,7 @@ const TABLE_COLUMNS = [
     { key: 'serial_number', label: 'Mã Máy (Serial)' },
     { key: 'machine_type', label: 'Loại Máy' },
     { key: 'warehouse', label: 'Kho Quản Lý' },
-    { key: 'customer_name', label: 'Tên Khách Hàng' },
+    { key: 'customer_name', label: 'Khách hàng đang sử dụng máy' },
     { key: 'status', label: 'Trạng Thái' },
     { key: 'department_in_charge', label: 'Bộ Phận Phụ Trách' },
 ];
@@ -365,7 +365,7 @@ const Machines = () => {
     const getCustomerStats = () => {
         const stats = {};
         filteredMachines.forEach(machine => {
-            const customer = machine.customer_name || 'Sẵn sàng xuất kho';
+            const customer = machine.customer_name || '—';
             stats[customer] = (stats[customer] || 0) + 1;
         });
         return Object.entries(stats)
@@ -513,7 +513,7 @@ const Machines = () => {
                                         </div>
                                         <div className="col-span-2">
                                             <p className="text-[9px] uppercase tracking-wider text-muted-foreground">Khách hàng</p>
-                                            <p className="text-[12px] text-foreground font-medium">{machine.customer_name || 'Sẵn sàng xuất kho'}</p>
+                                            <p className="text-[12px] text-foreground font-medium">{machine.customer_name || '—'}</p>
                                         </div>
                                     </div>
 
@@ -793,7 +793,7 @@ const Machines = () => {
                                         {isColumnVisible('serial_number') && <td className="px-4 py-4 text-sm font-semibold text-foreground font-mono">{machine.serial_number}</td>}
                                         {isColumnVisible('machine_type') && <td className="px-4 py-4 text-sm text-muted-foreground">{getLabel(MACHINE_TYPES, machine.machine_type)}</td>}
                                         {isColumnVisible('warehouse') && <td className="px-4 py-4 text-sm text-muted-foreground">{getWarehouseLabel(machine.warehouse)}</td>}
-                                        {isColumnVisible('customer_name') && <td className="px-4 py-4 text-sm font-semibold text-foreground">{machine.customer_name || 'Sẵn sàng xuất kho'}</td>}
+                                        {isColumnVisible('customer_name') && <td className="px-4 py-4 text-sm font-semibold text-foreground">{machine.customer_name || '—'}</td>}
                                         {isColumnVisible('status') && (
                                             <td className="px-4 py-4">
                                                 <span className={clsx('inline-flex items-center px-3 py-1 text-[11px] font-bold rounded-full border', getStatusBadgeClass(machine.status))}>

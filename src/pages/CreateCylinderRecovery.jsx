@@ -14,6 +14,7 @@ import { ITEM_CONDITIONS } from '../constants/recoveryConstants';
 import { supabase } from '../supabase/config';
 import { patchIOSVideoPlaysinline } from '../utils/scannerHelper';
 import BarcodeScanner from '../components/Common/BarcodeScanner';
+import { toast } from 'react-toastify';
 
 
 const CreateCylinderRecovery = () => {
@@ -138,34 +139,40 @@ const CreateCylinderRecovery = () => {
     const handleScanSuccess = useCallback(async (decodedText) => {
         const currentItems = itemsRef.current;
         if (currentItems.some(i => i.serial_number === decodedText)) {
+            toast.info(`Mã ${decodedText} đã được quét!`);
             return;
         }
         
         // Add to items list
         setItems(prev => [...prev, { _id: Date.now(), serial_number: decodedText, condition: 'tot', note: '' }]);
 
-        // AUTO-FETCH: If customer is not yet selected, try to find owner
         const currentFormData = formDataRef.current;
-        if (!currentFormData.customer_id) {
-            try {
-                // 1. Get cylinder status/owner
-                const { data: cylData } = await supabase
-                    .from('cylinders')
-                    .select('customer_name')
-                    .eq('serial_number', decodedText)
-                    .maybeSingle();
+        // AUTO-FETCH: Try to find owner regardless if selected, to warn or auto-select
+        try {
+            // 1. Get cylinder status/owner
+            const { data: cylData } = await supabase
+                .from('cylinders')
+                .select('customer_name')
+                .eq('serial_number', decodedText)
+                .maybeSingle();
 
-                if (cylData?.customer_name) {
-                    // 2. Map name to customer ID (using local customers list loaded at start)
-                    const matchedCustomer = customers.find(c => c.name === cylData.customer_name);
-                    
-                    if (matchedCustomer) {
+            if (cylData?.customer_name) {
+                // 2. Map name to customer ID (using local customers list loaded at start)
+                const matchedCustomer = customers.find(c => c.name === cylData.customer_name);
+                
+                if (matchedCustomer) {
+                    if (!currentFormData.customer_id) {
                         setFormData(prev => ({ ...prev, customer_id: matchedCustomer.id }));
-                        
-                        // 3. Find most recent relative order
+                        toast.success(`Đã tự động chọn KH: ${matchedCustomer.name}`);
+                    } else if (currentFormData.customer_id !== matchedCustomer.id) {
+                        toast.warning(`Lưu ý: Bình ${decodedText} thuộc về KH ${matchedCustomer.name}, khác với KH đang chọn!`);
+                    }
+                    
+                    // 3. Find most recent relative order if no order selected
+                    if (!currentFormData.order_id || currentFormData.customer_id !== matchedCustomer.id) {
                         const { data: orderData } = await supabase
                             .from('orders')
-                            .select('id')
+                            .select('id, order_code')
                             .eq('customer_name', cylData.customer_name)
                             .contains('assigned_cylinders', [decodedText])
                             .order('created_at', { ascending: false })
@@ -173,13 +180,18 @@ const CreateCylinderRecovery = () => {
                             .maybeSingle();
                         
                         if (orderData) {
-                            setFormData(prev => ({ ...prev, order_id: orderData.id }));
+                            setFormData(prev => ({ ...prev, order_id: orderData.id, customer_id: matchedCustomer.id }));
+                            toast.success(`Đã tự động liên kết đơn hàng: ĐH ${orderData.order_code}`);
                         }
                     }
+                } else {
+                    if (!currentFormData.customer_id) toast.info(`Tìm thấy KH gốc (${cylData.customer_name}) nhưng không có trong hệ thống.`);
                 }
-            } catch (err) {
-                console.error('Auto-fetch failed:', err);
+            } else {
+                if (!currentFormData.customer_id) toast.info(`Bình ${decodedText} hiện không gắn với KH nào.`);
             }
+        } catch (err) {
+            console.error('Auto-fetch failed:', err);
         }
     }, [customers]);
 

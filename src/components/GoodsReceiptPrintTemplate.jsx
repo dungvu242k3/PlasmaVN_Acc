@@ -313,6 +313,7 @@ const ReceiptItem = ({ receipt, items, warehousesList }) => {
                     <div style={S.companyName}>CÔNG TY TNHH DỊCH VỤ Y TẾ CỘNG ĐỒNG CHS</div>
                     <div style={S.companyInfo}>Hải âu 02 - 57 Vinhomes Ocean Park, Xã Gia Lâm, Thành phố Hà Nội, Việt Nam</div>
                     <div style={S.companyInfo}>Mã số thuế: 0110517351</div>
+                    <div style={S.companyInfo}>Tel: 0981 878 423</div>
                 </div>
                 <div style={S.headerRight}>
                     <div style={S.formNumber}>Mẫu số: 01 - VT</div>
