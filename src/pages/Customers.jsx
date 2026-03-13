@@ -11,28 +11,35 @@ import {
     Title
 } from 'chart.js';
 import {
+    BarChart2,
     ChevronDown,
+    ChevronLeft,
+    ChevronRight,
     Edit,
     Eye,
     Filter,
+    List,
     MapPin,
     Phone,
     Plus,
     Search,
     Trash2,
-    Users
+    User,
+    Users,
+    X
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Bar as BarChartJS, Pie as PieChartJS } from 'react-chartjs-2';
 import { useNavigate } from 'react-router-dom';
+import { clsx } from 'clsx';
 import CustomerDetailsModal from '../components/Customers/CustomerDetailsModal';
 import CustomerFormModal from '../components/Customers/CustomerFormModal';
+import FilterDropdown from '../components/ui/FilterDropdown';
+import MobileFilterSheet from '../components/ui/MobileFilterSheet';
 import useColumnVisibility from '../hooks/useColumnVisibility';
 import usePermissions from '../hooks/usePermissions';
 import { supabase } from '../supabase/config';
 
-
-// Register Chart.js components
 ChartJS.register(
     CategoryScale,
     LinearScale,
@@ -48,7 +55,7 @@ ChartJS.register(
 const Customers = () => {
     const { role } = usePermissions();
     const navigate = useNavigate();
-    const [activeView, setActiveView] = useState('list'); // 'list' or 'stats'
+    const [activeView, setActiveView] = useState('list');
     const [searchTerm, setSearchTerm] = useState('');
     const [customers, setCustomers] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -56,13 +63,22 @@ const Customers = () => {
     const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
     const [selectedCustomer, setSelectedCustomer] = useState(null);
 
-    // Filter states
     const [selectedCategories, setSelectedCategories] = useState([]);
     const [selectedManagedBy, setSelectedManagedBy] = useState([]);
     const [selectedCareBy, setSelectedCareBy] = useState([]);
     const [uniqueManagedBy, setUniqueManagedBy] = useState([]);
     const [uniqueCareBy, setUniqueCareBy] = useState([]);
     const [warehousesList, setWarehousesList] = useState([]);
+
+    const [showMobileFilter, setShowMobileFilter] = useState(false);
+    const [mobileFilterClosing, setMobileFilterClosing] = useState(false);
+    const [pendingCategories, setPendingCategories] = useState([]);
+    const [pendingManagedBy, setPendingManagedBy] = useState([]);
+    const [pendingCareBy, setPendingCareBy] = useState([]);
+
+    const [activeDropdown, setActiveDropdown] = useState(null);
+    const [filterSearch, setFilterSearch] = useState('');
+    const dropdownRef = useRef(null);
 
     const TABLE_COLUMNS_DEF = [
         { key: 'code', label: 'Mã khách hàng' },
@@ -78,7 +94,6 @@ const Customers = () => {
         { key: 'machines_in_use', label: 'Mã máy đang sử dụng' },
         { key: 'care_by', label: 'KD chăm sóc' },
     ];
-    const { visibleColumns, toggleColumn, isColumnVisible, resetColumns, visibleCount, totalCount } = useColumnVisibility('columns_customers', TABLE_COLUMNS_DEF);
 
     const CUSTOMER_CATEGORIES = [
         { id: 'BV', label: 'Bệnh viện' },
@@ -88,6 +103,7 @@ const Customers = () => {
         { id: 'SP', label: 'Spa / Khác' },
     ];
 
+    const { isColumnVisible } = useColumnVisibility('columns_customers', TABLE_COLUMNS_DEF);
     const visibleTableColumns = TABLE_COLUMNS_DEF.filter(col => isColumnVisible(col.key));
 
     useEffect(() => {
@@ -96,12 +112,43 @@ const Customers = () => {
     }, []);
 
     useEffect(() => {
-        // Extract unique values for filters
         const managedBy = [...new Set(customers.map(c => c.managed_by).filter(Boolean))];
         const careBy = [...new Set(customers.map(c => c.care_by).filter(Boolean))];
         setUniqueManagedBy(managedBy);
         setUniqueCareBy(careBy);
     }, [customers]);
+
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+                setActiveDropdown(null);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    const closeMobileFilter = () => {
+        setMobileFilterClosing(true);
+        setTimeout(() => {
+            setShowMobileFilter(false);
+            setMobileFilterClosing(false);
+        }, 280);
+    };
+
+    const openMobileFilter = () => {
+        setPendingCategories(selectedCategories);
+        setPendingManagedBy(selectedManagedBy);
+        setPendingCareBy(selectedCareBy);
+        setShowMobileFilter(true);
+    };
+
+    const applyMobileFilter = () => {
+        setSelectedCategories(pendingCategories);
+        setSelectedManagedBy(pendingManagedBy);
+        setSelectedCareBy(pendingCareBy);
+        closeMobileFilter();
+    };
 
     const fetchCustomers = async () => {
         setIsLoading(true);
@@ -134,7 +181,7 @@ const Customers = () => {
 
     const formatNumber = (num) => {
         if (!num) return '0';
-        return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+        return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
     };
 
     const getLabel = (list, id) => {
@@ -150,26 +197,38 @@ const Customers = () => {
             (c.address?.toLowerCase().includes(search))
         );
 
-        // Filter by category
-        const matchesCategory = selectedCategories.length === 0 ||
-            selectedCategories.includes(c.category);
-
-        // Filter by managed_by
-        const matchesManagedBy = selectedManagedBy.length === 0 ||
-            selectedManagedBy.includes(c.managed_by);
-
-        // Filter by care_by
-        const matchesCareBy = selectedCareBy.length === 0 ||
-            selectedCareBy.includes(c.care_by);
+        const matchesCategory = selectedCategories.length === 0 || selectedCategories.includes(c.category);
+        const matchesManagedBy = selectedManagedBy.length === 0 || selectedManagedBy.includes(c.managed_by);
+        const matchesCareBy = selectedCareBy.length === 0 || selectedCareBy.includes(c.care_by);
 
         return matchesSearch && matchesCategory && matchesManagedBy && matchesCareBy;
     });
 
-    // Calculate totals
     const filteredCustomersCount = filteredCustomers.length;
     const totalCylinders = filteredCustomers.reduce((sum, c) => sum + (c.current_cylinders || 0), 0);
     const totalMachines = filteredCustomers.reduce((sum, c) => sum + (c.current_machines || 0), 0);
     const totalBorrowed = filteredCustomers.reduce((sum, c) => sum + (c.borrowed_cylinders || 0), 0);
+
+    const hasActiveFilters = selectedCategories.length > 0 || selectedManagedBy.length > 0 || selectedCareBy.length > 0;
+    const totalActiveFilters = selectedCategories.length + selectedManagedBy.length + selectedCareBy.length;
+
+    const categoryOptions = CUSTOMER_CATEGORIES.map(c => ({
+        id: c.id,
+        label: c.label,
+        count: customers.filter(x => x.category === c.id).length
+    }));
+
+    const managedByOptions = uniqueManagedBy.map(name => ({
+        id: name,
+        label: name,
+        count: customers.filter(x => x.managed_by === name).length
+    }));
+
+    const careByOptions = uniqueCareBy.map(name => ({
+        id: name,
+        label: name,
+        count: customers.filter(x => x.care_by === name).length
+    }));
 
     const handleEditCustomer = (customer) => {
         setSelectedCustomer(customer);
@@ -205,59 +264,6 @@ const Customers = () => {
         setIsFormModalOpen(false);
     };
 
-    // Filter Dropdown Component
-    const FilterDropdown = ({ label, selectedCount, totalCount, onSelectAll, children }) => {
-        const [isOpen, setIsOpen] = useState(false);
-
-        return (
-            <div className="relative">
-                <button
-                    onClick={() => setIsOpen(!isOpen)}
-                    className="flex items-center gap-2 px-4 py-2.5 border border-[#D1D5DB] bg-white text-sm font-medium text-[#374151] hover:bg-[#F9FAFB] transition-all"
-                    style={{ fontFamily: '"Roboto", sans-serif' }}
-                >
-                    <Filter className="w-4 h-4" />
-                    <span>{label}</span>
-                    {selectedCount > 0 && (
-                        <span className="px-2 py-0.5 bg-[#2563EB] text-white text-xs rounded-full">
-                            {selectedCount}
-                        </span>
-                    )}
-                    <ChevronDown className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
-                </button>
-                {isOpen && (
-                    <>
-                        <div
-                            className="fixed inset-0 z-10"
-                            onClick={() => setIsOpen(false)}
-                        ></div>
-                        <div className="absolute top-full left-0 mt-1 bg-white border border-[#E5E7EB] shadow-lg z-20 min-w-[250px] max-h-80">
-                            <div className="p-3 border-b border-[#E5E7EB] flex items-center justify-between bg-[#F9FAFB]">
-                                <span className="text-sm font-medium text-[#374151]" style={{ fontFamily: '"Roboto", sans-serif' }}>
-                                    {selectedCount > 0 ? `Đã chọn ${selectedCount}/${totalCount}` : `Chọn ${label.toLowerCase()}`}
-                                </span>
-                                <button
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        onSelectAll();
-                                    }}
-                                    className="text-xs text-[#2563EB] hover:text-[#1D4ED8] font-medium"
-                                    style={{ fontFamily: '"Roboto", sans-serif' }}
-                                >
-                                    {selectedCount === totalCount ? 'Bỏ chọn tất cả' : 'Chọn tất cả'}
-                                </button>
-                            </div>
-                            <div className="overflow-y-auto max-h-64">
-                                {children}
-                            </div>
-                        </div>
-                    </>
-                )}
-            </div>
-        );
-    };
-
-    // Calculate statistics data for charts
     const getCategoryStats = () => {
         const stats = {};
         filteredCustomers.forEach(customer => {
@@ -321,556 +327,722 @@ const Customers = () => {
         return Object.entries(stats).map(([name, value]) => ({ name, value }));
     };
 
-    // Chart colors
     const chartColors = [
         '#2563EB', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6',
         '#06B6D4', '#F97316', '#84CC16', '#EC4899', '#6366F1'
     ];
 
+    const clearAllFilters = () => {
+        setSelectedCategories([]);
+        setSelectedManagedBy([]);
+        setSelectedCareBy([]);
+    };
+
     return (
-        <div className="p-4 sm:p-6 bg-[#F8F9FA] min-h-screen" style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif' }}>
-            {/* Navigation Tabs */}
-            <div className="flex items-center gap-1 mb-6 sm:mb-8 border-b border-[#E5E7EB] overflow-x-auto no-scrollbar">
+        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 w-full flex-1 flex flex-col -mt-2 min-h-0 px-3 md:px-6">
+            <div className="flex items-center gap-1 mb-4 mt-6">
                 <button
                     onClick={() => setActiveView('list')}
-                    className={`px-6 py-3 text-sm font-semibold tracking-wide transition-colors ${activeView === 'list'
-                        ? 'text-[#2563EB] border-b-2 border-[#2563EB]'
-                        : 'text-[#6B7280] hover:text-[#374151]'
-                        }`}
-                    style={activeView === 'list' ? { color: '#2563EB', borderBottomColor: '#2563EB' } : { color: '#6B7280' }}
+                    className={clsx(
+                        'flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-bold transition-all',
+                        activeView === 'list'
+                            ? 'bg-white text-primary shadow-sm ring-1 ring-border'
+                            : 'text-muted-foreground hover:text-foreground'
+                    )}
                 >
+                    <List size={14} />
                     Danh sách
                 </button>
                 <button
                     onClick={() => setActiveView('stats')}
-                    className={`px-6 py-3 text-sm font-semibold tracking-wide transition-colors ${activeView === 'stats'
-                        ? 'text-[#2563EB] border-b-2 border-[#2563EB]'
-                        : 'text-[#6B7280] hover:text-[#374151]'
-                        }`}
-                    style={activeView === 'stats' ? { color: '#2563EB', borderBottomColor: '#2563EB' } : { color: '#6B7280' }}
+                    className={clsx(
+                        'flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-bold transition-all',
+                        activeView === 'stats'
+                            ? 'bg-white text-primary shadow-sm ring-1 ring-border'
+                            : 'text-muted-foreground hover:text-foreground'
+                    )}
                 >
+                    <BarChart2 size={14} />
                     Thống kê
                 </button>
             </div>
 
-            {activeView === 'list' ? (
-                <>
-                    {/* Header with Add Button */}
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
-                        <h1 className="text-xl sm:text-2xl font-semibold text-[#111827] tracking-tight">Danh sách khách hàng</h1>
+            {activeView === 'list' && (
+                <div className="bg-white rounded-2xl border border-border shadow-sm flex flex-col flex-1 min-h-0 w-full">
+                    <div className="md:hidden flex items-center gap-2 p-3 border-b border-border">
                         <button
-                            onClick={() => setIsFormModalOpen(true)}
-                            className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 text-white font-medium text-sm transition-all duration-200 shadow-sm hover:shadow-md"
-                            style={{ backgroundColor: '#2563EB' }}
-                            onMouseEnter={(e) => e.target.style.backgroundColor = '#1D4ED8'}
-                            onMouseLeave={(e) => e.target.style.backgroundColor = '#2563EB'}
+                            onClick={() => navigate(-1)}
+                            className="p-2 rounded-xl border border-border bg-white text-muted-foreground shrink-0"
                         >
-                            <Plus className="w-4 h-4" />
-                            Thêm mới
+                            <ChevronLeft size={18} />
+                        </button>
+                        <div className="relative flex-1">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={15} />
+                            <input
+                                type="text"
+                                placeholder="Tìm kiếm . . ."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="w-full pl-9 pr-8 py-2 bg-muted/20 border border-border/80 rounded-xl text-[13px] focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all font-medium"
+                            />
+                            {searchTerm && (
+                                <button onClick={() => setSearchTerm('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                                    <X size={14} />
+                                </button>
+                            )}
+                        </div>
+                        <button
+                            onClick={openMobileFilter}
+                            className={clsx(
+                                'relative p-2 rounded-xl border shrink-0 transition-all',
+                                hasActiveFilters ? 'border-primary bg-primary/5 text-primary' : 'border-border bg-white text-muted-foreground',
+                            )}
+                        >
+                            <Filter size={18} />
+                            {hasActiveFilters && (
+                                <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-primary text-white text-[9px] font-bold flex items-center justify-center">
+                                    {totalActiveFilters}
+                                </span>
+                            )}
+                        </button>
+                        <button
+                            onClick={() => {
+                                setSelectedCustomer(null);
+                                setIsFormModalOpen(true);
+                            }}
+                            className="p-2 rounded-xl bg-primary text-white shrink-0 shadow-md shadow-primary/20"
+                        >
+                            <Plus size={18} />
                         </button>
                     </div>
 
-                    {/* Search Bar and Summary Stats - Same Row */}
-                    <div className="mb-6 flex flex-col lg:flex-row lg:items-center gap-4">
-                        {/* Search Bar */}
-                        <div className="flex-1 relative">
-                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#9CA3AF]" />
-                            <input
-                                type="text"
-                                placeholder="Tìm theo tên, email, SĐT..."
-                                className="w-full pl-12 pr-4 py-3 border border-[#D1D5DB] focus:outline-none focus:ring-2 focus:ring-[#2563EB] focus:border-[#2563EB] bg-white text-[#111827] placeholder-[#9CA3AF] text-sm transition-all"
-                                style={{ fontFamily: '"Roboto", sans-serif' }}
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                            />
-                        </div>
+                    <div className="md:hidden flex-1 overflow-y-auto p-3 flex flex-col gap-3">
+                        {isLoading ? (
+                            <div className="py-16 text-center text-[13px] text-muted-foreground italic">Đang tải dữ liệu...</div>
+                        ) : filteredCustomers.length === 0 ? (
+                            <div className="py-16 text-center text-[13px] text-muted-foreground italic">Không tìm thấy kết quả phù hợp</div>
+                        ) : (
+                            filteredCustomers.map((c) => (
+                                <div key={c.id} className="rounded-2xl border border-border bg-white shadow-sm p-4">
+                                    <div className="flex items-start justify-between gap-2 mb-2">
+                                        <div>
+                                            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{c.code}</p>
+                                            <h3 className="text-[15px] font-bold text-foreground leading-tight mt-0.5">{c.name}</h3>
+                                        </div>
+                                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border border-primary/20 text-primary bg-primary/5">
+                                            {getLabel(CUSTOMER_CATEGORIES, c.category)}
+                                        </span>
+                                    </div>
 
-                        {/* Summary Stats */}
-                        <div className="flex items-center justify-around sm:justify-start gap-4 sm:gap-6 px-4 py-3 bg-[#EFF6FF] border border-[#BFDBFE]">
-                            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 text-center sm:text-left">
-                                <span className="text-[10px] sm:text-sm text-[#6B7280]" style={{ fontFamily: '"Roboto", sans-serif' }}>Khách hàng:</span>
-                                <span className="text-sm sm:text-lg font-semibold text-[#2563EB]" style={{ fontFamily: '"Roboto", sans-serif' }}>{filteredCustomersCount}</span>
-                            </div>
-                            <div className="hidden sm:block w-px h-8 bg-[#BFDBFE]"></div>
-                            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 text-center sm:text-left border-l border-[#BFDBFE] sm:border-none pl-4 sm:pl-0">
-                                <span className="text-[10px] sm:text-sm text-[#6B7280]" style={{ fontFamily: '"Roboto", sans-serif' }}>Tổng bình:</span>
-                                <span className="text-sm sm:text-lg font-semibold text-[#2563EB]" style={{ fontFamily: '"Roboto", sans-serif' }}>{formatNumber(totalCylinders)}</span>
-                            </div>
-                            <div className="hidden sm:block w-px h-8 bg-[#BFDBFE]"></div>
-                            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 text-center sm:text-left border-l border-[#BFDBFE] sm:border-none pl-4 sm:pl-0">
-                                <span className="text-[10px] sm:text-sm text-[#6B7280]" style={{ fontFamily: '"Roboto", sans-serif' }}>Tổng máy:</span>
-                                <span className="text-sm sm:text-lg font-semibold text-[#2563EB]" style={{ fontFamily: '"Roboto", sans-serif' }}>{formatNumber(totalMachines)}</span>
-                            </div>
-                        </div>
-                    </div>
+                                    <div className="space-y-1.5 mb-3">
+                                        <div className="flex items-center gap-2 text-[12px] text-muted-foreground">
+                                            <Phone className="w-3.5 h-3.5" />
+                                            <span>{c.phone || '—'}</span>
+                                        </div>
+                                        <div className="flex items-start gap-2 text-[12px] text-muted-foreground">
+                                            <MapPin className="w-3.5 h-3.5 mt-0.5" />
+                                            <span className="line-clamp-2">{c.address || '—'}</span>
+                                        </div>
+                                    </div>
 
-                    {/* Filter Section */}
-                    <div className="mb-6 flex items-center gap-3 flex-wrap">
-                        {/* Loại khách Dropdown */}
-                        <FilterDropdown
-                            label="Loại khách"
-                            selectedCount={selectedCategories.length}
-                            totalCount={CUSTOMER_CATEGORIES.length}
-                            onSelectAll={() => {
-                                if (selectedCategories.length === CUSTOMER_CATEGORIES.length) {
-                                    setSelectedCategories([]);
-                                } else {
-                                    setSelectedCategories(CUSTOMER_CATEGORIES.map(c => c.id));
-                                }
-                            }}
-                        >
-                            <div className="space-y-1 p-2">
-                                {CUSTOMER_CATEGORIES.map(cat => (
-                                    <label key={cat.id} className="flex items-center gap-2 cursor-pointer hover:bg-[#F3F4F6] p-2">
-                                        <input
-                                            type="checkbox"
-                                            checked={selectedCategories.includes(cat.id)}
-                                            onChange={(e) => {
-                                                if (e.target.checked) {
-                                                    setSelectedCategories([...selectedCategories, cat.id]);
-                                                } else {
-                                                    setSelectedCategories(selectedCategories.filter(id => id !== cat.id));
-                                                }
-                                            }}
-                                            className="w-4 h-4 text-[#2563EB] border-[#D1D5DB] focus:ring-[#2563EB]"
-                                        />
-                                        <span className="text-sm text-[#374151]" style={{ fontFamily: '"Roboto", sans-serif' }}>{cat.label}</span>
-                                    </label>
-                                ))}
-                            </div>
-                        </FilterDropdown>
+                                    <div className="grid grid-cols-3 gap-2 rounded-xl bg-muted/30 border border-border/60 p-2.5 mb-3">
+                                        <div className="text-center">
+                                            <p className="text-[9px] uppercase tracking-wider text-muted-foreground">Số vỏ</p>
+                                            <p className="text-[13px] font-bold text-foreground">{formatNumber(c.current_cylinders || 0)}</p>
+                                        </div>
+                                        <div className="text-center border-x border-border/60">
+                                            <p className="text-[9px] uppercase tracking-wider text-muted-foreground">Số máy</p>
+                                            <p className="text-[13px] font-bold text-foreground">{formatNumber(c.current_machines || 0)}</p>
+                                        </div>
+                                        <div className="text-center">
+                                            <p className="text-[9px] uppercase tracking-wider text-muted-foreground">Bình mượn</p>
+                                            <p className="text-[13px] font-bold text-foreground">{formatNumber(c.borrowed_cylinders || 0)}</p>
+                                        </div>
+                                    </div>
 
-                        {/* Nhân viên phụ trách Dropdown */}
-                        <FilterDropdown
-                            label="Nhân viên phụ trách"
-                            selectedCount={selectedManagedBy.length}
-                            totalCount={uniqueManagedBy.length}
-                            onSelectAll={() => {
-                                if (selectedManagedBy.length === uniqueManagedBy.length) {
-                                    setSelectedManagedBy([]);
-                                } else {
-                                    setSelectedManagedBy([...uniqueManagedBy]);
-                                }
-                            }}
-                        >
-                            <div className="space-y-1 p-2">
-                                {uniqueManagedBy.map(managedBy => (
-                                    <label key={managedBy} className="flex items-center gap-2 cursor-pointer hover:bg-[#F3F4F6] p-2">
-                                        <input
-                                            type="checkbox"
-                                            checked={selectedManagedBy.includes(managedBy)}
-                                            onChange={(e) => {
-                                                if (e.target.checked) {
-                                                    setSelectedManagedBy([...selectedManagedBy, managedBy]);
-                                                } else {
-                                                    setSelectedManagedBy(selectedManagedBy.filter(m => m !== managedBy));
-                                                }
-                                            }}
-                                            className="w-4 h-4 text-[#2563EB] border-[#D1D5DB] focus:ring-[#2563EB]"
-                                        />
-                                        <span className="text-sm text-[#374151] truncate" style={{ fontFamily: '"Roboto", sans-serif' }} title={managedBy}>{managedBy}</span>
-                                    </label>
-                                ))}
-                            </div>
-                        </FilterDropdown>
-
-                        {/* KD chăm sóc Dropdown */}
-                        <FilterDropdown
-                            label="KD chăm sóc"
-                            selectedCount={selectedCareBy.length}
-                            totalCount={uniqueCareBy.length}
-                            onSelectAll={() => {
-                                if (selectedCareBy.length === uniqueCareBy.length) {
-                                    setSelectedCareBy([]);
-                                } else {
-                                    setSelectedCareBy([...uniqueCareBy]);
-                                }
-                            }}
-                        >
-                            <div className="space-y-1 p-2">
-                                {uniqueCareBy.map(careBy => (
-                                    <label key={careBy} className="flex items-center gap-2 cursor-pointer hover:bg-[#F3F4F6] p-2">
-                                        <input
-                                            type="checkbox"
-                                            checked={selectedCareBy.includes(careBy)}
-                                            onChange={(e) => {
-                                                if (e.target.checked) {
-                                                    setSelectedCareBy([...selectedCareBy, careBy]);
-                                                } else {
-                                                    setSelectedCareBy(selectedCareBy.filter(c => c !== careBy));
-                                                }
-                                            }}
-                                            className="w-4 h-4 text-[#2563EB] border-[#D1D5DB] focus:ring-[#2563EB]"
-                                        />
-                                        <span className="text-sm text-[#374151] truncate" style={{ fontFamily: '"Roboto", sans-serif' }} title={careBy}>{careBy}</span>
-                                    </label>
-                                ))}
-                            </div>
-                        </FilterDropdown>
-                    </div>
-
-                    {/* Main Content Card */}
-                    <div className="bg-white rounded-lg border border-[#E5E7EB] shadow-sm overflow-hidden">
-                        {/* Mobile Card List (Visible only on mobile) */}
-                        <div className="md:hidden divide-y divide-[#E5E7EB]">
-                            {isLoading ? (
-                                <div className="px-4 py-16 text-center">
-                                    <div className="flex flex-col items-center gap-4">
-                                        <div className="w-8 h-8 border-4 border-[#2563EB] border-t-transparent rounded-full animate-spin"></div>
-                                        <p className="text-[#6B7280] text-sm font-medium">Đang tải dữ liệu...</p>
+                                    <div className="flex items-center justify-between pt-2 border-t border-border/70">
+                                        <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+                                            <User size={12} />
+                                            <span>{c.managed_by || '—'}</span>
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                            <button onClick={() => handleViewCustomer(c)} className="text-muted-foreground hover:text-primary transition-colors"><Eye size={18} /></button>
+                                            <button onClick={() => handleEditCustomer(c)} className="text-muted-foreground hover:text-primary transition-colors"><Edit size={18} /></button>
+                                            <button onClick={() => handleDeleteCustomer(c.id, c.name)} className="text-muted-foreground hover:text-red-500 transition-colors"><Trash2 size={18} /></button>
+                                        </div>
                                     </div>
                                 </div>
-                            ) : filteredCustomers.length === 0 ? (
-                                <div className="px-4 py-16 text-center">
-                                    <div className="flex flex-col items-center gap-4">
-                                        <Users className="w-12 h-12 text-[#D1D5DB]" />
-                                        <p className="text-sm font-medium text-[#6B7280]">Không tìm thấy khách hàng nào</p>
-                                    </div>
+                            ))
+                        )}
+                    </div>
+
+                    <div className="hidden md:block p-4 space-y-4">
+                        <div className="flex items-center justify-between gap-4">
+                            <div className="flex items-center gap-2 flex-1">
+                                <button
+                                    onClick={() => navigate(-1)}
+                                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-border hover:bg-muted text-muted-foreground text-[12px] font-bold transition-all bg-white shadow-sm shrink-0"
+                                >
+                                    <ChevronLeft size={16} />
+                                    Quay lại
+                                </button>
+                                <div className="relative flex-1">
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
+                                    <input
+                                        type="text"
+                                        placeholder="Tìm kiếm . . ."
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                        className="w-full pl-10 pr-8 py-1.5 bg-muted/20 border border-border/80 rounded-xl text-[13px] focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all font-medium"
+                                    />
+                                    {searchTerm && (
+                                        <button onClick={() => setSearchTerm('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                                            <X size={14} />
+                                        </button>
+                                    )}
                                 </div>
-                            ) : (
-                                filteredCustomers.map((c) => (
-                                    <div key={c.id} className="p-4 bg-white hover:bg-gray-50 active:bg-gray-100 transition-colors">
-                                        <div className="flex justify-between items-start mb-3">
-                                            <div className="flex flex-col">
-                                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{c.code}</span>
-                                                <h3 className="text-base font-bold text-[#111827] leading-tight mt-0.5">{c.name}</h3>
-                                            </div>
-                                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border uppercase bg-[#EFF6FF] text-[#2563EB] border-[#BFDBFE]">
-                                                {getLabel(CUSTOMER_CATEGORIES, c.category)}
-                                            </span>
-                                        </div>
+                            </div>
+                            <button
+                                onClick={() => {
+                                    setSelectedCustomer(null);
+                                    setIsFormModalOpen(true);
+                                }}
+                                className="flex items-center gap-2 px-6 py-1.5 rounded-xl bg-primary text-white text-[13px] font-bold hover:bg-primary/90 shadow-md shadow-primary/20 transition-all"
+                            >
+                                <Plus size={18} />
+                                Thêm
+                            </button>
+                        </div>
 
-                                        <div className="space-y-2 mb-4">
-                                            {c.phone && (
-                                                <div className="flex items-center gap-2 text-sm text-slate-600">
-                                                    <Phone className="w-3.5 h-3.5 text-slate-400" />
-                                                    <span>{c.phone}</span>
-                                                </div>
-                                            )}
-                                            {c.address && (
-                                                <div className="flex items-start gap-2 text-sm text-slate-600">
-                                                    <MapPin className="w-3.5 h-3.5 text-slate-400 mt-0.5" />
-                                                    <span className="line-clamp-2">{c.address}</span>
-                                                </div>
-                                            )}
-                                        </div>
+                        <div className="flex flex-wrap items-center gap-2" ref={dropdownRef}>
+                            <div className="relative">
+                                <button
+                                    onClick={() => setActiveDropdown(activeDropdown === 'categories' ? null : 'categories')}
+                                    className={clsx(
+                                        'flex items-center gap-2.5 px-4 py-2 rounded-xl border text-[13px] font-bold transition-all',
+                                        activeDropdown === 'categories' || selectedCategories.length > 0
+                                            ? 'border-primary bg-primary/5 text-primary'
+                                            : 'border-border bg-white text-muted-foreground hover:text-foreground'
+                                    )}
+                                >
+                                    <Users size={14} />
+                                    Loại khách
+                                    {selectedCategories.length > 0 && (
+                                        <span className="px-1.5 py-0.5 rounded-full bg-primary text-white text-[10px] font-bold">
+                                            {selectedCategories.length}
+                                        </span>
+                                    )}
+                                    <ChevronDown size={14} className={clsx('transition-transform', activeDropdown === 'categories' ? 'rotate-180' : '')} />
+                                </button>
+                                {activeDropdown === 'categories' && (
+                                    <FilterDropdown
+                                        options={categoryOptions}
+                                        selected={selectedCategories}
+                                        setSelected={setSelectedCategories}
+                                        filterSearch={filterSearch}
+                                        setFilterSearch={setFilterSearch}
+                                    />
+                                )}
+                            </div>
 
-                                        <div className="grid grid-cols-3 gap-2 p-3 bg-slate-50 border border-slate-100 rounded-xl mb-4">
-                                            <div className="text-center">
-                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter mb-1">Số vỏ</p>
-                                                <p className="text-sm font-black text-blue-600">{formatNumber(c.current_cylinders || 0)}</p>
-                                            </div>
-                                            <div className="text-center border-x border-slate-200">
-                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter mb-1">Số máy</p>
-                                                <p className="text-sm font-black text-blue-600">{formatNumber(c.current_machines || 0)}</p>
-                                            </div>
-                                            <div className="text-center">
-                                                <p className="text-[9px] font-black text-slate-400 uppercase tracking-tighter mb-1">Bình mượn</p>
-                                                <p className="text-sm font-black text-blue-600">{formatNumber(c.borrowed_cylinders || 0)}</p>
-                                            </div>
-                                        </div>
+                            <div className="relative">
+                                <button
+                                    onClick={() => setActiveDropdown(activeDropdown === 'managedBy' ? null : 'managedBy')}
+                                    className={clsx(
+                                        'flex items-center gap-2.5 px-4 py-2 rounded-xl border text-[13px] font-bold transition-all',
+                                        activeDropdown === 'managedBy' || selectedManagedBy.length > 0
+                                            ? 'border-primary bg-primary/5 text-primary'
+                                            : 'border-border bg-white text-muted-foreground hover:text-foreground'
+                                    )}
+                                >
+                                    <User size={14} />
+                                    NV phụ trách
+                                    {selectedManagedBy.length > 0 && (
+                                        <span className="px-1.5 py-0.5 rounded-full bg-primary text-white text-[10px] font-bold">
+                                            {selectedManagedBy.length}
+                                        </span>
+                                    )}
+                                    <ChevronDown size={14} className={clsx('transition-transform', activeDropdown === 'managedBy' ? 'rotate-180' : '')} />
+                                </button>
+                                {activeDropdown === 'managedBy' && (
+                                    <FilterDropdown
+                                        options={managedByOptions}
+                                        selected={selectedManagedBy}
+                                        setSelected={setSelectedManagedBy}
+                                        filterSearch={filterSearch}
+                                        setFilterSearch={setFilterSearch}
+                                    />
+                                )}
+                            </div>
 
-                                        <div className="flex items-center justify-between pt-3 border-t border-slate-50">
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-[10px] font-bold text-slate-400 uppercase">Phụ trách:</span>
-                                                <span className="text-[11px] font-medium text-slate-700">{c.managed_by || '—'}</span>
-                                            </div>
-                                            <div className="flex items-center gap-3">
-                                                <button
-                                                    onClick={() => handleViewCustomer(c)}
-                                                    className="p-2 text-[#9CA3AF] hover:text-[#2563EB] active:bg-blue-50 rounded-lg transition-colors border border-transparent active:border-blue-100"
-                                                >
-                                                    <Eye className="w-5 h-5" />
-                                                </button>
-                                                <button
-                                                    onClick={() => handleEditCustomer(c)}
-                                                    className="p-2 text-[#9CA3AF] hover:text-[#2563EB] active:bg-blue-50 rounded-lg transition-colors border border-transparent active:border-blue-100"
-                                                >
-                                                    <Edit className="w-5 h-5" />
-                                                </button>
-                                                <button
-                                                    onClick={() => handleDeleteCustomer(c.id, c.name)}
-                                                    className="p-2 text-[#9CA3AF] hover:text-[#DC2626] active:bg-red-50 rounded-lg transition-colors border border-transparent active:border-red-100"
-                                                >
-                                                    <Trash2 className="w-5 h-5" />
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                ))
+                            <div className="relative">
+                                <button
+                                    onClick={() => setActiveDropdown(activeDropdown === 'careBy' ? null : 'careBy')}
+                                    className={clsx(
+                                        'flex items-center gap-2.5 px-4 py-2 rounded-xl border text-[13px] font-bold transition-all',
+                                        activeDropdown === 'careBy' || selectedCareBy.length > 0
+                                            ? 'border-primary bg-primary/5 text-primary'
+                                            : 'border-border bg-white text-muted-foreground hover:text-foreground'
+                                    )}
+                                >
+                                    <User size={14} />
+                                    KD chăm sóc
+                                    {selectedCareBy.length > 0 && (
+                                        <span className="px-1.5 py-0.5 rounded-full bg-primary text-white text-[10px] font-bold">
+                                            {selectedCareBy.length}
+                                        </span>
+                                    )}
+                                    <ChevronDown size={14} className={clsx('transition-transform', activeDropdown === 'careBy' ? 'rotate-180' : '')} />
+                                </button>
+                                {activeDropdown === 'careBy' && (
+                                    <FilterDropdown
+                                        options={careByOptions}
+                                        selected={selectedCareBy}
+                                        setSelected={setSelectedCareBy}
+                                        filterSearch={filterSearch}
+                                        setFilterSearch={setFilterSearch}
+                                    />
+                                )}
+                            </div>
+
+                            {hasActiveFilters && (
+                                <button
+                                    onClick={clearAllFilters}
+                                    className="flex items-center gap-2 px-3 py-2 rounded-xl border border-dashed border-red-300 text-red-500 text-[12px] font-bold hover:bg-red-50 transition-all"
+                                >
+                                    <X size={14} />
+                                    Xóa bộ lọc
+                                </button>
                             )}
                         </div>
+                    </div>
 
-                        {/* Desktop Table View (Hidden on mobile) */}
-                        <div className="hidden md:block w-full overflow-x-auto">
-                            <table className="w-full border-collapse">
-                                <thead className="bg-[#F9FAFB]">
+                    <div className="hidden md:block flex-1 overflow-x-auto border-t border-border">
+                        <table className="w-full border-collapse">
+                            <thead className="bg-muted/20">
+                                <tr>
+                                    {visibleTableColumns.map(col => (
+                                        <th key={col.key} className="px-4 py-3.5 text-[12px] font-bold text-muted-foreground text-left uppercase tracking-wide">
+                                            {col.label}
+                                        </th>
+                                    ))}
+                                    <th className="px-4 py-3.5 text-[12px] font-bold text-muted-foreground text-center uppercase tracking-wide">Thao tác</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-border">
+                                {isLoading ? (
                                     <tr>
-                                        {visibleTableColumns.map(col => (
-                                            <th key={col.key} className="px-4 py-3.5 text-xs font-semibold text-[#374151] text-left uppercase tracking-wider">
-                                                {col.label}
-                                            </th>
-                                        ))}
-                                        <th className="px-4 py-3.5 text-xs font-semibold text-[#374151] text-center uppercase tracking-wider">Thao tác</th>
+                                        <td colSpan={visibleTableColumns.length + 1} className="px-4 py-16 text-center text-muted-foreground">
+                                            Đang tải dữ liệu...
+                                        </td>
                                     </tr>
-                                </thead>
-                                <tbody className="divide-y divide-[#E5E7EB]">
-                                    {isLoading ? (
-                                        <tr>
-                                            <td colSpan={visibleTableColumns.length + 1} className="px-4 py-16 text-center">
-                                                <div className="flex flex-col items-center gap-4">
-                                                    <div className="w-8 h-8 border-4 border-[#2563EB] border-t-transparent rounded-full animate-spin"></div>
-                                                    <p className="text-[#6B7280] text-sm font-medium" style={{ fontFamily: '"Roboto", sans-serif' }}>Đang tải dữ liệu...</p>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ) : filteredCustomers.length === 0 ? (
-                                        <tr>
-                                            <td colSpan={visibleTableColumns.length + 1} className="px-4 py-16 text-center">
-                                                <div className="flex flex-col items-center gap-4">
-                                                    <Users className="w-12 h-12 text-[#D1D5DB]" />
-                                                    <p className="text-sm font-medium text-[#6B7280]" style={{ fontFamily: '"Roboto", sans-serif' }}>Không tìm thấy khách hàng nào</p>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ) : filteredCustomers.map((c) => (
-                                        <tr key={c.id} className="hover:bg-[#F9FAFB] transition-colors">
-                                            {isColumnVisible('code') && <td className="px-4 py-4 whitespace-nowrap">
-                                                <span className="text-sm font-medium text-[#111827]" style={{ fontFamily: '"Roboto", sans-serif' }}>
-                                                    {c.code}
-                                                </span>
-                                            </td>}
-                                            {isColumnVisible('name') && <td className="px-4 py-4">
-                                                <span className="text-sm font-medium text-[#111827]" style={{ fontFamily: '"Roboto", sans-serif' }}>{c.name}</span>
-                                            </td>}
-                                            {isColumnVisible('phone') && <td className="px-4 py-4 text-sm text-[#374151] font-normal" style={{ fontFamily: '"Roboto", sans-serif' }}>{c.phone || '—'}</td>}
-                                            {isColumnVisible('address') && <td className="px-4 py-4 text-sm text-[#374151] font-normal" style={{ fontFamily: '"Roboto", sans-serif' }}>{c.address || '—'}</td>}
-                                            {isColumnVisible('legal_rep') && <td className="px-4 py-4 text-sm text-[#374151] font-normal" style={{ fontFamily: '"Roboto", sans-serif' }}>{c.legal_rep || '—'}</td>}
-                                            {isColumnVisible('managed_by') && <td className="px-4 py-4 text-sm text-[#374151] font-normal" style={{ fontFamily: '"Roboto", sans-serif' }}>{c.managed_by || '—'}</td>}
-                                            {isColumnVisible('category') && <td className="px-4 py-4 text-sm text-[#374151] font-normal" style={{ fontFamily: '"Roboto", sans-serif' }}>{getLabel(CUSTOMER_CATEGORIES, c.category)}</td>}
-                                            {isColumnVisible('current_cylinders') && <td className="px-4 py-4">
-                                                <span className="text-sm font-semibold text-[#111827]" style={{ fontFamily: '"Roboto", sans-serif' }}>{formatNumber(c.current_cylinders || 0)}</span>
-                                            </td>}
-                                            {isColumnVisible('current_machines') && <td className="px-4 py-4">
-                                                <span className="text-sm font-semibold text-[#111827]" style={{ fontFamily: '"Roboto", sans-serif' }}>{formatNumber(c.current_machines || 0)}</span>
-                                            </td>}
-                                            {isColumnVisible('borrowed_cylinders') && <td className="px-4 py-4">
-                                                <span className="text-sm font-semibold text-[#111827]" style={{ fontFamily: '"Roboto", sans-serif' }}>{formatNumber(c.borrowed_cylinders || 0)}</span>
-                                            </td>}
-                                            {isColumnVisible('machines_in_use') && <td className="px-4 py-4 text-sm text-[#374151] font-normal" style={{ fontFamily: '"Roboto", sans-serif' }}>{c.machines_in_use || '—'}</td>}
-                                            {isColumnVisible('care_by') && <td className="px-4 py-4 text-sm text-[#374151] font-normal" style={{ fontFamily: '"Roboto", sans-serif' }}>{c.care_by || '—'}</td>}
-                                            <td className="px-4 py-4 text-center">
-                                                <div className="flex items-center justify-center gap-3">
-                                                    <button
-                                                        onClick={() => handleViewCustomer(c)}
-                                                        className="text-[#9CA3AF] hover:text-[#2563EB] transition-colors p-1 hover:bg-[#EFF6FF]"
-                                                        title="Xem chi tiết"
-                                                    >
-                                                        <Eye className="w-4 h-4" />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleEditCustomer(c)}
-                                                        className="text-[#9CA3AF] hover:text-[#2563EB] transition-colors p-1 hover:bg-[#EFF6FF]"
-                                                        title="Chỉnh sửa"
-                                                    >
-                                                        <Edit className="w-4 h-4" />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleDeleteCustomer(c.id, c.name)}
-                                                        className="text-[#9CA3AF] hover:text-[#DC2626] transition-colors p-1 hover:bg-[#FEF2F2]"
-                                                        title="Xóa"
-                                                    >
+                                ) : filteredCustomers.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={visibleTableColumns.length + 1} className="px-4 py-16 text-center text-muted-foreground">
+                                            Không tìm thấy khách hàng nào
+                                        </td>
+                                    </tr>
+                                ) : filteredCustomers.map((c) => (
+                                    <tr key={c.id} className="hover:bg-muted/20 transition-colors">
+                                        {isColumnVisible('code') && <td className="px-4 py-4 whitespace-nowrap text-sm font-semibold text-foreground">{c.code}</td>}
+                                        {isColumnVisible('name') && <td className="px-4 py-4 text-sm font-semibold text-foreground">{c.name}</td>}
+                                        {isColumnVisible('phone') && <td className="px-4 py-4 text-sm text-muted-foreground">{c.phone || '—'}</td>}
+                                        {isColumnVisible('address') && <td className="px-4 py-4 text-sm text-muted-foreground">{c.address || '—'}</td>}
+                                        {isColumnVisible('legal_rep') && <td className="px-4 py-4 text-sm text-muted-foreground">{c.legal_rep || '—'}</td>}
+                                        {isColumnVisible('managed_by') && <td className="px-4 py-4 text-sm text-muted-foreground">{c.managed_by || '—'}</td>}
+                                        {isColumnVisible('category') && <td className="px-4 py-4 text-sm text-muted-foreground">{getLabel(CUSTOMER_CATEGORIES, c.category)}</td>}
+                                        {isColumnVisible('current_cylinders') && <td className="px-4 py-4 text-sm font-semibold text-foreground">{formatNumber(c.current_cylinders || 0)}</td>}
+                                        {isColumnVisible('current_machines') && <td className="px-4 py-4 text-sm font-semibold text-foreground">{formatNumber(c.current_machines || 0)}</td>}
+                                        {isColumnVisible('borrowed_cylinders') && <td className="px-4 py-4 text-sm font-semibold text-foreground">{formatNumber(c.borrowed_cylinders || 0)}</td>}
+                                        {isColumnVisible('machines_in_use') && <td className="px-4 py-4 text-sm text-muted-foreground">{c.machines_in_use || '—'}</td>}
+                                        {isColumnVisible('care_by') && <td className="px-4 py-4 text-sm text-muted-foreground">{c.care_by || '—'}</td>}
+                                        <td className="px-4 py-4 text-center">
+                                            <div className="flex items-center justify-center gap-3">
+                                                <button onClick={() => handleViewCustomer(c)} className="text-muted-foreground hover:text-primary transition-colors p-1" title="Xem chi tiết">
+                                                    <Eye className="w-4 h-4" />
+                                                </button>
+                                                <button onClick={() => handleEditCustomer(c)} className="text-muted-foreground hover:text-primary transition-colors p-1" title="Chỉnh sửa">
+                                                    <Edit className="w-4 h-4" />
+                                                </button>
+                                                {(role === 'admin' || role === 'manager') && (
+                                                    <button onClick={() => handleDeleteCustomer(c.id, c.name)} className="text-muted-foreground hover:text-red-500 transition-colors p-1" title="Xóa">
                                                         <Trash2 className="w-4 h-4" />
                                                     </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </>
-            ) : (
-                /* Statistics View */
-                <div className="space-y-6">
-                    {/* Summary Stats */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <div className="bg-white p-4 sm:p-6 border border-[#E5E7EB]">
-                            <div className="text-[10px] sm:text-sm text-[#6B7280] mb-2 uppercase tracking-wider font-bold" style={{ fontFamily: '"Roboto", sans-serif' }}>Khách hàng</div>
-                            <div className="text-lg sm:text-2xl font-black text-[#111827]" style={{ fontFamily: '"Roboto", sans-serif' }}>{filteredCustomersCount}</div>
-                        </div>
-                        <div className="bg-white p-4 sm:p-6 border border-[#E5E7EB]">
-                            <div className="text-[10px] sm:text-sm text-[#6B7280] mb-2 uppercase tracking-wider font-bold" style={{ fontFamily: '"Roboto", sans-serif' }}>Tổng bình</div>
-                            <div className="text-lg sm:text-2xl font-black text-[#111827]" style={{ fontFamily: '"Roboto", sans-serif' }}>{formatNumber(totalCylinders)}</div>
-                        </div>
-                        <div className="bg-white p-4 sm:p-6 border border-[#E5E7EB]">
-                            <div className="text-[10px] sm:text-sm text-[#6B7280] mb-2 uppercase tracking-wider font-bold" style={{ fontFamily: '"Roboto", sans-serif' }}>Tổng máy</div>
-                            <div className="text-lg sm:text-2xl font-black text-[#111827]" style={{ fontFamily: '"Roboto", sans-serif' }}>{formatNumber(totalMachines)}</div>
-                        </div>
-                        <div className="bg-white p-4 sm:p-6 border border-[#E5E7EB]">
-                            <div className="text-[10px] sm:text-sm text-[#6B7280] mb-2 uppercase tracking-wider font-bold" style={{ fontFamily: '"Roboto", sans-serif' }}>Bình mượn</div>
-                            <div className="text-lg sm:text-2xl font-black text-[#111827]" style={{ fontFamily: '"Roboto", sans-serif' }}>{formatNumber(totalBorrowed)}</div>
-                        </div>
+                                                )}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
                     </div>
 
-                    {/* Charts Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {/* Category Chart */}
-                        <div className="bg-white p-6 border border-[#E5E7EB]">
-                            <h3 className="text-lg font-semibold text-[#111827] mb-4" style={{ fontFamily: '"Roboto", sans-serif' }}>Phân bổ theo Loại khách</h3>
-                            <div style={{ height: '300px' }}>
-                                <PieChartJS
-                                    data={{
-                                        labels: getCategoryStats().map(item => item.name),
-                                        datasets: [{
-                                            data: getCategoryStats().map(item => item.value),
-                                            backgroundColor: chartColors.slice(0, getCategoryStats().length),
-                                            borderColor: '#fff',
-                                            borderWidth: 2
-                                        }]
-                                    }}
-                                    options={{
-                                        responsive: true,
-                                        maintainAspectRatio: false,
-                                        plugins: {
-                                            legend: {
-                                                position: 'bottom'
-                                            }
-                                        }
-                                    }}
-                                />
+                    <div className="hidden md:flex px-4 py-4 border-t border-border items-center justify-between bg-muted/5">
+                        <div className="flex items-center gap-3 text-[12px] text-muted-foreground font-medium">
+                            <span>{filteredCustomers.length > 0 ? `1–${filteredCustomers.length}` : '0'}/Tổng {filteredCustomers.length}</span>
+                            <div className="flex items-center gap-1 ml-2">
+                                <span className="text-[11px] font-bold">│</span>
+                                <span className="text-primary font-bold">{formatNumber(totalCylinders)} vỏ</span>
+                                <span className="text-muted-foreground">•</span>
+                                <span className="text-primary font-bold">{formatNumber(totalMachines)} máy</span>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-1">
+                            <button className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors disabled:opacity-20" disabled>
+                                <ChevronLeft size={16} />
+                                <ChevronLeft size={16} className="-ml-2.5" />
+                            </button>
+                            <button className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors disabled:opacity-20" disabled>
+                                <ChevronLeft size={16} />
+                            </button>
+                            <div className="w-8 h-8 rounded-lg bg-primary text-white flex items-center justify-center text-[12px] font-bold shadow-md shadow-primary/25">1</div>
+                            <button className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors disabled:opacity-20" disabled>
+                                <ChevronRight size={16} />
+                            </button>
+                            <button className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors disabled:opacity-20" disabled>
+                                <ChevronRight size={16} />
+                                <ChevronRight size={16} className="-ml-2.5" />
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {activeView === 'stats' && (
+                <div className="bg-white rounded-2xl border border-border shadow-sm flex flex-col flex-1 min-h-0 w-full">
+                    <div className="space-y-0">
+                        <div className="md:hidden flex items-center gap-2 p-3 border-b border-border">
+                            <button
+                                onClick={() => navigate(-1)}
+                                className="p-2 rounded-xl border border-border bg-white text-muted-foreground shrink-0"
+                            >
+                                <ChevronLeft size={18} />
+                            </button>
+                            <h2 className="text-base font-bold text-foreground flex-1 text-center">Thống kê</h2>
+                            <button
+                                onClick={openMobileFilter}
+                                className={clsx(
+                                    'relative p-2 rounded-xl border shrink-0 transition-all',
+                                    hasActiveFilters ? 'border-primary bg-primary/5 text-primary' : 'border-border bg-white text-muted-foreground',
+                                )}
+                            >
+                                <Filter size={18} />
+                                {hasActiveFilters && (
+                                    <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-primary text-white text-[9px] font-bold flex items-center justify-center">
+                                        {totalActiveFilters}
+                                    </span>
+                                )}
+                            </button>
+                        </div>
+
+                        <div className="hidden md:block p-4 border-b border-border" ref={dropdownRef}>
+                            <div className="flex flex-wrap items-center gap-2">
+                                <button
+                                    onClick={() => navigate(-1)}
+                                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-border hover:bg-muted text-muted-foreground text-[12px] font-bold transition-all bg-white shadow-sm shrink-0"
+                                >
+                                    <ChevronLeft size={16} />
+                                    Quay lại
+                                </button>
+
+                                <div className="relative">
+                                    <button
+                                        onClick={() => setActiveDropdown(activeDropdown === 'categories' ? null : 'categories')}
+                                        className={clsx(
+                                            'flex items-center gap-2.5 px-4 py-2 rounded-xl border text-[13px] font-bold transition-all',
+                                            activeDropdown === 'categories' || selectedCategories.length > 0
+                                                ? 'border-primary bg-primary/5 text-primary'
+                                                : 'border-border bg-white text-muted-foreground hover:text-foreground'
+                                        )}
+                                    >
+                                        <Users size={14} />
+                                        Loại khách
+                                        {selectedCategories.length > 0 && (
+                                            <span className="px-1.5 py-0.5 rounded-full bg-primary text-white text-[10px] font-bold">
+                                                {selectedCategories.length}
+                                            </span>
+                                        )}
+                                        <ChevronDown size={14} className={clsx('transition-transform', activeDropdown === 'categories' ? 'rotate-180' : '')} />
+                                    </button>
+                                    {activeDropdown === 'categories' && (
+                                        <FilterDropdown
+                                            options={categoryOptions}
+                                            selected={selectedCategories}
+                                            setSelected={setSelectedCategories}
+                                            filterSearch={filterSearch}
+                                            setFilterSearch={setFilterSearch}
+                                        />
+                                    )}
+                                </div>
+
+                                <div className="relative">
+                                    <button
+                                        onClick={() => setActiveDropdown(activeDropdown === 'managedBy' ? null : 'managedBy')}
+                                        className={clsx(
+                                            'flex items-center gap-2.5 px-4 py-2 rounded-xl border text-[13px] font-bold transition-all',
+                                            activeDropdown === 'managedBy' || selectedManagedBy.length > 0
+                                                ? 'border-primary bg-primary/5 text-primary'
+                                                : 'border-border bg-white text-muted-foreground hover:text-foreground'
+                                        )}
+                                    >
+                                        <User size={14} />
+                                        NV phụ trách
+                                        {selectedManagedBy.length > 0 && (
+                                            <span className="px-1.5 py-0.5 rounded-full bg-primary text-white text-[10px] font-bold">
+                                                {selectedManagedBy.length}
+                                            </span>
+                                        )}
+                                        <ChevronDown size={14} className={clsx('transition-transform', activeDropdown === 'managedBy' ? 'rotate-180' : '')} />
+                                    </button>
+                                    {activeDropdown === 'managedBy' && (
+                                        <FilterDropdown
+                                            options={managedByOptions}
+                                            selected={selectedManagedBy}
+                                            setSelected={setSelectedManagedBy}
+                                            filterSearch={filterSearch}
+                                            setFilterSearch={setFilterSearch}
+                                        />
+                                    )}
+                                </div>
+
+                                <div className="relative">
+                                    <button
+                                        onClick={() => setActiveDropdown(activeDropdown === 'careBy' ? null : 'careBy')}
+                                        className={clsx(
+                                            'flex items-center gap-2.5 px-4 py-2 rounded-xl border text-[13px] font-bold transition-all',
+                                            activeDropdown === 'careBy' || selectedCareBy.length > 0
+                                                ? 'border-primary bg-primary/5 text-primary'
+                                                : 'border-border bg-white text-muted-foreground hover:text-foreground'
+                                        )}
+                                    >
+                                        <User size={14} />
+                                        KD chăm sóc
+                                        {selectedCareBy.length > 0 && (
+                                            <span className="px-1.5 py-0.5 rounded-full bg-primary text-white text-[10px] font-bold">
+                                                {selectedCareBy.length}
+                                            </span>
+                                        )}
+                                        <ChevronDown size={14} className={clsx('transition-transform', activeDropdown === 'careBy' ? 'rotate-180' : '')} />
+                                    </button>
+                                    {activeDropdown === 'careBy' && (
+                                        <FilterDropdown
+                                            options={careByOptions}
+                                            selected={selectedCareBy}
+                                            setSelected={setSelectedCareBy}
+                                            filterSearch={filterSearch}
+                                            setFilterSearch={setFilterSearch}
+                                        />
+                                    )}
+                                </div>
+
+                                {hasActiveFilters && (
+                                    <button
+                                        onClick={clearAllFilters}
+                                        className="flex items-center gap-2 px-3 py-2 rounded-xl border border-dashed border-red-300 text-red-500 text-[12px] font-bold hover:bg-red-50 transition-all"
+                                    >
+                                        <X size={14} />
+                                        Xóa bộ lọc
+                                    </button>
+                                )}
                             </div>
                         </div>
 
-                        {/* Managed By Chart */}
-                        <div className="bg-white p-6 border border-[#E5E7EB]">
-                            <h3 className="text-lg font-semibold text-[#111827] mb-4" style={{ fontFamily: '"Roboto", sans-serif' }}>Top 10 Nhân viên phụ trách</h3>
-                            <div style={{ height: '300px' }}>
-                                <BarChartJS
-                                    data={{
-                                        labels: getManagedByStats().map(item => item.name.length > 20 ? item.name.substring(0, 20) + '...' : item.name),
-                                        datasets: [{
-                                            label: 'Số khách hàng',
-                                            data: getManagedByStats().map(item => item.value),
-                                            backgroundColor: chartColors[0],
-                                            borderColor: chartColors[0],
-                                            borderWidth: 1
-                                        }]
-                                    }}
-                                    options={{
-                                        responsive: true,
-                                        maintainAspectRatio: false,
-                                        indexAxis: 'y',
-                                        plugins: {
-                                            legend: {
-                                                display: false
-                                            }
-                                        },
-                                        scales: {
-                                            x: {
-                                                beginAtZero: true
-                                            }
-                                        }
-                                    }}
-                                />
-                            </div>
-                        </div>
+                        <div className="px-3 md:px-4 pt-4 md:pt-5 pb-5 md:pb-6 space-y-5">
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                <div className="bg-blue-50 rounded-2xl p-3.5 md:p-5 shadow-sm col-span-2 md:col-span-1">
+                                    <div className="flex items-center justify-start gap-3 md:gap-4">
+                                        <div className="w-12 h-12  bg-blue-100 rounded-full flex items-center justify-center shrink-0">
+                                            <Users className="w-5 h-5 md:w-6 md:h-6 text-blue-600" />
+                                        </div>
+                                        <div>
+                                            <p className="text-[11px] font-semibold text-blue-600 uppercase tracking-wider">Tổng khách hàng</p>
+                                            <p className="text-[34px] md:text-3xl font-bold text-blue-900 mt-0.5 md:mt-1 leading-none">{formatNumber(filteredCustomersCount)}</p>
+                                        </div>
+                                    </div>
+                                </div>
 
-                        {/* Care By Chart */}
-                        <div className="bg-white p-6 border border-[#E5E7EB]">
-                            <h3 className="text-lg font-semibold text-[#111827] mb-4" style={{ fontFamily: '"Roboto", sans-serif' }}>Top 10 KD chăm sóc</h3>
-                            <div style={{ height: '300px' }}>
-                                <BarChartJS
-                                    data={{
-                                        labels: getCareByStats().map(item => item.name.length > 20 ? item.name.substring(0, 20) + '...' : item.name),
-                                        datasets: [{
-                                            label: 'Số khách hàng',
-                                            data: getCareByStats().map(item => item.value),
-                                            backgroundColor: chartColors[1],
-                                            borderColor: chartColors[1],
-                                            borderWidth: 1
-                                        }]
-                                    }}
-                                    options={{
-                                        responsive: true,
-                                        maintainAspectRatio: false,
-                                        indexAxis: 'y',
-                                        plugins: {
-                                            legend: {
-                                                display: false
-                                            }
-                                        },
-                                        scales: {
-                                            x: {
-                                                beginAtZero: true
-                                            }
-                                        }
-                                    }}
-                                />
-                            </div>
-                        </div>
+                                <div className="bg-green-50 rounded-2xl p-3.5 md:p-5 shadow-sm">
+                                    <div className="flex items-center justify-start gap-3 md:gap-4">
+                                        <div className="w-12 h-12  bg-green-100 rounded-full flex items-center justify-center shrink-0">
+                                            <BarChart2 className="w-5 h-5 md:w-6 md:h-6 text-green-600" />
+                                        </div>
+                                        <div>
+                                            <p className="text-[11px] font-semibold text-green-600 uppercase tracking-wider">Tổng vỏ bình</p>
+                                            <p className="text-[34px] md:text-3xl font-bold text-green-900 mt-0.5 md:mt-1 leading-none">{formatNumber(totalCylinders)}</p>
+                                        </div>
+                                    </div>
+                                </div>
 
-                        {/* Cylinders Stats Chart */}
-                        <div className="bg-white p-6 border border-[#E5E7EB]">
-                            <h3 className="text-lg font-semibold text-[#111827] mb-4" style={{ fontFamily: '"Roboto", sans-serif' }}>Phân bổ Bình</h3>
-                            <div style={{ height: '300px' }}>
-                                <PieChartJS
-                                    data={{
-                                        labels: getCylindersStats().map(item => item.name),
-                                        datasets: [{
-                                            data: getCylindersStats().map(item => item.value),
-                                            backgroundColor: chartColors.slice(0, getCylindersStats().length),
-                                            borderColor: '#fff',
-                                            borderWidth: 2
-                                        }]
-                                    }}
-                                    options={{
-                                        responsive: true,
-                                        maintainAspectRatio: false,
-                                        plugins: {
-                                            legend: {
-                                                position: 'bottom'
-                                            }
-                                        }
-                                    }}
-                                />
+                                <div className="bg-orange-50 rounded-2xl p-3.5 md:p-5 shadow-sm">
+                                    <div className="flex items-center justify-start gap-3 md:gap-4">
+                                        <div className="w-12 h-12  bg-orange-100 rounded-full flex items-center justify-center shrink-0">
+                                            <BarChart2 className="w-5 h-5 md:w-6 md:h-6 text-orange-600" />
+                                        </div>
+                                        <div>
+                                            <p className="text-[11px] font-semibold text-orange-600 uppercase tracking-wider">Tổng máy</p>
+                                            <p className="text-[34px] md:text-3xl font-bold text-orange-900 mt-0.5 md:mt-1 leading-none">{formatNumber(totalMachines)}</p>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
 
-                        {/* Machines Stats Chart */}
-                        <div className="bg-white p-6 border border-[#E5E7EB]">
-                            <h3 className="text-lg font-semibold text-[#111827] mb-4" style={{ fontFamily: '"Roboto", sans-serif' }}>Phân bổ Máy</h3>
-                            <div style={{ height: '300px' }}>
-                                <PieChartJS
-                                    data={{
-                                        labels: getMachinesStats().map(item => item.name),
-                                        datasets: [{
-                                            data: getMachinesStats().map(item => item.value),
-                                            backgroundColor: chartColors.slice(0, getMachinesStats().length),
-                                            borderColor: '#fff',
-                                            borderWidth: 2
-                                        }]
-                                    }}
-                                    options={{
-                                        responsive: true,
-                                        maintainAspectRatio: false,
-                                        plugins: {
-                                            legend: {
-                                                position: 'bottom'
-                                            }
-                                        }
-                                    }}
-                                />
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                                <div className="bg-card border border-border rounded-xl p-6 shadow-sm">
+                                    <h3 className="text-lg font-bold text-foreground mb-4">Phân bổ theo Loại khách</h3>
+                                    <div style={{ height: '300px' }}>
+                                        <PieChartJS
+                                            data={{
+                                                labels: getCategoryStats().map(item => item.name),
+                                                datasets: [{
+                                                    data: getCategoryStats().map(item => item.value),
+                                                    backgroundColor: chartColors.slice(0, getCategoryStats().length),
+                                                    borderColor: '#fff',
+                                                    borderWidth: 2
+                                                }]
+                                            }}
+                                            options={{
+                                                responsive: true,
+                                                maintainAspectRatio: false,
+                                                plugins: { legend: { position: 'bottom' } }
+                                            }}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="bg-card border border-border rounded-xl p-6 shadow-sm">
+                                    <h3 className="text-lg font-bold text-foreground mb-4">Top 10 Nhân viên phụ trách</h3>
+                                    <div style={{ height: '300px' }}>
+                                        <BarChartJS
+                                            data={{
+                                                labels: getManagedByStats().map(item => item.name.length > 20 ? item.name.substring(0, 20) + '...' : item.name),
+                                                datasets: [{
+                                                    label: 'Số khách hàng',
+                                                    data: getManagedByStats().map(item => item.value),
+                                                    backgroundColor: chartColors[0],
+                                                    borderColor: chartColors[0],
+                                                    borderWidth: 1
+                                                }]
+                                            }}
+                                            options={{
+                                                responsive: true,
+                                                maintainAspectRatio: false,
+                                                indexAxis: 'y',
+                                                plugins: { legend: { display: false } },
+                                                scales: { x: { beginAtZero: true } }
+                                            }}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="bg-card border border-border rounded-xl p-6 shadow-sm">
+                                    <h3 className="text-lg font-bold text-foreground mb-4">Top 10 KD chăm sóc</h3>
+                                    <div style={{ height: '300px' }}>
+                                        <BarChartJS
+                                            data={{
+                                                labels: getCareByStats().map(item => item.name.length > 20 ? item.name.substring(0, 20) + '...' : item.name),
+                                                datasets: [{
+                                                    label: 'Số khách hàng',
+                                                    data: getCareByStats().map(item => item.value),
+                                                    backgroundColor: chartColors[1],
+                                                    borderColor: chartColors[1],
+                                                    borderWidth: 1
+                                                }]
+                                            }}
+                                            options={{
+                                                responsive: true,
+                                                maintainAspectRatio: false,
+                                                indexAxis: 'y',
+                                                plugins: { legend: { display: false } },
+                                                scales: { x: { beginAtZero: true } }
+                                            }}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="bg-card border border-border rounded-xl p-6 shadow-sm">
+                                    <h3 className="text-lg font-bold text-foreground mb-4">Phân bổ Bình</h3>
+                                    <div style={{ height: '300px' }}>
+                                        <PieChartJS
+                                            data={{
+                                                labels: getCylindersStats().map(item => item.name),
+                                                datasets: [{
+                                                    data: getCylindersStats().map(item => item.value),
+                                                    backgroundColor: chartColors.slice(0, getCylindersStats().length),
+                                                    borderColor: '#fff',
+                                                    borderWidth: 2
+                                                }]
+                                            }}
+                                            options={{
+                                                responsive: true,
+                                                maintainAspectRatio: false,
+                                                plugins: { legend: { position: 'bottom' } }
+                                            }}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="bg-card border border-border rounded-xl p-6 shadow-sm lg:col-span-2">
+                                    <h3 className="text-lg font-bold text-foreground mb-4">Phân bổ Máy</h3>
+                                    <div style={{ height: '300px' }}>
+                                        <PieChartJS
+                                            data={{
+                                                labels: getMachinesStats().map(item => item.name),
+                                                datasets: [{
+                                                    data: getMachinesStats().map(item => item.value),
+                                                    backgroundColor: chartColors.slice(0, getMachinesStats().length),
+                                                    borderColor: '#fff',
+                                                    borderWidth: 2
+                                                }]
+                                            }}
+                                            options={{
+                                                responsive: true,
+                                                maintainAspectRatio: false,
+                                                plugins: { legend: { position: 'bottom' } }
+                                            }}
+                                        />
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
             )}
 
-            {/* Modals */}
+            {showMobileFilter && (
+                <MobileFilterSheet
+                    isOpen={showMobileFilter}
+                    isClosing={mobileFilterClosing}
+                    onClose={closeMobileFilter}
+                    onApply={applyMobileFilter}
+                    sections={[
+                        {
+                            id: 'categories',
+                            label: 'Loại khách',
+                            icon: <Users size={16} />,
+                            options: categoryOptions,
+                            selectedValues: pendingCategories,
+                            onSelectionChange: setPendingCategories,
+                        },
+                        {
+                            id: 'managedBy',
+                            label: 'Nhân viên phụ trách',
+                            icon: <User size={16} />,
+                            options: managedByOptions,
+                            selectedValues: pendingManagedBy,
+                            onSelectionChange: setPendingManagedBy,
+                        },
+                        {
+                            id: 'careBy',
+                            label: 'KD chăm sóc',
+                            icon: <User size={16} />,
+                            options: careByOptions,
+                            selectedValues: pendingCareBy,
+                            onSelectionChange: setPendingCareBy,
+                        },
+                    ]}
+                />
+            )}
 
-            {/* Modals */}
             {isFormModalOpen && (
                 <CustomerFormModal
                     customer={selectedCustomer}

@@ -11,24 +11,30 @@ import {
     Title
 } from 'chart.js';
 import {
+    BarChart2,
     CalendarDays,
     ChevronDown,
+    ChevronLeft,
+    ChevronRight,
     Edit,
     Filter,
     Gift,
+    List,
     Plus,
     Search,
     Tag,
-    Trash2
+    Trash2,
+    X
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Bar as BarChartJS, Pie as PieChartJS } from 'react-chartjs-2';
 import { useNavigate } from 'react-router-dom';
+import { clsx } from 'clsx';
 import PromotionFormModal from '../components/Promotions/PromotionFormModal';
-import useColumnVisibility from '../hooks/useColumnVisibility';
+import FilterDropdown from '../components/ui/FilterDropdown';
+import MobileFilterSheet from '../components/ui/MobileFilterSheet';
 import { supabase } from '../supabase/config';
 
-// Register Chart.js components
 ChartJS.register(
     CategoryScale,
     LinearScale,
@@ -41,7 +47,7 @@ ChartJS.register(
     ChartLegend
 );
 
-const TABLE_COLUMNS = [
+const TABLE_COLUMNS_DEF = [
     { key: 'code', label: 'Mã Khuyến mãi' },
     { key: 'content', label: 'Nội dung ưu đãi' },
     { key: 'period', label: 'Thời hạn áp dụng' },
@@ -50,30 +56,52 @@ const TABLE_COLUMNS = [
     { key: 'active', label: 'Kích hoạt' },
 ];
 
+const PROMOTION_STATUSES = ['Đang hoạt động', 'Hết hạn', 'Vô hiệu', 'Chờ kích hoạt'];
+const ACTIVE_OPTIONS = [
+    { id: 'active', label: 'Đã kích hoạt' },
+    { id: 'inactive', label: 'Chưa kích hoạt' }
+];
+
 const Promotions = () => {
     const navigate = useNavigate();
-    const [activeView, setActiveView] = useState('list'); // 'list' or 'stats'
+    const [activeView, setActiveView] = useState('list');
     const [searchTerm, setSearchTerm] = useState('');
     const [promotions, setPromotions] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [filterStatus, setFilterStatus] = useState('all'); // 'all', 'active', 'expired'
+    const [isLoading, setIsLoading] = useState(true);
     const [isFormModalOpen, setIsFormModalOpen] = useState(false);
     const [selectedPromo, setSelectedPromo] = useState(null);
-    const { visibleColumns, toggleColumn, isColumnVisible, resetColumns, visibleCount, totalCount } = useColumnVisibility('columns_promotions', TABLE_COLUMNS);
-    const visibleTableColumns = TABLE_COLUMNS.filter(col => isColumnVisible(col.key));
 
-    // Filter states
     const [selectedStatuses, setSelectedStatuses] = useState([]);
     const [selectedCustomerTypes, setSelectedCustomerTypes] = useState([]);
     const [selectedActiveStatus, setSelectedActiveStatus] = useState([]);
     const [uniqueCustomerTypes, setUniqueCustomerTypes] = useState([]);
 
+    const [showMobileFilter, setShowMobileFilter] = useState(false);
+    const [mobileFilterClosing, setMobileFilterClosing] = useState(false);
+    const [pendingStatuses, setPendingStatuses] = useState([]);
+    const [pendingCustomerTypes, setPendingCustomerTypes] = useState([]);
+    const [pendingActiveStatus, setPendingActiveStatus] = useState([]);
+
+    const [activeDropdown, setActiveDropdown] = useState(null);
+    const [filterSearch, setFilterSearch] = useState('');
+    const dropdownRef = useRef(null);
+
     useEffect(() => {
         fetchPromotions();
     }, []);
 
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+                setActiveDropdown(null);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
     const fetchPromotions = async () => {
-        setLoading(true);
+        setIsLoading(true);
         try {
             const { data, error } = await supabase
                 .from('app_promotions')
@@ -81,36 +109,37 @@ const Promotions = () => {
                 .order('created_at', { ascending: false });
 
             if (error) throw error;
-            setPromotions(data || []);
+            const list = data || [];
+            setPromotions(list);
 
-            // Extract unique customer types
-            const uniqueTypes = [...new Set((data || []).map(p => p.customer_type).filter(Boolean))];
+            const uniqueTypes = [...new Set(list.map(p => p.customer_type).filter(Boolean))];
             setUniqueCustomerTypes(uniqueTypes);
         } catch (error) {
             console.error('Error fetching promotions:', error);
+            alert('❌ Không thể tải danh sách khuyến mãi: ' + error.message);
         } finally {
-            setLoading(false);
+            setIsLoading(false);
         }
     };
 
     const today = new Date().toISOString().split('T')[0];
 
     const getPromoStatus = (promo) => {
-        if (!promo.is_active) return { label: 'Vô hiệu', color: 'text-gray-500 bg-gray-100 border-gray-200' };
-        if (promo.end_date < today) return { label: 'Hết hạn', color: 'text-red-600 bg-red-50 border-red-100' };
-        if (promo.start_date > today) return { label: 'Chờ kích hoạt', color: 'text-amber-600 bg-amber-50 border-amber-100' };
-        return { label: 'Đang hoạt động', color: 'text-emerald-600 bg-emerald-50 border-emerald-100' };
+        if (!promo.is_active) return { label: 'Vô hiệu', style: 'bg-slate-50 text-slate-500 border-slate-100' };
+        if (promo.end_date < today) return { label: 'Hết hạn', style: 'bg-rose-50 text-rose-500 border-rose-100' };
+        if (promo.start_date > today) return { label: 'Chờ kích hoạt', style: 'bg-amber-50 text-amber-600 border-amber-100' };
+        return { label: 'Đang hoạt động', style: 'bg-emerald-50 text-emerald-600 border-emerald-100' };
     };
 
     const formatDate = (dateStr) => {
         if (!dateStr) return '---';
-        const d = new Date(dateStr);
-        return d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        const date = new Date(dateStr);
+        return date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
     };
 
     const formatNumber = (num) => {
         if (!num) return '0';
-        return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+        return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
     };
 
     const filteredPromotions = promotions.filter(promo => {
@@ -121,36 +150,44 @@ const Promotions = () => {
             promo.free_cylinders?.toString().includes(search)
         );
 
-        // Status filter
         const status = getPromoStatus(promo);
         const matchStatus = selectedStatuses.length === 0 || selectedStatuses.includes(status.label);
-
-        // Customer type filter
         const matchCustomerType = selectedCustomerTypes.length === 0 || selectedCustomerTypes.includes(promo.customer_type);
-
-        // Active status filter
         const matchActive = selectedActiveStatus.length === 0 ||
             (selectedActiveStatus.includes('active') && promo.is_active) ||
             (selectedActiveStatus.includes('inactive') && !promo.is_active);
 
-        // Legacy filterStatus (for backward compatibility)
-        let matchLegacyFilter = true;
-        if (filterStatus === 'active') {
-            matchLegacyFilter = promo.is_active && promo.end_date >= today && promo.start_date <= today;
-        } else if (filterStatus === 'expired') {
-            matchLegacyFilter = promo.end_date < today || !promo.is_active;
-        }
-
-        return matchSearch && matchStatus && matchCustomerType && matchActive && matchLegacyFilter;
+        return matchSearch && matchStatus && matchCustomerType && matchActive;
     });
 
-    // Calculate totals
     const filteredPromotionsCount = filteredPromotions.length;
     const activeCount = filteredPromotions.filter(p => p.is_active && p.end_date >= today && p.start_date <= today).length;
     const expiredCount = filteredPromotions.filter(p => p.end_date < today || !p.is_active).length;
 
+    const hasActiveFilters = selectedStatuses.length > 0 || selectedCustomerTypes.length > 0 || selectedActiveStatus.length > 0;
+    const totalActiveFilters = selectedStatuses.length + selectedCustomerTypes.length + selectedActiveStatus.length;
+
+    const statusOptions = PROMOTION_STATUSES.map(status => ({
+        id: status,
+        label: status,
+        count: promotions.filter(promo => getPromoStatus(promo).label === status).length
+    }));
+
+    const customerTypeOptions = uniqueCustomerTypes.map(type => ({
+        id: type,
+        label: type,
+        count: promotions.filter(promo => promo.customer_type === type).length
+    }));
+
+    const activeOptions = ACTIVE_OPTIONS.map(option => ({
+        id: option.id,
+        label: option.label,
+        count: promotions.filter(promo => option.id === 'active' ? promo.is_active : !promo.is_active).length
+    }));
+
     const handleDeletePromo = async (id, code) => {
         if (!window.confirm(`Bạn có chắc chắn muốn xóa mã khuyến mãi ${code} không?`)) return;
+
         try {
             const { error } = await supabase.from('app_promotions').delete().eq('id', id);
             if (error) throw error;
@@ -179,69 +216,39 @@ const Promotions = () => {
         setIsFormModalOpen(true);
     };
 
-    const handleCreateNew = () => {
-        setSelectedPromo(null);
-        setIsFormModalOpen(true);
-    };
-
     const handleFormSubmitSuccess = () => {
         fetchPromotions();
         setIsFormModalOpen(false);
     };
 
-    // Filter Dropdown Component
-    const FilterDropdown = ({ label, selectedCount, totalCount, onSelectAll, children }) => {
-        const [isOpen, setIsOpen] = useState(false);
-
-        return (
-            <div className="relative">
-                <button
-                    onClick={() => setIsOpen(!isOpen)}
-                    className="flex items-center gap-2 px-4 py-2.5 border border-[#D1D5DB] bg-white text-sm font-medium text-[#374151] hover:bg-[#F9FAFB] transition-all"
-                    style={{ fontFamily: '"Roboto", sans-serif' }}
-                >
-                    <Filter className="w-4 h-4" />
-                    <span>{label}</span>
-                    {selectedCount > 0 && (
-                        <span className="px-2 py-0.5 bg-[#2563EB] text-white text-xs rounded-full">
-                            {selectedCount}
-                        </span>
-                    )}
-                    <ChevronDown className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
-                </button>
-                {isOpen && (
-                    <>
-                        <div
-                            className="fixed inset-0 z-10"
-                            onClick={() => setIsOpen(false)}
-                        ></div>
-                        <div className="absolute top-full left-0 mt-1 bg-white border border-[#E5E7EB] shadow-lg z-20 min-w-[250px] max-h-80">
-                            <div className="p-3 border-b border-[#E5E7EB] flex items-center justify-between bg-[#F9FAFB]">
-                                <span className="text-sm font-medium text-[#374151]" style={{ fontFamily: '"Roboto", sans-serif' }}>
-                                    {selectedCount > 0 ? `Đã chọn ${selectedCount}/${totalCount}` : `Chọn ${label.toLowerCase()}`}
-                                </span>
-                                <button
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        onSelectAll();
-                                    }}
-                                    className="text-xs text-[#2563EB] hover:text-[#1D4ED8] font-medium"
-                                    style={{ fontFamily: '"Roboto", sans-serif' }}
-                                >
-                                    {selectedCount === totalCount ? 'Bỏ chọn tất cả' : 'Chọn tất cả'}
-                                </button>
-                            </div>
-                            <div className="overflow-y-auto max-h-64">
-                                {children}
-                            </div>
-                        </div>
-                    </>
-                )}
-            </div>
-        );
+    const closeMobileFilter = () => {
+        setMobileFilterClosing(true);
+        setTimeout(() => {
+            setShowMobileFilter(false);
+            setMobileFilterClosing(false);
+        }, 280);
     };
 
-    // Calculate statistics data for charts
+    const openMobileFilter = () => {
+        setPendingStatuses(selectedStatuses);
+        setPendingCustomerTypes(selectedCustomerTypes);
+        setPendingActiveStatus(selectedActiveStatus);
+        setShowMobileFilter(true);
+    };
+
+    const applyMobileFilter = () => {
+        setSelectedStatuses(pendingStatuses);
+        setSelectedCustomerTypes(pendingCustomerTypes);
+        setSelectedActiveStatus(pendingActiveStatus);
+        closeMobileFilter();
+    };
+
+    const clearAllFilters = () => {
+        setSelectedStatuses([]);
+        setSelectedCustomerTypes([]);
+        setSelectedActiveStatus([]);
+    };
+
     const getStatusStats = () => {
         const stats = {};
         filteredPromotions.forEach(promo => {
@@ -262,359 +269,657 @@ const Promotions = () => {
 
     const getTopPromotions = () => {
         return filteredPromotions
-            .map(p => ({ name: p.code, value: p.free_cylinders || 0 }))
+            .map(promo => ({ name: promo.code, value: promo.free_cylinders || 0 }))
             .sort((a, b) => b.value - a.value)
             .slice(0, 10);
     };
 
-    // Chart colors
     const chartColors = [
         '#2563EB', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6',
         '#06B6D4', '#F97316', '#84CC16', '#EC4899', '#6366F1'
     ];
 
     return (
-        <div className="p-4 sm:p-6 bg-[#F8F9FA] min-h-screen" style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif' }}>
-            {/* Navigation Tabs */}
-            <div className="flex items-center gap-1 mb-6 sm:mb-8 border-b border-[#E5E7EB] overflow-x-auto no-scrollbar">
+        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 w-full flex-1 flex flex-col -mt-2 min-h-0 px-3 md:px-6">
+            <div className="flex items-center gap-1 mb-4 mt-6">
                 <button
                     onClick={() => setActiveView('list')}
-                    className={`px-6 py-3 text-sm font-semibold tracking-wide transition-colors ${activeView === 'list'
-                            ? 'text-[#2563EB] border-b-2 border-[#2563EB]'
-                            : 'text-[#6B7280] hover:text-[#374151]'
-                        }`}
-                    style={activeView === 'list' ? { color: '#2563EB', borderBottomColor: '#2563EB' } : { color: '#6B7280' }}
+                    className={clsx(
+                        'flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-bold transition-all',
+                        activeView === 'list'
+                            ? 'bg-white text-primary shadow-sm ring-1 ring-border'
+                            : 'text-muted-foreground hover:text-foreground'
+                    )}
                 >
+                    <List size={14} />
                     Danh sách
                 </button>
                 <button
                     onClick={() => setActiveView('stats')}
-                    className={`px-6 py-3 text-sm font-semibold tracking-wide transition-colors ${activeView === 'stats'
-                            ? 'text-[#2563EB] border-b-2 border-[#2563EB]'
-                            : 'text-[#6B7280] hover:text-[#374151]'
-                        }`}
-                    style={activeView === 'stats' ? { color: '#2563EB', borderBottomColor: '#2563EB' } : { color: '#6B7280' }}
+                    className={clsx(
+                        'flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-bold transition-all',
+                        activeView === 'stats'
+                            ? 'bg-white text-primary shadow-sm ring-1 ring-border'
+                            : 'text-muted-foreground hover:text-foreground'
+                    )}
                 >
+                    <BarChart2 size={14} />
                     Thống kê
                 </button>
             </div>
 
-            {activeView === 'list' ? (
-                <>
-                    {/* Header with Add Button */}
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
-                        <h1 className="text-xl sm:text-2xl font-semibold text-[#111827] tracking-tight">Danh sách khuyến mãi</h1>
-                        <button onClick={handleCreateNew} className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 text-white font-medium text-sm transition-all duration-200 shadow-sm hover:shadow-md" style={{ backgroundColor: '#2563EB' }} onMouseEnter={(e) => e.target.style.backgroundColor = '#1D4ED8'} onMouseLeave={(e) => e.target.style.backgroundColor = '#2563EB'}><Plus className="w-4 h-4" /> Thêm mới</button>
-                    </div>
-
-                    {/* Search Bar and Summary Stats */}
-                    <div className="mb-6 flex flex-col lg:flex-row lg:items-center gap-4">
-                        <div className="flex-1 relative">
-                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#9CA3AF]" />
-                            <input type="text" placeholder="Tìm theo mã KM, loại khách hàng..." className="w-full pl-12 pr-4 py-3 border border-[#D1D5DB] focus:outline-none focus:ring-2 focus:ring-[#2563EB] focus:border-[#2563EB] bg-white text-[#111827] placeholder-[#9CA3AF] text-sm transition-all" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+            {activeView === 'list' && (
+                <div className="bg-white rounded-2xl border border-border shadow-sm flex flex-col flex-1 min-h-0 w-full">
+                    <div className="md:hidden flex items-center gap-2 p-3 border-b border-border">
+                        <button
+                            onClick={() => navigate(-1)}
+                            className="p-2 rounded-xl border border-border bg-white text-muted-foreground shrink-0"
+                        >
+                            <ChevronLeft size={18} />
+                        </button>
+                        <div className="relative flex-1">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={15} />
+                            <input
+                                type="text"
+                                placeholder="Tìm kiếm . . ."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="w-full pl-9 pr-8 py-2 bg-muted/20 border border-border/80 rounded-xl text-[13px] focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all font-medium"
+                            />
+                            {searchTerm && (
+                                <button onClick={() => setSearchTerm('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                                    <X size={14} />
+                                </button>
+                            )}
                         </div>
-                        <div className="flex items-center gap-4 px-4 py-3 bg-[#EFF6FF] border border-[#BFDBFE]">
-                            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
-                                <span className="text-[10px] sm:text-sm text-[#6B7280]">Tổng số:</span>
-                                <span className="text-sm sm:text-lg font-semibold text-[#2563EB]">{filteredPromotionsCount}</span>
-                            </div>
-                        </div>
+                        <button
+                            onClick={openMobileFilter}
+                            className={clsx(
+                                'relative p-2 rounded-xl border shrink-0 transition-all',
+                                hasActiveFilters ? 'border-primary bg-primary/5 text-primary' : 'border-border bg-white text-muted-foreground',
+                            )}
+                        >
+                            <Filter size={18} />
+                            {hasActiveFilters && (
+                                <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-primary text-white text-[9px] font-bold flex items-center justify-center">
+                                    {totalActiveFilters}
+                                </span>
+                            )}
+                        </button>
+                        <button
+                            onClick={() => {
+                                setSelectedPromo(null);
+                                setIsFormModalOpen(true);
+                            }}
+                            className="p-2 rounded-xl bg-primary text-white shrink-0 shadow-md shadow-primary/20"
+                        >
+                            <Plus size={18} />
+                        </button>
                     </div>
 
-                    {/* Filter Dropdowns */}
-                    <div className="mb-6 flex items-center gap-3 flex-wrap overflow-x-auto no-scrollbar">
-                        <FilterDropdown
-                            label="Trạng thái"
-                            selectedCount={selectedStatuses.length}
-                            totalCount={4}
-                            onSelectAll={() => {
-                                if (selectedStatuses.length === 4) {
-                                    setSelectedStatuses([]);
-                                } else {
-                                    setSelectedStatuses(['Đang hoạt động', 'Hết hạn', 'Vô hiệu', 'Chờ kích hoạt']);
-                                }
-                            }}
-                        >
-                            <div className="space-y-1 p-2">
-                                {['Đang hoạt động', 'Hết hạn', 'Vô hiệu', 'Chờ kích hoạt'].map(status => (
-                                    <label key={status} className="flex items-center gap-2 cursor-pointer hover:bg-[#F3F4F6] p-2">
-                                        <input
-                                            type="checkbox"
-                                            checked={selectedStatuses.includes(status)}
-                                            onChange={(e) => {
-                                                if (e.target.checked) {
-                                                    setSelectedStatuses([...selectedStatuses, status]);
-                                                } else {
-                                                    setSelectedStatuses(selectedStatuses.filter(s => s !== status));
-                                                }
-                                            }}
-                                            className="w-4 h-4 text-[#2563EB] border-[#D1D5DB] focus:ring-[#2563EB]"
-                                        />
-                                        <span className="text-sm text-[#374151]" style={{ fontFamily: '"Roboto", sans-serif' }}>{status}</span>
-                                    </label>
-                                ))}
-                            </div>
-                        </FilterDropdown>
-
-                        <FilterDropdown
-                            label="Loại khách hàng"
-                            selectedCount={selectedCustomerTypes.length}
-                            totalCount={uniqueCustomerTypes.length}
-                            onSelectAll={() => {
-                                if (selectedCustomerTypes.length === uniqueCustomerTypes.length) {
-                                    setSelectedCustomerTypes([]);
-                                } else {
-                                    setSelectedCustomerTypes([...uniqueCustomerTypes]);
-                                }
-                            }}
-                        >
-                            <div className="space-y-1 p-2">
-                                {uniqueCustomerTypes.map(type => (
-                                    <label key={type} className="flex items-center gap-2 cursor-pointer hover:bg-[#F3F4F6] p-2">
-                                        <input
-                                            type="checkbox"
-                                            checked={selectedCustomerTypes.includes(type)}
-                                            onChange={(e) => {
-                                                if (e.target.checked) {
-                                                    setSelectedCustomerTypes([...selectedCustomerTypes, type]);
-                                                } else {
-                                                    setSelectedCustomerTypes(selectedCustomerTypes.filter(t => t !== type));
-                                                }
-                                            }}
-                                            className="w-4 h-4 text-[#2563EB] border-[#D1D5DB] focus:ring-[#2563EB]"
-                                        />
-                                        <span className="text-sm text-[#374151]" style={{ fontFamily: '"Roboto", sans-serif' }}>{type}</span>
-                                    </label>
-                                ))}
-                            </div>
-                        </FilterDropdown>
-
-                        <FilterDropdown
-                            label="Kích hoạt"
-                            selectedCount={selectedActiveStatus.length}
-                            totalCount={2}
-                            onSelectAll={() => {
-                                if (selectedActiveStatus.length === 2) {
-                                    setSelectedActiveStatus([]);
-                                } else {
-                                    setSelectedActiveStatus(['active', 'inactive']);
-                                }
-                            }}
-                        >
-                            <div className="space-y-1 p-2">
-                                {[
-                                    { value: 'active', label: 'Đã kích hoạt' },
-                                    { value: 'inactive', label: 'Chưa kích hoạt' }
-                                ].map(item => (
-                                    <label key={item.value} className="flex items-center gap-2 cursor-pointer hover:bg-[#F3F4F6] p-2">
-                                        <input
-                                            type="checkbox"
-                                            checked={selectedActiveStatus.includes(item.value)}
-                                            onChange={(e) => {
-                                                if (e.target.checked) {
-                                                    setSelectedActiveStatus([...selectedActiveStatus, item.value]);
-                                                } else {
-                                                    setSelectedActiveStatus(selectedActiveStatus.filter(s => s !== item.value));
-                                                }
-                                            }}
-                                            className="w-4 h-4 text-[#2563EB] border-[#D1D5DB] focus:ring-[#2563EB]"
-                                        />
-                                        <span className="text-sm text-[#374151]" style={{ fontFamily: '"Roboto", sans-serif' }}>{item.label}</span>
-                                    </label>
-                                ))}
-                            </div>
-                        </FilterDropdown>
-                    </div>
-
-                    {/* Main Content Card */}
-                    <div className="bg-white rounded-lg border border-[#E5E7EB] shadow-sm overflow-hidden">
-                        {/* Mobile Card List */}
-                        <div className="md:hidden divide-y divide-[#E5E7EB]">
-                            {loading ? (
-                                <div className="px-4 py-16 text-center"><div className="flex flex-col items-center gap-4"><div className="w-8 h-8 border-4 border-[#2563EB] border-t-transparent rounded-full animate-spin"></div><p className="text-[#6B7280] text-sm font-medium">Đang tải...</p></div></div>
-                            ) : filteredPromotions.length === 0 ? (
-                                <div className="px-4 py-16 text-center"><div className="flex flex-col items-center gap-4"><Gift className="w-12 h-12 text-[#D1D5DB]" /><p className="text-sm font-medium text-[#6B7280]">Không tìm thấy khuyến mãi nào</p></div></div>
-                            ) : filteredPromotions.map((promo, index) => {
-                                const status = getPromoStatus(promo);
-                                return (
-                                    <div key={promo.id} className="p-4 bg-white hover:bg-gray-50 active:bg-gray-100 transition-colors">
-                                        <div className="flex justify-between items-start mb-3">
-                                            <div className="flex items-center gap-2">
-                                                <Tag className="w-4 h-4 text-[#2563EB] flex-shrink-0" />
-                                                <div>
-                                                    <h3 className="text-sm font-bold text-[#111827]">{promo.code}</h3>
-                                                    <span className="text-[10px] text-[#6B7280]">#{index + 1}</span>
-                                                </div>
-                                            </div>
-                                            <span className={`px-2.5 py-1 text-[10px] font-semibold border rounded-full whitespace-nowrap ${status.label === 'Đang hoạt động' ? 'text-[#10B981] bg-[#D1FAE5] border-[#A7F3D0]' : status.label === 'Hết hạn' ? 'text-[#EF4444] bg-[#FEE2E2] border-[#FECACA]' : status.label === 'Vô hiệu' ? 'text-[#6B7280] bg-[#F3F4F6] border-[#E5E7EB]' : 'text-[#F59E0B] bg-[#FEF3C7] border-[#FDE68A]'}`}>{status.label}</span>
+                    <div className="md:hidden flex-1 overflow-y-auto p-3 flex flex-col gap-3">
+                        {isLoading ? (
+                            <div className="py-16 text-center text-[13px] text-muted-foreground italic">Đang tải dữ liệu...</div>
+                        ) : filteredPromotions.length === 0 ? (
+                            <div className="py-16 text-center text-[13px] text-muted-foreground italic">Không tìm thấy kết quả phù hợp</div>
+                        ) : filteredPromotions.map((promo) => {
+                            const status = getPromoStatus(promo);
+                            return (
+                                <div key={promo.id} className="rounded-2xl border border-border bg-white shadow-sm p-4">
+                                    <div className="flex items-start justify-between gap-2 mb-2">
+                                        <div>
+                                            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Mã khuyến mãi</p>
+                                            <h3 className="text-[15px] font-bold text-foreground leading-tight mt-0.5">{promo.code}</h3>
                                         </div>
-                                        <div className="grid grid-cols-2 gap-2 mb-3">
-                                            <div><span className="text-[9px] font-bold text-slate-400 uppercase">Ưu đãi</span><p className="text-xs font-bold text-[#111827]">+ {promo.free_cylinders || 0} bình khí</p></div>
-                                            <div><span className="text-[9px] font-bold text-slate-400 uppercase">Đối tượng</span><p className="text-xs font-medium text-[#111827]">{promo.customer_type || '—'}</p></div>
-                                            <div className="col-span-2"><span className="text-[9px] font-bold text-slate-400 uppercase">Thời hạn</span>
-                                                <div className="flex items-center gap-1.5 mt-0.5"><CalendarDays className="w-3 h-3 text-[#9CA3AF]" /><span className="text-xs text-[#374151]">{formatDate(promo.start_date)} — {formatDate(promo.end_date)}</span></div>
-                                            </div>
-                                        </div>
-                                        <div className="flex items-center justify-between pt-3 border-t border-slate-50">
-                                            <label className="relative inline-flex items-center cursor-pointer">
-                                                <input type="checkbox" className="sr-only peer" checked={promo.is_active} onChange={() => handleToggleActive(promo.id, promo.is_active)} />
-                                                <div className="w-9 h-5 bg-[#D1D5DB] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:border-[#E5E7EB] after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#2563EB]"></div>
-                                                <span className="ml-2 text-[10px] font-medium text-[#6B7280]">{promo.is_active ? 'Bật' : 'Tắt'}</span>
-                                            </label>
-                                            <div className="flex items-center gap-3">
-                                                <button onClick={() => handleEditPromo(promo)} className="p-2 text-[#9CA3AF] hover:text-[#2563EB] active:bg-blue-50 rounded-lg transition-colors"><Edit className="w-5 h-5" /></button>
-                                                <button onClick={() => handleDeletePromo(promo.id, promo.code)} className="p-2 text-[#9CA3AF] hover:text-[#DC2626] active:bg-red-50 rounded-lg transition-colors"><Trash2 className="w-5 h-5" /></button>
-                                            </div>
+                                        <span className={clsx('inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border', status.style)}>
+                                            {status.label}
+                                        </span>
+                                    </div>
+
+                                    <div className="space-y-1.5 mb-3 text-[12px] text-muted-foreground">
+                                        <p><span className="font-semibold text-foreground/90">Ưu đãi:</span> + {promo.free_cylinders || 0} bình khí</p>
+                                        <p><span className="font-semibold text-foreground/90">Đối tượng:</span> {promo.customer_type || '—'}</p>
+                                        <div className="flex items-center gap-1.5">
+                                            <CalendarDays className="w-3 h-3" />
+                                            <span>{formatDate(promo.start_date)} — {formatDate(promo.end_date)}</span>
                                         </div>
                                     </div>
-                                );
-                            })}
-                        </div>
-                        {/* Desktop Table View */}
-                        <div className="hidden md:block w-full overflow-x-auto">
-                            <table className="w-full border-collapse">
-                                <thead className="bg-[#F9FAFB]"><tr><th className="px-4 py-3.5 text-xs font-semibold text-[#374151] text-center uppercase tracking-wider w-16">STT</th>{visibleTableColumns.map(col => (<th key={col.key} className={`px-4 py-3.5 text-xs font-semibold text-[#374151] ${col.key === 'content' || col.key === 'status' || col.key === 'active' ? 'text-center' : 'text-left'} uppercase tracking-wider`}>{col.label}</th>))}<th className="px-4 py-3.5 text-xs font-semibold text-[#374151] text-center uppercase tracking-wider">Thao tác</th></tr></thead>
-                                <tbody className="divide-y divide-[#E5E7EB]">
-                                    {loading ? (
-                                        <tr><td colSpan={visibleTableColumns.length + 2} className="px-4 py-16 text-center"><div className="flex flex-col items-center gap-4"><div className="w-8 h-8 border-4 border-[#2563EB] border-t-transparent rounded-full animate-spin"></div><p className="text-[#6B7280] text-sm font-medium">Đang tải dữ liệu...</p></div></td></tr>
-                                    ) : filteredPromotions.length === 0 ? (
-                                        <tr><td colSpan={visibleTableColumns.length + 2} className="px-4 py-16 text-center"><div className="flex flex-col items-center gap-4"><Gift className="w-12 h-12 text-[#D1D5DB]" /><p className="text-sm font-medium text-[#6B7280]">Không tìm thấy khuyến mãi nào</p></div></td></tr>
-                                    ) : filteredPromotions.map((promo, index) => {
-                                        const status = getPromoStatus(promo);
-                                        return (
-                                            <tr key={promo.id} className="hover:bg-[#F9FAFB] transition-colors">
-                                                <td className="px-4 py-4 text-center"><span className="text-sm text-[#6B7280]">{index + 1}</span></td>
-                                                {isColumnVisible('code') && <td className="px-4 py-4"><div className="flex items-center gap-2"><Tag className="w-4 h-4 text-[#2563EB]" /><span className="text-sm font-medium text-[#111827]">{promo.code}</span></div></td>}
-                                                {isColumnVisible('content') && <td className="px-4 py-4 text-center"><span className="text-sm font-semibold text-[#111827]">+ {promo.free_cylinders || 0} bình khí</span></td>}
-                                                {isColumnVisible('period') && <td className="px-4 py-4"><div className="flex items-center gap-2 text-sm text-[#374151]"><CalendarDays className="w-4 h-4 text-[#9CA3AF]" /><span>{formatDate(promo.start_date)} — {formatDate(promo.end_date)}</span></div></td>}
-                                                {isColumnVisible('target') && <td className="px-4 py-4"><span className="text-sm font-medium text-[#111827]">{promo.customer_type}</span></td>}
-                                                {isColumnVisible('status') && <td className="px-4 py-4 text-center"><span className={`px-3 py-1 text-xs font-medium border ${status.label === 'Đang hoạt động' ? 'text-[#10B981] bg-[#D1FAE5] border-[#A7F3D0]' : status.label === 'Hết hạn' ? 'text-[#EF4444] bg-[#FEE2E2] border-[#FECACA]' : status.label === 'Vô hiệu' ? 'text-[#6B7280] bg-[#F3F4F6] border-[#E5E7EB]' : 'text-[#F59E0B] bg-[#FEF3C7] border-[#FDE68A]'}`}>{status.label}</span></td>}
-                                                {isColumnVisible('active') && <td className="px-4 py-4 text-center"><label className="relative inline-flex items-center cursor-pointer"><input type="checkbox" className="sr-only peer" checked={promo.is_active} onChange={() => handleToggleActive(promo.id, promo.is_active)} /><div className="w-11 h-6 bg-[#D1D5DB] peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-[#2563EB] rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:border-[#E5E7EB] after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#2563EB]"></div></label></td>}
-                                                <td className="px-4 py-4 text-center"><div className="flex items-center justify-center gap-3">
-                                                    <button onClick={() => handleEditPromo(promo)} className="text-[#9CA3AF] hover:text-[#2563EB] transition-colors p-1 hover:bg-[#EFF6FF]" title="Chỉnh sửa"><Edit className="w-4 h-4" /></button>
-                                                    <button onClick={() => handleDeletePromo(promo.id, promo.code)} className="text-[#9CA3AF] hover:text-[#DC2626] transition-colors p-1 hover:bg-[#FEF2F2]" title="Xóa"><Trash2 className="w-4 h-4" /></button>
-                                                </div></td>
-                                            </tr>
-                                        );
-                                    })}
-                                </tbody>
-                            </table>
-                        </div>
+
+                                    <div className="flex items-center justify-between pt-2 border-t border-border/70">
+                                        <label className="relative inline-flex items-center cursor-pointer">
+                                            <input type="checkbox" className="sr-only peer" checked={promo.is_active} onChange={() => handleToggleActive(promo.id, promo.is_active)} />
+                                            <div className="w-9 h-5 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:border-border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+                                            <span className="ml-2 text-[10px] font-medium text-muted-foreground">{promo.is_active ? 'Bật' : 'Tắt'}</span>
+                                        </label>
+                                        <div className="flex items-center gap-3">
+                                            <button onClick={() => handleEditPromo(promo)} className="text-muted-foreground hover:text-primary transition-colors"><Edit size={18} /></button>
+                                            <button onClick={() => handleDeletePromo(promo.id, promo.code)} className="text-muted-foreground hover:text-red-500 transition-colors"><Trash2 size={18} /></button>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })}
                     </div>
-                </>
-            ) : (
-                /* Statistics View */
-                <div className="space-y-6">
-                    {/* Summary Stats */}
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
-                        <div className="bg-white p-4 sm:p-6 border border-[#E5E7EB]">
-                            <div className="text-[10px] sm:text-sm text-[#6B7280] mb-1 sm:mb-2 uppercase tracking-wider font-bold">Tổng KM</div>
-                            <div className="text-lg sm:text-2xl font-black text-[#111827]">{filteredPromotionsCount}</div>
+
+                    <div className="hidden md:block p-4 space-y-4">
+                        <div className="flex items-center justify-between gap-4">
+                            <div className="flex items-center gap-2 flex-1">
+                                <button
+                                    onClick={() => navigate(-1)}
+                                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-border hover:bg-muted text-muted-foreground text-[12px] font-bold transition-all bg-white shadow-sm shrink-0"
+                                >
+                                    <ChevronLeft size={16} />
+                                    Quay lại
+                                </button>
+                                <div className="relative flex-1">
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
+                                    <input
+                                        type="text"
+                                        placeholder="Tìm kiếm . . ."
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                        className="w-full pl-10 pr-8 py-1.5 bg-muted/20 border border-border/80 rounded-xl text-[13px] focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all font-medium"
+                                    />
+                                    {searchTerm && (
+                                        <button onClick={() => setSearchTerm('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                                            <X size={14} />
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => {
+                                    setSelectedPromo(null);
+                                    setIsFormModalOpen(true);
+                                }}
+                                className="flex items-center gap-2 px-6 py-1.5 rounded-xl bg-primary text-white text-[13px] font-bold hover:bg-primary/90 shadow-md shadow-primary/20 transition-all"
+                            >
+                                <Plus size={18} />
+                                Thêm
+                            </button>
                         </div>
-                        <div className="bg-white p-4 sm:p-6 border border-[#E5E7EB]">
-                            <div className="text-[10px] sm:text-sm text-[#6B7280] mb-1 sm:mb-2 uppercase tracking-wider font-bold">Hoạt động</div>
-                            <div className="text-lg sm:text-2xl font-black text-[#10B981]">{activeCount}</div>
-                        </div>
-                        <div className="col-span-2 md:col-span-1 bg-white p-4 sm:p-6 border border-[#E5E7EB]">
-                            <div className="text-[10px] sm:text-sm text-[#6B7280] mb-1 sm:mb-2 uppercase tracking-wider font-bold">Hết hạn / Vô hiệu</div>
-                            <div className="text-lg sm:text-2xl font-black text-[#EF4444]">{expiredCount}</div>
+
+                        <div className="flex flex-wrap items-center gap-2" ref={dropdownRef}>
+                            <div className="relative">
+                                <button
+                                    onClick={() => setActiveDropdown(activeDropdown === 'statuses' ? null : 'statuses')}
+                                    className={clsx(
+                                        'flex items-center gap-2.5 px-4 py-2 rounded-xl border text-[13px] font-bold transition-all',
+                                        activeDropdown === 'statuses' || selectedStatuses.length > 0
+                                            ? 'border-primary bg-primary/5 text-primary'
+                                            : 'border-border bg-white text-muted-foreground hover:text-foreground'
+                                    )}
+                                >
+                                    <Filter size={14} />
+                                    Trạng thái
+                                    {selectedStatuses.length > 0 && (
+                                        <span className="px-1.5 py-0.5 rounded-full bg-primary text-white text-[10px] font-bold">
+                                            {selectedStatuses.length}
+                                        </span>
+                                    )}
+                                    <ChevronDown size={14} className={clsx('transition-transform', activeDropdown === 'statuses' ? 'rotate-180' : '')} />
+                                </button>
+                                {activeDropdown === 'statuses' && (
+                                    <FilterDropdown
+                                        options={statusOptions}
+                                        selected={selectedStatuses}
+                                        setSelected={setSelectedStatuses}
+                                        filterSearch={filterSearch}
+                                        setFilterSearch={setFilterSearch}
+                                    />
+                                )}
+                            </div>
+
+                            <div className="relative">
+                                <button
+                                    onClick={() => setActiveDropdown(activeDropdown === 'customerTypes' ? null : 'customerTypes')}
+                                    className={clsx(
+                                        'flex items-center gap-2.5 px-4 py-2 rounded-xl border text-[13px] font-bold transition-all',
+                                        activeDropdown === 'customerTypes' || selectedCustomerTypes.length > 0
+                                            ? 'border-primary bg-primary/5 text-primary'
+                                            : 'border-border bg-white text-muted-foreground hover:text-foreground'
+                                    )}
+                                >
+                                    <Gift size={14} />
+                                    Loại khách hàng
+                                    {selectedCustomerTypes.length > 0 && (
+                                        <span className="px-1.5 py-0.5 rounded-full bg-primary text-white text-[10px] font-bold">
+                                            {selectedCustomerTypes.length}
+                                        </span>
+                                    )}
+                                    <ChevronDown size={14} className={clsx('transition-transform', activeDropdown === 'customerTypes' ? 'rotate-180' : '')} />
+                                </button>
+                                {activeDropdown === 'customerTypes' && (
+                                    <FilterDropdown
+                                        options={customerTypeOptions}
+                                        selected={selectedCustomerTypes}
+                                        setSelected={setSelectedCustomerTypes}
+                                        filterSearch={filterSearch}
+                                        setFilterSearch={setFilterSearch}
+                                    />
+                                )}
+                            </div>
+
+                            <div className="relative">
+                                <button
+                                    onClick={() => setActiveDropdown(activeDropdown === 'active' ? null : 'active')}
+                                    className={clsx(
+                                        'flex items-center gap-2.5 px-4 py-2 rounded-xl border text-[13px] font-bold transition-all',
+                                        activeDropdown === 'active' || selectedActiveStatus.length > 0
+                                            ? 'border-primary bg-primary/5 text-primary'
+                                            : 'border-border bg-white text-muted-foreground hover:text-foreground'
+                                    )}
+                                >
+                                    <Tag size={14} />
+                                    Kích hoạt
+                                    {selectedActiveStatus.length > 0 && (
+                                        <span className="px-1.5 py-0.5 rounded-full bg-primary text-white text-[10px] font-bold">
+                                            {selectedActiveStatus.length}
+                                        </span>
+                                    )}
+                                    <ChevronDown size={14} className={clsx('transition-transform', activeDropdown === 'active' ? 'rotate-180' : '')} />
+                                </button>
+                                {activeDropdown === 'active' && (
+                                    <FilterDropdown
+                                        options={activeOptions}
+                                        selected={selectedActiveStatus}
+                                        setSelected={setSelectedActiveStatus}
+                                        filterSearch={filterSearch}
+                                        setFilterSearch={setFilterSearch}
+                                    />
+                                )}
+                            </div>
+
+                            {hasActiveFilters && (
+                                <button
+                                    onClick={clearAllFilters}
+                                    className="flex items-center gap-2 px-3 py-2 rounded-xl border border-dashed border-red-300 text-red-500 text-[12px] font-bold hover:bg-red-50 transition-all"
+                                >
+                                    <X size={14} />
+                                    Xóa bộ lọc
+                                </button>
+                            )}
                         </div>
                     </div>
 
-                    {/* Charts Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {/* Status Chart */}
-                        <div className="bg-white p-4 sm:p-6 border border-[#E5E7EB]">
-                            <h3 className="text-lg font-semibold text-[#111827] mb-4" style={{ fontFamily: '"Roboto", sans-serif' }}>Phân bổ theo Trạng thái</h3>
-                            <div style={{ height: '300px' }}>
-                                <PieChartJS
-                                    data={{
-                                        labels: getStatusStats().map(item => item.name),
-                                        datasets: [{
-                                            data: getStatusStats().map(item => item.value),
-                                            backgroundColor: chartColors.slice(0, getStatusStats().length),
-                                            borderColor: '#fff',
-                                            borderWidth: 2
-                                        }]
-                                    }}
-                                    options={{
-                                        responsive: true,
-                                        maintainAspectRatio: false,
-                                        plugins: {
-                                            legend: {
-                                                position: 'bottom'
-                                            }
-                                        }
-                                    }}
-                                />
+                    <div className="hidden md:block flex-1 overflow-x-auto border-t border-border">
+                        <table className="w-full border-collapse">
+                            <thead className="bg-muted/20">
+                                <tr>
+                                    {TABLE_COLUMNS_DEF.map(col => (
+                                        <th key={col.key} className={clsx('px-4 py-3.5 text-[12px] font-bold text-muted-foreground uppercase tracking-wide', col.key === 'content' || col.key === 'status' || col.key === 'active' ? 'text-center' : 'text-left')}>
+                                            {col.label}
+                                        </th>
+                                    ))}
+                                    <th className="px-4 py-3.5 text-[12px] font-bold text-muted-foreground text-center uppercase tracking-wide">Thao tác</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-border">
+                                {isLoading ? (
+                                    <tr>
+                                        <td colSpan={TABLE_COLUMNS_DEF.length + 1} className="px-4 py-16 text-center text-muted-foreground">
+                                            Đang tải dữ liệu...
+                                        </td>
+                                    </tr>
+                                ) : filteredPromotions.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={TABLE_COLUMNS_DEF.length + 1} className="px-4 py-16 text-center text-muted-foreground">
+                                            Không tìm thấy khuyến mãi nào
+                                        </td>
+                                    </tr>
+                                ) : filteredPromotions.map((promo) => {
+                                    const status = getPromoStatus(promo);
+                                    return (
+                                        <tr key={promo.id} className="hover:bg-muted/20 transition-colors">
+                                            <td className="px-4 py-4 text-sm font-semibold text-foreground">{promo.code}</td>
+                                            <td className="px-4 py-4 text-sm font-semibold text-foreground text-center">+ {promo.free_cylinders || 0} bình khí</td>
+                                            <td className="px-4 py-4 text-sm text-muted-foreground">{formatDate(promo.start_date)} — {formatDate(promo.end_date)}</td>
+                                            <td className="px-4 py-4 text-sm text-muted-foreground">{promo.customer_type || '—'}</td>
+                                            <td className="px-4 py-4 text-center">
+                                                <span className={clsx('px-2.5 py-1 rounded-full text-[11px] font-bold border', status.style)}>{status.label}</span>
+                                            </td>
+                                            <td className="px-4 py-4 text-center">
+                                                <label className="relative inline-flex items-center cursor-pointer">
+                                                    <input type="checkbox" className="sr-only peer" checked={promo.is_active} onChange={() => handleToggleActive(promo.id, promo.is_active)} />
+                                                    <div className="w-11 h-6 bg-muted peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:border-border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                                                </label>
+                                            </td>
+                                            <td className="px-4 py-4 text-center">
+                                                <div className="flex items-center justify-center gap-3">
+                                                    <button onClick={() => handleEditPromo(promo)} className="text-muted-foreground hover:text-primary transition-colors p-1" title="Chỉnh sửa">
+                                                        <Edit className="w-4 h-4" />
+                                                    </button>
+                                                    <button onClick={() => handleDeletePromo(promo.id, promo.code)} className="text-muted-foreground hover:text-red-500 transition-colors p-1" title="Xóa">
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div className="hidden md:flex px-4 py-4 border-t border-border items-center justify-between bg-muted/5">
+                        <div className="flex items-center gap-3 text-[12px] text-muted-foreground font-medium">
+                            <span>{filteredPromotions.length > 0 ? `1–${filteredPromotions.length}` : '0'}/Tổng {filteredPromotions.length}</span>
+                            <div className="flex items-center gap-1 ml-2">
+                                <span className="text-[11px] font-bold">│</span>
+                                <span className="text-primary font-bold">{activeCount} hoạt động</span>
+                                <span className="text-muted-foreground">•</span>
+                                <span className="text-primary font-bold">{expiredCount} hết hạn/vô hiệu</span>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-1">
+                            <button className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors disabled:opacity-20" disabled>
+                                <ChevronLeft size={16} />
+                                <ChevronLeft size={16} className="-ml-2.5" />
+                            </button>
+                            <button className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors disabled:opacity-20" disabled>
+                                <ChevronLeft size={16} />
+                            </button>
+                            <div className="w-8 h-8 rounded-lg bg-primary text-white flex items-center justify-center text-[12px] font-bold shadow-md shadow-primary/25">1</div>
+                            <button className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors disabled:opacity-20" disabled>
+                                <ChevronRight size={16} />
+                            </button>
+                            <button className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors disabled:opacity-20" disabled>
+                                <ChevronRight size={16} />
+                                <ChevronRight size={16} className="-ml-2.5" />
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {activeView === 'stats' && (
+                <div className="bg-white rounded-2xl border border-border shadow-sm flex flex-col flex-1 min-h-0 w-full">
+                    <div className="space-y-0">
+                        <div className="md:hidden flex items-center gap-2 p-3 border-b border-border">
+                            <button
+                                onClick={() => navigate(-1)}
+                                className="p-2 rounded-xl border border-border bg-white text-muted-foreground shrink-0"
+                            >
+                                <ChevronLeft size={18} />
+                            </button>
+                            <h2 className="text-base font-bold text-foreground flex-1 text-center">Thống kê</h2>
+                            <button
+                                onClick={openMobileFilter}
+                                className={clsx(
+                                    'relative p-2 rounded-xl border shrink-0 transition-all',
+                                    hasActiveFilters ? 'border-primary bg-primary/5 text-primary' : 'border-border bg-white text-muted-foreground',
+                                )}
+                            >
+                                <Filter size={18} />
+                                {hasActiveFilters && (
+                                    <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-primary text-white text-[9px] font-bold flex items-center justify-center">
+                                        {totalActiveFilters}
+                                    </span>
+                                )}
+                            </button>
+                        </div>
+
+                        <div className="hidden md:block p-4 border-b border-border" ref={dropdownRef}>
+                            <div className="flex flex-wrap items-center gap-2">
+                                <button
+                                    onClick={() => navigate(-1)}
+                                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-border hover:bg-muted text-muted-foreground text-[12px] font-bold transition-all bg-white shadow-sm shrink-0"
+                                >
+                                    <ChevronLeft size={16} />
+                                    Quay lại
+                                </button>
+
+                                <div className="relative">
+                                    <button
+                                        onClick={() => setActiveDropdown(activeDropdown === 'statuses' ? null : 'statuses')}
+                                        className={clsx(
+                                            'flex items-center gap-2.5 px-4 py-2 rounded-xl border text-[13px] font-bold transition-all',
+                                            activeDropdown === 'statuses' || selectedStatuses.length > 0
+                                                ? 'border-primary bg-primary/5 text-primary'
+                                                : 'border-border bg-white text-muted-foreground hover:text-foreground'
+                                        )}
+                                    >
+                                        <Filter size={14} />
+                                        Trạng thái
+                                        {selectedStatuses.length > 0 && (
+                                            <span className="px-1.5 py-0.5 rounded-full bg-primary text-white text-[10px] font-bold">
+                                                {selectedStatuses.length}
+                                            </span>
+                                        )}
+                                        <ChevronDown size={14} className={clsx('transition-transform', activeDropdown === 'statuses' ? 'rotate-180' : '')} />
+                                    </button>
+                                    {activeDropdown === 'statuses' && (
+                                        <FilterDropdown
+                                            options={statusOptions}
+                                            selected={selectedStatuses}
+                                            setSelected={setSelectedStatuses}
+                                            filterSearch={filterSearch}
+                                            setFilterSearch={setFilterSearch}
+                                        />
+                                    )}
+                                </div>
+
+                                <div className="relative">
+                                    <button
+                                        onClick={() => setActiveDropdown(activeDropdown === 'customerTypes' ? null : 'customerTypes')}
+                                        className={clsx(
+                                            'flex items-center gap-2.5 px-4 py-2 rounded-xl border text-[13px] font-bold transition-all',
+                                            activeDropdown === 'customerTypes' || selectedCustomerTypes.length > 0
+                                                ? 'border-primary bg-primary/5 text-primary'
+                                                : 'border-border bg-white text-muted-foreground hover:text-foreground'
+                                        )}
+                                    >
+                                        <Gift size={14} />
+                                        Loại khách hàng
+                                        {selectedCustomerTypes.length > 0 && (
+                                            <span className="px-1.5 py-0.5 rounded-full bg-primary text-white text-[10px] font-bold">
+                                                {selectedCustomerTypes.length}
+                                            </span>
+                                        )}
+                                        <ChevronDown size={14} className={clsx('transition-transform', activeDropdown === 'customerTypes' ? 'rotate-180' : '')} />
+                                    </button>
+                                    {activeDropdown === 'customerTypes' && (
+                                        <FilterDropdown
+                                            options={customerTypeOptions}
+                                            selected={selectedCustomerTypes}
+                                            setSelected={setSelectedCustomerTypes}
+                                            filterSearch={filterSearch}
+                                            setFilterSearch={setFilterSearch}
+                                        />
+                                    )}
+                                </div>
+
+                                <div className="relative">
+                                    <button
+                                        onClick={() => setActiveDropdown(activeDropdown === 'active' ? null : 'active')}
+                                        className={clsx(
+                                            'flex items-center gap-2.5 px-4 py-2 rounded-xl border text-[13px] font-bold transition-all',
+                                            activeDropdown === 'active' || selectedActiveStatus.length > 0
+                                                ? 'border-primary bg-primary/5 text-primary'
+                                                : 'border-border bg-white text-muted-foreground hover:text-foreground'
+                                        )}
+                                    >
+                                        <Tag size={14} />
+                                        Kích hoạt
+                                        {selectedActiveStatus.length > 0 && (
+                                            <span className="px-1.5 py-0.5 rounded-full bg-primary text-white text-[10px] font-bold">
+                                                {selectedActiveStatus.length}
+                                            </span>
+                                        )}
+                                        <ChevronDown size={14} className={clsx('transition-transform', activeDropdown === 'active' ? 'rotate-180' : '')} />
+                                    </button>
+                                    {activeDropdown === 'active' && (
+                                        <FilterDropdown
+                                            options={activeOptions}
+                                            selected={selectedActiveStatus}
+                                            setSelected={setSelectedActiveStatus}
+                                            filterSearch={filterSearch}
+                                            setFilterSearch={setFilterSearch}
+                                        />
+                                    )}
+                                </div>
+
+                                {hasActiveFilters && (
+                                    <button
+                                        onClick={clearAllFilters}
+                                        className="flex items-center gap-2 px-3 py-2 rounded-xl border border-dashed border-red-300 text-red-500 text-[12px] font-bold hover:bg-red-50 transition-all"
+                                    >
+                                        <X size={14} />
+                                        Xóa bộ lọc
+                                    </button>
+                                )}
                             </div>
                         </div>
 
-                        {/* Customer Type Chart */}
-                        <div className="bg-white p-6 border border-[#E5E7EB]">
-                            <h3 className="text-lg font-semibold text-[#111827] mb-4" style={{ fontFamily: '"Roboto", sans-serif' }}>Phân bổ theo Loại khách hàng</h3>
-                            <div style={{ height: '300px' }}>
-                                <PieChartJS
-                                    data={{
-                                        labels: getCustomerTypeStats().map(item => item.name),
-                                        datasets: [{
-                                            data: getCustomerTypeStats().map(item => item.value),
-                                            backgroundColor: chartColors.slice(0, getCustomerTypeStats().length),
-                                            borderColor: '#fff',
-                                            borderWidth: 2
-                                        }]
-                                    }}
-                                    options={{
-                                        responsive: true,
-                                        maintainAspectRatio: false,
-                                        plugins: {
-                                            legend: {
-                                                position: 'bottom'
-                                            }
-                                        }
-                                    }}
-                                />
-                            </div>
-                        </div>
+                        <div className="px-3 md:px-4 pt-4 md:pt-5 pb-5 md:pb-6 space-y-5">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                <div className="bg-blue-50 rounded-2xl p-3.5 md:p-5 shadow-sm col-span-1">
+                                    <div className="flex items-center justify-start gap-3 md:gap-4">
+                                        <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center shrink-0">
+                                            <Gift className="w-5 h-5 md:w-6 md:h-6 text-blue-600" />
+                                        </div>
+                                        <div>
+                                            <p className="text-[11px] font-semibold text-blue-600 uppercase tracking-wider">Tổng KM</p>
+                                            <p className="text-[34px] md:text-3xl font-bold text-blue-900 mt-0.5 md:mt-1 leading-none">{formatNumber(filteredPromotionsCount)}</p>
+                                        </div>
+                                    </div>
+                                </div>
 
-                        {/* Top Promotions Chart */}
-                        <div className="bg-white p-6 border border-[#E5E7EB] md:col-span-2">
-                            <h3 className="text-lg font-semibold text-[#111827] mb-4" style={{ fontFamily: '"Roboto", sans-serif' }}>Top 10 Khuyến mãi (Số bình khí)</h3>
-                            <div style={{ height: '300px' }}>
-                                <BarChartJS
-                                    data={{
-                                        labels: getTopPromotions().map(item => item.name.length > 20 ? item.name.substring(0, 20) + '...' : item.name),
-                                        datasets: [{
-                                            label: 'Số bình khí',
-                                            data: getTopPromotions().map(item => item.value),
-                                            backgroundColor: chartColors[0],
-                                            borderColor: chartColors[0],
-                                            borderWidth: 1
-                                        }]
-                                    }}
-                                    options={{
-                                        responsive: true,
-                                        maintainAspectRatio: false,
-                                        indexAxis: 'y',
-                                        plugins: {
-                                            legend: {
-                                                display: false
-                                            }
-                                        },
-                                        scales: {
-                                            x: {
-                                                beginAtZero: true
-                                            }
-                                        }
-                                    }}
-                                />
+                                <div className="bg-green-50 rounded-2xl p-3.5 md:p-5 shadow-sm col-span-1">
+                                    <div className="flex items-center justify-start gap-3 md:gap-4">
+                                        <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center shrink-0">
+                                            <BarChart2 className="w-5 h-5 md:w-6 md:h-6 text-green-600" />
+                                        </div>
+                                        <div>
+                                            <p className="text-[11px] font-semibold text-green-600 uppercase tracking-wider">Hoạt động</p>
+                                            <p className="text-[34px] md:text-3xl font-bold text-green-900 mt-0.5 md:mt-1 leading-none">{formatNumber(activeCount)}</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="bg-orange-50 rounded-2xl p-3.5 md:p-5 shadow-sm col-span-1">
+                                    <div className="flex items-center justify-start gap-3 md:gap-4">
+                                        <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center shrink-0">
+                                            <Filter className="w-5 h-5 md:w-6 md:h-6 text-orange-600" />
+                                        </div>
+                                        <div>
+                                            <p className="text-[11px] font-semibold text-orange-600 uppercase tracking-wider">Hết hạn / Vô hiệu</p>
+                                            <p className="text-[34px] md:text-3xl font-bold text-orange-900 mt-0.5 md:mt-1 leading-none">{formatNumber(expiredCount)}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                                <div className="bg-card border border-border rounded-xl p-6 shadow-sm">
+                                    <h3 className="text-lg font-bold text-foreground mb-4">Phân bổ theo Trạng thái</h3>
+                                    <div style={{ height: '300px' }}>
+                                        <PieChartJS
+                                            data={{
+                                                labels: getStatusStats().map(item => item.name),
+                                                datasets: [{
+                                                    data: getStatusStats().map(item => item.value),
+                                                    backgroundColor: chartColors.slice(0, getStatusStats().length),
+                                                    borderColor: '#fff',
+                                                    borderWidth: 2
+                                                }]
+                                            }}
+                                            options={{
+                                                responsive: true,
+                                                maintainAspectRatio: false,
+                                                plugins: { legend: { position: 'bottom' } }
+                                            }}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="bg-card border border-border rounded-xl p-6 shadow-sm">
+                                    <h3 className="text-lg font-bold text-foreground mb-4">Phân bổ theo Loại khách hàng</h3>
+                                    <div style={{ height: '300px' }}>
+                                        <PieChartJS
+                                            data={{
+                                                labels: getCustomerTypeStats().map(item => item.name),
+                                                datasets: [{
+                                                    data: getCustomerTypeStats().map(item => item.value),
+                                                    backgroundColor: chartColors.slice(0, getCustomerTypeStats().length),
+                                                    borderColor: '#fff',
+                                                    borderWidth: 2
+                                                }]
+                                            }}
+                                            options={{
+                                                responsive: true,
+                                                maintainAspectRatio: false,
+                                                plugins: { legend: { position: 'bottom' } }
+                                            }}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="bg-card border border-border rounded-xl p-6 shadow-sm lg:col-span-2">
+                                    <h3 className="text-lg font-bold text-foreground mb-4">Top 10 Khuyến mãi (Số bình khí)</h3>
+                                    <div style={{ height: '300px' }}>
+                                        <BarChartJS
+                                            data={{
+                                                labels: getTopPromotions().map(item => item.name.length > 20 ? item.name.substring(0, 20) + '...' : item.name),
+                                                datasets: [{
+                                                    label: 'Số bình khí',
+                                                    data: getTopPromotions().map(item => item.value),
+                                                    backgroundColor: chartColors[0],
+                                                    borderColor: chartColors[0],
+                                                    borderWidth: 1
+                                                }]
+                                            }}
+                                            options={{
+                                                responsive: true,
+                                                maintainAspectRatio: false,
+                                                indexAxis: 'y',
+                                                plugins: { legend: { display: false } },
+                                                scales: { x: { beginAtZero: true } }
+                                            }}
+                                        />
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
             )}
 
-            {/* Modal */}
+            {showMobileFilter && (
+                <MobileFilterSheet
+                    isOpen={showMobileFilter}
+                    isClosing={mobileFilterClosing}
+                    onClose={closeMobileFilter}
+                    onApply={applyMobileFilter}
+                    sections={[
+                        {
+                            id: 'statuses',
+                            label: 'Trạng thái',
+                            icon: <Filter size={16} />,
+                            options: statusOptions,
+                            selectedValues: pendingStatuses,
+                            onSelectionChange: setPendingStatuses,
+                        },
+                        {
+                            id: 'customerTypes',
+                            label: 'Loại khách hàng',
+                            icon: <Gift size={16} />,
+                            options: customerTypeOptions,
+                            selectedValues: pendingCustomerTypes,
+                            onSelectionChange: setPendingCustomerTypes,
+                        },
+                        {
+                            id: 'active',
+                            label: 'Kích hoạt',
+                            icon: <Tag size={16} />,
+                            options: activeOptions,
+                            selectedValues: pendingActiveStatus,
+                            onSelectionChange: setPendingActiveStatus,
+                        }
+                    ]}
+                />
+            )}
+
             {isFormModalOpen && (
                 <PromotionFormModal
                     promotion={selectedPromo}

@@ -11,22 +11,29 @@ import {
     Title
 } from 'chart.js';
 import {
+    BarChart2,
     Building2,
+    ChevronLeft,
+    ChevronRight,
     Edit,
     Eye,
+    List,
+    Phone,
     Plus,
     Search,
-    Trash2
+    Trash2,
+    X
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Bar as BarChartJS } from 'react-chartjs-2';
 import { useNavigate } from 'react-router-dom';
+import { clsx } from 'clsx';
 import SupplierDetailsModal from '../components/Suppliers/SupplierDetailsModal';
 import SupplierFormModal from '../components/Suppliers/SupplierFormModal';
 import useColumnVisibility from '../hooks/useColumnVisibility';
+import usePermissions from '../hooks/usePermissions';
 import { supabase } from '../supabase/config';
 
-// Register Chart.js components
 ChartJS.register(
     CategoryScale,
     LinearScale,
@@ -39,30 +46,32 @@ ChartJS.register(
     ChartLegend
 );
 
-const TABLE_COLUMNS = [
-    { key: 'info', label: 'Thông tin đối tác' },
+const TABLE_COLUMNS_DEF = [
+    { key: 'name', label: 'Tên nhà cung cấp' },
     { key: 'phone', label: 'Số điện thoại' },
     { key: 'address', label: 'Địa chỉ liên hệ' },
 ];
 
 const Suppliers = () => {
+    const { role } = usePermissions();
     const navigate = useNavigate();
-    const [activeView, setActiveView] = useState('list'); // 'list' or 'stats'
+    const [activeView, setActiveView] = useState('list');
     const [searchTerm, setSearchTerm] = useState('');
     const [suppliers, setSuppliers] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const [isLoading, setIsLoading] = useState(true);
     const [isFormModalOpen, setIsFormModalOpen] = useState(false);
     const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
     const [selectedSupplier, setSelectedSupplier] = useState(null);
-    const { visibleColumns, toggleColumn, isColumnVisible, resetColumns, visibleCount, totalCount } = useColumnVisibility('columns_suppliers', TABLE_COLUMNS);
-    const visibleTableColumns = TABLE_COLUMNS.filter(col => isColumnVisible(col.key));
+
+    const { isColumnVisible } = useColumnVisibility('columns_suppliers', TABLE_COLUMNS_DEF);
+    const visibleTableColumns = TABLE_COLUMNS_DEF.filter(col => isColumnVisible(col.key));
 
     useEffect(() => {
         fetchSuppliers();
     }, []);
 
     const fetchSuppliers = async () => {
-        setLoading(true);
+        setIsLoading(true);
         try {
             const { data, error } = await supabase
                 .from('suppliers')
@@ -73,15 +82,15 @@ const Suppliers = () => {
             setSuppliers(data || []);
         } catch (error) {
             console.error('Error fetching suppliers:', error);
-            alert('Lỗi khi tải dữ liệu nhà cung cấp!');
+            alert('❌ Không thể tải danh sách nhà cung cấp: ' + error.message);
         } finally {
-            setLoading(false);
+            setIsLoading(false);
         }
     };
 
     const formatNumber = (num) => {
         if (!num) return '0';
-        return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+        return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
     };
 
     const filteredSuppliers = suppliers.filter(supplier => {
@@ -93,11 +102,10 @@ const Suppliers = () => {
         );
     });
 
-    // Calculate totals
     const filteredSuppliersCount = filteredSuppliers.length;
 
     const handleDeleteSupplier = async (id, name) => {
-        if (!window.confirm(`Bạn có chắc chắn muốn xóa đối tác "${name}" không?`)) {
+        if (!window.confirm(`Bạn có chắc chắn muốn xóa đối tác "${name}" không? Dữ liệu liên quan có thể bị ảnh hưởng và không thể khôi phục.`)) {
             return;
         }
 
@@ -125,28 +133,21 @@ const Suppliers = () => {
         setIsDetailsModalOpen(true);
     };
 
-    const handleCreateNew = () => {
-        setSelectedSupplier(null);
-        setIsFormModalOpen(true);
-    };
-
     const handleFormSubmitSuccess = () => {
         fetchSuppliers();
         setIsFormModalOpen(false);
     };
 
-    // Calculate statistics data for charts
     const getTopSuppliers = () => {
-        // Since suppliers table is simple, we'll just show all suppliers sorted by name
         return filteredSuppliers
-            .map(s => ({ name: s.name, value: 1 }))
+            .map(supplier => ({ name: supplier.name, value: 1 }))
             .sort((a, b) => a.name.localeCompare(b.name))
             .slice(0, 10);
     };
 
     const getSuppliersByFirstLetter = () => {
         const stats = {};
-        filteredSuppliers.forEach(supplier => {
+        filteredSuppliers.forEach((supplier) => {
             const firstLetter = supplier.name?.charAt(0).toUpperCase() || 'Khác';
             stats[firstLetter] = (stats[firstLetter] || 0) + 1;
         });
@@ -155,197 +156,331 @@ const Suppliers = () => {
             .sort((a, b) => a.name.localeCompare(b.name));
     };
 
-    // Chart colors
     const chartColors = [
         '#2563EB', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6',
         '#06B6D4', '#F97316', '#84CC16', '#EC4899', '#6366F1'
     ];
 
     return (
-        <div className="p-4 sm:p-6 bg-[#F8F9FA] min-h-screen" style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif' }}>
-            {/* Navigation Tabs */}
-            <div className="flex items-center gap-1 mb-6 sm:mb-8 border-b border-[#E5E7EB] overflow-x-auto no-scrollbar">
+        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 w-full flex-1 flex flex-col -mt-2 min-h-0 px-3 md:px-6">
+            <div className="flex items-center gap-1 mb-4 mt-6">
                 <button
                     onClick={() => setActiveView('list')}
-                    className={`px-6 py-3 text-sm font-semibold tracking-wide transition-colors ${activeView === 'list'
-                            ? 'text-[#2563EB] border-b-2 border-[#2563EB]'
-                            : 'text-[#6B7280] hover:text-[#374151]'
-                        }`}
-                    style={activeView === 'list' ? { color: '#2563EB', borderBottomColor: '#2563EB' } : { color: '#6B7280' }}
+                    className={clsx(
+                        'flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-bold transition-all',
+                        activeView === 'list'
+                            ? 'bg-white text-primary shadow-sm ring-1 ring-border'
+                            : 'text-muted-foreground hover:text-foreground'
+                    )}
                 >
+                    <List size={14} />
                     Danh sách
                 </button>
                 <button
                     onClick={() => setActiveView('stats')}
-                    className={`px-6 py-3 text-sm font-semibold tracking-wide transition-colors ${activeView === 'stats'
-                            ? 'text-[#2563EB] border-b-2 border-[#2563EB]'
-                            : 'text-[#6B7280] hover:text-[#374151]'
-                        }`}
-                    style={activeView === 'stats' ? { color: '#2563EB', borderBottomColor: '#2563EB' } : { color: '#6B7280' }}
+                    className={clsx(
+                        'flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-bold transition-all',
+                        activeView === 'stats'
+                            ? 'bg-white text-primary shadow-sm ring-1 ring-border'
+                            : 'text-muted-foreground hover:text-foreground'
+                    )}
                 >
+                    <BarChart2 size={14} />
                     Thống kê
                 </button>
             </div>
 
-            {activeView === 'list' ? (
-                <>
-                    {/* Header with Add Button */}
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
-                        <h1 className="text-xl sm:text-2xl font-semibold text-[#111827] tracking-tight">Danh sách nhà cung cấp</h1>
-                        <button onClick={handleCreateNew} className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 text-white font-medium text-sm transition-all duration-200 shadow-sm hover:shadow-md" style={{ backgroundColor: '#2563EB' }} onMouseEnter={(e) => e.target.style.backgroundColor = '#1D4ED8'} onMouseLeave={(e) => e.target.style.backgroundColor = '#2563EB'}><Plus className="w-4 h-4" /> Thêm mới</button>
+            {activeView === 'list' && (
+                <div className="bg-white rounded-2xl border border-border shadow-sm flex flex-col flex-1 min-h-0 w-full">
+                    <div className="md:hidden flex items-center gap-2 p-3 border-b border-border">
+                        <button
+                            onClick={() => navigate(-1)}
+                            className="p-2 rounded-xl border border-border bg-white text-muted-foreground shrink-0"
+                        >
+                            <ChevronLeft size={18} />
+                        </button>
+                        <div className="relative flex-1">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={15} />
+                            <input
+                                type="text"
+                                placeholder="Tìm kiếm . . ."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="w-full pl-9 pr-8 py-2 bg-muted/20 border border-border/80 rounded-xl text-[13px] focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all font-medium"
+                            />
+                            {searchTerm && (
+                                <button onClick={() => setSearchTerm('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                                    <X size={14} />
+                                </button>
+                            )}
+                        </div>
+                        <button
+                            onClick={() => {
+                                setSelectedSupplier(null);
+                                setIsFormModalOpen(true);
+                            }}
+                            className="p-2 rounded-xl bg-primary text-white shrink-0 shadow-md shadow-primary/20"
+                        >
+                            <Plus size={18} />
+                        </button>
                     </div>
 
-                    <div className="mb-6 flex flex-col lg:flex-row lg:items-center gap-4">
-                        <div className="flex-1 relative">
-                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#9CA3AF]" />
-                            <input type="text" placeholder="Tìm theo tên, SĐT, địa chỉ..." className="w-full pl-12 pr-4 py-3 border border-[#D1D5DB] focus:outline-none focus:ring-2 focus:ring-[#2563EB] focus:border-[#2563EB] bg-white text-[#111827] placeholder-[#9CA3AF] text-sm transition-all" style={{ fontFamily: '"Roboto", sans-serif' }} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
-                        </div>
-                        <div className="flex items-center gap-4 px-4 py-3 bg-[#EFF6FF] border border-[#BFDBFE]">
-                            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
-                                <span className="text-[10px] sm:text-sm text-[#6B7280]">Tổng NCC:</span>
-                                <span className="text-sm sm:text-lg font-semibold text-[#2563EB]">{filteredSuppliersCount}</span>
-                            </div>
-                        </div>
-                    </div>
+                    <div className="md:hidden flex-1 overflow-y-auto p-3 flex flex-col gap-3">
+                        {isLoading ? (
+                            <div className="py-16 text-center text-[13px] text-muted-foreground italic">Đang tải dữ liệu...</div>
+                        ) : filteredSuppliers.length === 0 ? (
+                            <div className="py-16 text-center text-[13px] text-muted-foreground italic">Không tìm thấy kết quả phù hợp</div>
+                        ) : (
+                            filteredSuppliers.map((supplier) => (
+                                <div key={supplier.id} className="rounded-2xl border border-border bg-white shadow-sm p-4">
+                                    <div className="flex items-start justify-between gap-2 mb-2">
+                                        <div>
+                                            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Nhà cung cấp</p>
+                                            <h3 className="text-[15px] font-bold text-foreground leading-tight mt-0.5">{supplier.name}</h3>
+                                        </div>
+                                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border border-primary/20 text-primary bg-primary/5">
+                                            NCC
+                                        </span>
+                                    </div>
 
-                    {/* Main Content Card */}
-                    <div className="bg-white rounded-lg border border-[#E5E7EB] shadow-sm overflow-hidden">
-                        {/* Mobile Card List */}
-                        <div className="md:hidden divide-y divide-[#E5E7EB]">
-                            {loading ? (
-                                <div className="px-4 py-16 text-center"><div className="flex flex-col items-center gap-4"><div className="w-8 h-8 border-4 border-[#2563EB] border-t-transparent rounded-full animate-spin"></div><p className="text-[#6B7280] text-sm font-medium">Đang tải...</p></div></div>
-                            ) : filteredSuppliers.length === 0 ? (
-                                <div className="px-4 py-16 text-center"><div className="flex flex-col items-center gap-4"><Building2 className="w-12 h-12 text-[#D1D5DB]" /><p className="text-sm font-medium text-[#6B7280]">Không tìm thấy NCC nào</p></div></div>
-                            ) : filteredSuppliers.map((supplier, index) => (
-                                <div key={supplier.id} className="p-4 bg-white hover:bg-gray-50 active:bg-gray-100 transition-colors">
-                                    <div className="flex justify-between items-start mb-3">
-                                        <div className="flex flex-col">
-                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">#{index + 1}</span>
-                                            <h3 className="text-sm font-bold text-[#111827] leading-tight mt-0.5">{supplier.name}</h3>
-                                            <span className="text-[10px] text-[#6B7280] mt-0.5">ID: {supplier.id.substring(0, 8)}</span>
+                                    <div className="space-y-1.5 mb-3">
+                                        <div className="flex items-center gap-2 text-[12px] text-muted-foreground">
+                                            <Phone className="w-3.5 h-3.5" />
+                                            <span>{supplier.phone || '—'}</span>
+                                        </div>
+                                        <div className="flex items-start gap-2 text-[12px] text-muted-foreground">
+                                            <Building2 className="w-3.5 h-3.5 mt-0.5" />
+                                            <span className="line-clamp-2">{supplier.address || '—'}</span>
                                         </div>
                                     </div>
-                                    <div className="grid grid-cols-2 gap-2 mb-3">
-                                        <div><span className="text-[9px] font-bold text-slate-400 uppercase">SĐT</span><p className="text-xs text-[#111827] font-medium">{supplier.phone || '—'}</p></div>
-                                        <div className="col-span-2"><span className="text-[9px] font-bold text-slate-400 uppercase">Địa chỉ</span><p className="text-xs text-slate-700 font-medium line-clamp-2">{supplier.address || '—'}</p></div>
-                                    </div>
-                                    <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-50">
-                                        <button onClick={() => handleViewSupplier(supplier)} className="p-2 text-[#9CA3AF] hover:text-[#2563EB] active:bg-blue-50 rounded-lg transition-colors"><Eye className="w-5 h-5" /></button>
-                                        <button onClick={() => handleEditSupplier(supplier)} className="p-2 text-[#9CA3AF] hover:text-[#2563EB] active:bg-blue-50 rounded-lg transition-colors"><Edit className="w-5 h-5" /></button>
-                                        <button onClick={() => handleDeleteSupplier(supplier.id, supplier.name)} className="p-2 text-[#9CA3AF] hover:text-[#DC2626] active:bg-red-50 rounded-lg transition-colors"><Trash2 className="w-5 h-5" /></button>
+
+                                    <div className="flex items-center justify-end pt-2 border-t border-border/70">
+                                        <div className="flex items-center gap-3">
+                                            <button onClick={() => handleViewSupplier(supplier)} className="text-muted-foreground hover:text-primary transition-colors"><Eye size={18} /></button>
+                                            <button onClick={() => handleEditSupplier(supplier)} className="text-muted-foreground hover:text-primary transition-colors"><Edit size={18} /></button>
+                                            {(role === 'admin' || role === 'manager') && (
+                                                <button onClick={() => handleDeleteSupplier(supplier.id, supplier.name)} className="text-muted-foreground hover:text-red-500 transition-colors"><Trash2 size={18} /></button>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
-                            ))}
-                        </div>
-                        {/* Desktop Table View */}
-                        <div className="hidden md:block w-full overflow-x-auto">
-                            <table className="w-full border-collapse">
-                                <thead className="bg-[#F9FAFB]"><tr><th className="px-4 py-3.5 text-xs font-semibold text-[#374151] text-center uppercase tracking-wider w-16">STT</th>{visibleTableColumns.map(col => (<th key={col.key} className="px-4 py-3.5 text-xs font-semibold text-[#374151] text-left uppercase tracking-wider">{col.label}</th>))}<th className="px-4 py-3.5 text-xs font-semibold text-[#374151] text-center uppercase tracking-wider">Thao tác</th></tr></thead>
-                                <tbody className="divide-y divide-[#E5E7EB]">
-                                    {loading ? (
-                                        <tr><td colSpan={visibleTableColumns.length + 2} className="px-4 py-16 text-center"><div className="flex flex-col items-center gap-4"><div className="w-8 h-8 border-4 border-[#2563EB] border-t-transparent rounded-full animate-spin"></div><p className="text-[#6B7280] text-sm font-medium">Đang tải dữ liệu...</p></div></td></tr>
-                                    ) : filteredSuppliers.length === 0 ? (
-                                        <tr><td colSpan={visibleTableColumns.length + 2} className="px-4 py-16 text-center"><div className="flex flex-col items-center gap-4"><Building2 className="w-12 h-12 text-[#D1D5DB]" /><p className="text-sm font-medium text-[#6B7280]">Không tìm thấy NCC nào</p></div></td></tr>
-                                    ) : filteredSuppliers.map((supplier, index) => (
-                                        <tr key={supplier.id} className="hover:bg-[#F9FAFB] transition-colors">
-                                            <td className="px-4 py-4 text-center"><span className="text-sm text-[#6B7280]">{index + 1}</span></td>
-                                            {isColumnVisible('info') && <td className="px-4 py-4"><div><div className="text-sm font-medium text-[#111827]">{supplier.name}</div><div className="text-xs text-[#6B7280] mt-1">ID: {supplier.id.substring(0, 8)}</div></div></td>}
-                                            {isColumnVisible('phone') && <td className="px-4 py-4"><span className="text-sm font-medium text-[#111827]">{supplier.phone}</span></td>}
-                                            {isColumnVisible('address') && <td className="px-4 py-4 text-sm text-[#374151] font-normal">{supplier.address}</td>}
-                                            <td className="px-4 py-4 text-center"><div className="flex items-center justify-center gap-3">
-                                                <button onClick={() => handleViewSupplier(supplier)} className="text-[#9CA3AF] hover:text-[#2563EB] transition-colors p-1 hover:bg-[#EFF6FF]" title="Xem chi tiết"><Eye className="w-4 h-4" /></button>
-                                                <button onClick={() => handleEditSupplier(supplier)} className="text-[#9CA3AF] hover:text-[#2563EB] transition-colors p-1 hover:bg-[#EFF6FF]" title="Chỉnh sửa"><Edit className="w-4 h-4" /></button>
-                                                <button onClick={() => handleDeleteSupplier(supplier.id, supplier.name)} className="text-[#9CA3AF] hover:text-[#DC2626] transition-colors p-1 hover:bg-[#FEF2F2]" title="Xóa"><Trash2 className="w-4 h-4" /></button>
-                                            </div></td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </>
-            ) : (
-                /* Statistics View */
-                <div className="space-y-6">
-                    {/* Summary Stats */}
-                    <div className="bg-white p-4 sm:p-6 border border-[#E5E7EB]">
-                        <div className="text-[10px] sm:text-sm text-[#6B7280] mb-2 uppercase tracking-wider font-bold">Tổng NCC</div>
-                        <div className="text-lg sm:text-2xl font-black text-[#111827]">{filteredSuppliersCount}</div>
+                            ))
+                        )}
                     </div>
 
-                    {/* Charts Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {/* Top Suppliers Chart */}
-                        <div className="bg-white p-6 border border-[#E5E7EB]">
-                            <h3 className="text-lg font-semibold text-[#111827] mb-4" style={{ fontFamily: '"Roboto", sans-serif' }}>Danh sách Nhà cung cấp</h3>
-                            <div style={{ height: '300px' }}>
-                                <BarChartJS
-                                    data={{
-                                        labels: getTopSuppliers().map(item => item.name.length > 20 ? item.name.substring(0, 20) + '...' : item.name),
-                                        datasets: [{
-                                            label: 'Số lượng',
-                                            data: getTopSuppliers().map(item => item.value),
-                                            backgroundColor: chartColors[0],
-                                            borderColor: chartColors[0],
-                                            borderWidth: 1
-                                        }]
-                                    }}
-                                    options={{
-                                        responsive: true,
-                                        maintainAspectRatio: false,
-                                        indexAxis: 'y',
-                                        plugins: {
-                                            legend: {
-                                                display: false
-                                            }
-                                        },
-                                        scales: {
-                                            x: {
-                                                beginAtZero: true
-                                            }
-                                        }
-                                    }}
-                                />
+                    <div className="hidden md:block p-4 space-y-4">
+                        <div className="flex items-center justify-between gap-4">
+                            <div className="flex items-center gap-2 flex-1">
+                                <button
+                                    onClick={() => navigate(-1)}
+                                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-border hover:bg-muted text-muted-foreground text-[12px] font-bold transition-all bg-white shadow-sm shrink-0"
+                                >
+                                    <ChevronLeft size={16} />
+                                    Quay lại
+                                </button>
+                                <div className="relative flex-1">
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
+                                    <input
+                                        type="text"
+                                        placeholder="Tìm kiếm . . ."
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                        className="w-full pl-10 pr-8 py-1.5 bg-muted/20 border border-border/80 rounded-xl text-[13px] focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all font-medium"
+                                    />
+                                    {searchTerm && (
+                                        <button onClick={() => setSearchTerm('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                                            <X size={14} />
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => {
+                                    setSelectedSupplier(null);
+                                    setIsFormModalOpen(true);
+                                }}
+                                className="flex items-center gap-2 px-6 py-1.5 rounded-xl bg-primary text-white text-[13px] font-bold hover:bg-primary/90 shadow-md shadow-primary/20 transition-all"
+                            >
+                                <Plus size={18} />
+                                Thêm
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="hidden md:block flex-1 overflow-x-auto border-t border-border">
+                        <table className="w-full border-collapse">
+                            <thead className="bg-muted/20">
+                                <tr>
+                                    {visibleTableColumns.map(col => (
+                                        <th key={col.key} className="px-4 py-3.5 text-[12px] font-bold text-muted-foreground text-left uppercase tracking-wide">
+                                            {col.label}
+                                        </th>
+                                    ))}
+                                    <th className="px-4 py-3.5 text-[12px] font-bold text-muted-foreground text-center uppercase tracking-wide">Thao tác</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-border">
+                                {isLoading ? (
+                                    <tr>
+                                        <td colSpan={visibleTableColumns.length + 1} className="px-4 py-16 text-center text-muted-foreground">
+                                            Đang tải dữ liệu...
+                                        </td>
+                                    </tr>
+                                ) : filteredSuppliers.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={visibleTableColumns.length + 1} className="px-4 py-16 text-center text-muted-foreground">
+                                            Không tìm thấy nhà cung cấp nào
+                                        </td>
+                                    </tr>
+                                ) : filteredSuppliers.map((supplier) => (
+                                    <tr key={supplier.id} className="hover:bg-muted/20 transition-colors">
+                                        {isColumnVisible('name') && <td className="px-4 py-4 text-sm font-semibold text-foreground">{supplier.name || '—'}</td>}
+                                        {isColumnVisible('phone') && <td className="px-4 py-4 text-sm text-muted-foreground">{supplier.phone || '—'}</td>}
+                                        {isColumnVisible('address') && <td className="px-4 py-4 text-sm text-muted-foreground">{supplier.address || '—'}</td>}
+                                        <td className="px-4 py-4 text-center">
+                                            <div className="flex items-center justify-center gap-3">
+                                                <button onClick={() => handleViewSupplier(supplier)} className="text-muted-foreground hover:text-primary transition-colors p-1" title="Xem chi tiết">
+                                                    <Eye className="w-4 h-4" />
+                                                </button>
+                                                <button onClick={() => handleEditSupplier(supplier)} className="text-muted-foreground hover:text-primary transition-colors p-1" title="Chỉnh sửa">
+                                                    <Edit className="w-4 h-4" />
+                                                </button>
+                                                {(role === 'admin' || role === 'manager') && (
+                                                    <button onClick={() => handleDeleteSupplier(supplier.id, supplier.name)} className="text-muted-foreground hover:text-red-500 transition-colors p-1" title="Xóa">
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div className="hidden md:flex px-4 py-4 border-t border-border items-center justify-between bg-muted/5">
+                        <div className="flex items-center gap-3 text-[12px] text-muted-foreground font-medium">
+                            <span>{filteredSuppliers.length > 0 ? `1–${filteredSuppliers.length}` : '0'}/Tổng {filteredSuppliers.length}</span>
+                            <div className="flex items-center gap-1 ml-2">
+                                <span className="text-[11px] font-bold">│</span>
+                                <span className="text-primary font-bold">{formatNumber(filteredSuppliersCount)} NCC</span>
                             </div>
                         </div>
+                        <div className="flex items-center gap-1">
+                            <button className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors disabled:opacity-20" disabled>
+                                <ChevronLeft size={16} />
+                                <ChevronLeft size={16} className="-ml-2.5" />
+                            </button>
+                            <button className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors disabled:opacity-20" disabled>
+                                <ChevronLeft size={16} />
+                            </button>
+                            <div className="w-8 h-8 rounded-lg bg-primary text-white flex items-center justify-center text-[12px] font-bold shadow-md shadow-primary/25">1</div>
+                            <button className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors disabled:opacity-20" disabled>
+                                <ChevronRight size={16} />
+                            </button>
+                            <button className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors disabled:opacity-20" disabled>
+                                <ChevronRight size={16} />
+                                <ChevronRight size={16} className="-ml-2.5" />
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
-                        {/* Suppliers by First Letter Chart */}
-                        <div className="bg-white p-6 border border-[#E5E7EB]">
-                            <h3 className="text-lg font-semibold text-[#111827] mb-4" style={{ fontFamily: '"Roboto", sans-serif' }}>Phân bổ theo Chữ cái đầu</h3>
-                            <div style={{ height: '300px' }}>
-                                <BarChartJS
-                                    data={{
-                                        labels: getSuppliersByFirstLetter().map(item => item.name),
-                                        datasets: [{
-                                            label: 'Số lượng',
-                                            data: getSuppliersByFirstLetter().map(item => item.value),
-                                            backgroundColor: chartColors[1],
-                                            borderColor: chartColors[1],
-                                            borderWidth: 1
-                                        }]
-                                    }}
-                                    options={{
-                                        responsive: true,
-                                        maintainAspectRatio: false,
-                                        plugins: {
-                                            legend: {
-                                                display: false
-                                            }
-                                        },
-                                        scales: {
-                                            y: {
-                                                beginAtZero: true
-                                            }
-                                        }
-                                    }}
-                                />
+            {activeView === 'stats' && (
+                <div className="bg-white rounded-2xl border border-border shadow-sm flex flex-col flex-1 min-h-0 w-full">
+                    <div className="space-y-0">
+                        <div className="md:hidden flex items-center gap-2 p-3 border-b border-border">
+                            <button
+                                onClick={() => navigate(-1)}
+                                className="p-2 rounded-xl border border-border bg-white text-muted-foreground shrink-0"
+                            >
+                                <ChevronLeft size={18} />
+                            </button>
+                            <h2 className="text-base font-bold text-foreground flex-1 text-center">Thống kê</h2>
+                            <span className="w-9" />
+                        </div>
+
+                        <div className="hidden md:block p-4 border-b border-border">
+                            <button
+                                onClick={() => navigate(-1)}
+                                className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-border hover:bg-muted text-muted-foreground text-[12px] font-bold transition-all bg-white shadow-sm shrink-0"
+                            >
+                                <ChevronLeft size={16} />
+                                Quay lại
+                            </button>
+                        </div>
+
+                        <div className="px-3 md:px-4 pt-4 md:pt-5 pb-5 md:pb-6 space-y-5">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                <div className="bg-blue-50 rounded-2xl p-3.5 md:p-5 shadow-sm col-span-1">
+                                    <div className="flex items-center justify-start gap-3 md:gap-4">
+                                        <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center shrink-0">
+                                            <Building2 className="w-5 h-5 md:w-6 md:h-6 text-blue-600" />
+                                        </div>
+                                        <div>
+                                            <p className="text-[11px] font-semibold text-blue-600 uppercase tracking-wider">Tổng NCC</p>
+                                            <p className="text-[34px] md:text-3xl font-bold text-blue-900 mt-0.5 md:mt-1 leading-none">{formatNumber(filteredSuppliersCount)}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                                <div className="bg-card border border-border rounded-xl p-6 shadow-sm">
+                                    <h3 className="text-lg font-bold text-foreground mb-4">Danh sách Nhà cung cấp</h3>
+                                    <div style={{ height: '300px' }}>
+                                        <BarChartJS
+                                            data={{
+                                                labels: getTopSuppliers().map(item => item.name.length > 20 ? item.name.substring(0, 20) + '...' : item.name),
+                                                datasets: [{
+                                                    label: 'Số lượng',
+                                                    data: getTopSuppliers().map(item => item.value),
+                                                    backgroundColor: chartColors[0],
+                                                    borderColor: chartColors[0],
+                                                    borderWidth: 1
+                                                }]
+                                            }}
+                                            options={{
+                                                responsive: true,
+                                                maintainAspectRatio: false,
+                                                indexAxis: 'y',
+                                                plugins: { legend: { display: false } },
+                                                scales: { x: { beginAtZero: true } }
+                                            }}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="bg-card border border-border rounded-xl p-6 shadow-sm">
+                                    <h3 className="text-lg font-bold text-foreground mb-4">Phân bổ theo Chữ cái đầu</h3>
+                                    <div style={{ height: '300px' }}>
+                                        <BarChartJS
+                                            data={{
+                                                labels: getSuppliersByFirstLetter().map(item => item.name),
+                                                datasets: [{
+                                                    label: 'Số lượng',
+                                                    data: getSuppliersByFirstLetter().map(item => item.value),
+                                                    backgroundColor: chartColors[1],
+                                                    borderColor: chartColors[1],
+                                                    borderWidth: 1
+                                                }]
+                                            }}
+                                            options={{
+                                                responsive: true,
+                                                maintainAspectRatio: false,
+                                                plugins: { legend: { display: false } },
+                                                scales: { y: { beginAtZero: true } }
+                                            }}
+                                        />
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
             )}
 
-            {/* Form Modal (Create/Edit) */}
             {isFormModalOpen && (
                 <SupplierFormModal
                     supplier={selectedSupplier}
@@ -354,7 +489,6 @@ const Suppliers = () => {
                 />
             )}
 
-            {/* Details Dashboard Modal (View) */}
             {isDetailsModalOpen && selectedSupplier && (
                 <SupplierDetailsModal
                     supplier={selectedSupplier}

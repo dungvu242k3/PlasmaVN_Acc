@@ -11,22 +11,29 @@ import {
     Title
 } from 'chart.js';
 import {
+    BarChart2,
     ChevronDown,
+    ChevronLeft,
+    ChevronRight,
     Edit,
     Filter,
+    List,
     PackageOpen,
     Plus,
     Search,
-    Trash2
+    Trash2,
+    X
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Bar as BarChartJS, Pie as PieChartJS } from 'react-chartjs-2';
 import { useNavigate } from 'react-router-dom';
+import { clsx } from 'clsx';
 import MaterialFormModal from '../components/Materials/MaterialFormModal';
+import FilterDropdown from '../components/ui/FilterDropdown';
+import MobileFilterSheet from '../components/ui/MobileFilterSheet';
 import { MATERIAL_CATEGORIES } from '../constants/materialConstants';
 import { supabase } from '../supabase/config';
 
-// Register Chart.js components
 ChartJS.register(
     CategoryScale,
     LinearScale,
@@ -41,29 +48,44 @@ ChartJS.register(
 
 const Materials = () => {
     const navigate = useNavigate();
-    const [activeView, setActiveView] = useState('list'); // 'list' or 'stats'
+    const [activeView, setActiveView] = useState('list');
     const [searchTerm, setSearchTerm] = useState('');
-    const [categoryFilter, setCategoryFilter] = useState(MATERIAL_CATEGORIES[0].id); // Mặc định chọn loại đầu tiên
+    const [categoryFilter, setCategoryFilter] = useState(MATERIAL_CATEGORIES[0].id);
     const [materials, setMaterials] = useState([]);
-    const [allMaterials, setAllMaterials] = useState([]); // Store all materials for statistics
-    const [loading, setLoading] = useState(true);
+    const [allMaterials, setAllMaterials] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
     const [isFormModalOpen, setIsFormModalOpen] = useState(false);
     const [selectedMaterial, setSelectedMaterial] = useState(null);
 
-    // Filter states
     const [selectedCategories, setSelectedCategories] = useState([]);
+    const [pendingCategories, setPendingCategories] = useState([]);
+    const [showMobileFilter, setShowMobileFilter] = useState(false);
+    const [mobileFilterClosing, setMobileFilterClosing] = useState(false);
+
+    const [activeDropdown, setActiveDropdown] = useState(null);
+    const [filterSearch, setFilterSearch] = useState('');
+    const dropdownRef = useRef(null);
 
     useEffect(() => {
         fetchMaterials();
     }, [categoryFilter]);
 
     useEffect(() => {
-        // Fetch all materials for statistics
         fetchAllMaterials();
     }, []);
 
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+                setActiveDropdown(null);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
     const fetchMaterials = async () => {
-        setLoading(true);
+        setIsLoading(true);
         try {
             const { data, error } = await supabase
                 .from('materials')
@@ -75,9 +97,9 @@ const Materials = () => {
             setMaterials(data || []);
         } catch (error) {
             console.error('Error fetching materials:', error);
-            alert('Lỗi khi tải dữ liệu từ điển vật tư!');
+            alert('❌ Không thể tải danh sách vật tư: ' + error.message);
         } finally {
-            setLoading(false);
+            setIsLoading(false);
         }
     };
 
@@ -96,7 +118,7 @@ const Materials = () => {
     };
 
     const handleDeleteMaterial = async (id, name) => {
-        if (!window.confirm(`Bạn có chắc muốn xóa vật tư "${name}" không?`)) {
+        if (!window.confirm(`Bạn có chắc chắn muốn xóa vật tư "${name}" không? Dữ liệu sẽ không thể khôi phục.`)) {
             return;
         }
 
@@ -108,19 +130,15 @@ const Materials = () => {
 
             if (error) throw error;
             fetchMaterials();
+            fetchAllMaterials();
         } catch (error) {
             console.error('Error deleting material:', error);
-            alert('Lỗi khi xóa vật tư: ' + error.message);
+            alert('❌ Có lỗi xảy ra khi xóa vật tư: ' + error.message);
         }
     };
 
     const handleEditMaterial = (material) => {
         setSelectedMaterial(material);
-        setIsFormModalOpen(true);
-    };
-
-    const handleCreateNew = () => {
-        setSelectedMaterial(null);
         setIsFormModalOpen(true);
     };
 
@@ -130,65 +148,30 @@ const Materials = () => {
         setIsFormModalOpen(false);
     };
 
-    // Filter Dropdown Component
-    const FilterDropdown = ({ label, selectedCount, totalCount, onSelectAll, children }) => {
-        const [isOpen, setIsOpen] = useState(false);
+    const closeMobileFilter = () => {
+        setMobileFilterClosing(true);
+        setTimeout(() => {
+            setShowMobileFilter(false);
+            setMobileFilterClosing(false);
+        }, 280);
+    };
 
-        return (
-            <div className="relative">
-                <button
-                    onClick={() => setIsOpen(!isOpen)}
-                    className="flex items-center gap-2 px-4 py-2.5 border border-[#D1D5DB] bg-white text-sm font-medium text-[#374151] hover:bg-[#F9FAFB] transition-all"
-                    style={{ fontFamily: '"Roboto", sans-serif' }}
-                >
-                    <Filter className="w-4 h-4" />
-                    <span>{label}</span>
-                    {selectedCount > 0 && (
-                        <span className="px-2 py-0.5 bg-[#2563EB] text-white text-xs rounded-full">
-                            {selectedCount}
-                        </span>
-                    )}
-                    <ChevronDown className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
-                </button>
-                {isOpen && (
-                    <>
-                        <div
-                            className="fixed inset-0 z-10"
-                            onClick={() => setIsOpen(false)}
-                        ></div>
-                        <div className="absolute top-full left-0 mt-1 bg-white border border-[#E5E7EB] shadow-lg z-20 min-w-[250px] max-h-80">
-                            <div className="p-3 border-b border-[#E5E7EB] flex items-center justify-between bg-[#F9FAFB]">
-                                <span className="text-sm font-medium text-[#374151]" style={{ fontFamily: '"Roboto", sans-serif' }}>
-                                    {selectedCount > 0 ? `Đã chọn ${selectedCount}/${totalCount}` : `Chọn ${label.toLowerCase()}`}
-                                </span>
-                                <button
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        onSelectAll();
-                                    }}
-                                    className="text-xs text-[#2563EB] hover:text-[#1D4ED8] font-medium"
-                                    style={{ fontFamily: '"Roboto", sans-serif' }}
-                                >
-                                    {selectedCount === totalCount ? 'Bỏ chọn tất cả' : 'Chọn tất cả'}
-                                </button>
-                            </div>
-                            <div className="overflow-y-auto max-h-64">
-                                {children}
-                            </div>
-                        </div>
-                    </>
-                )}
-            </div>
-        );
+    const openMobileFilter = () => {
+        setPendingCategories(selectedCategories);
+        setShowMobileFilter(true);
+    };
+
+    const applyMobileFilter = () => {
+        setSelectedCategories(pendingCategories);
+        closeMobileFilter();
     };
 
     const formatNumber = (num) => {
         if (!num) return '0';
-        return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+        return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
     };
 
-    // Helper functions for dynamic data display
-    const currentCategoryDef = MATERIAL_CATEGORIES.find(c => c.id === categoryFilter) || MATERIAL_CATEGORIES[0];
+    const currentCategoryDef = MATERIAL_CATEGORIES.find(category => category.id === categoryFilter) || MATERIAL_CATEGORIES[0];
 
     const filteredMaterials = materials.filter(material => {
         const search = searchTerm.toLowerCase();
@@ -199,19 +182,16 @@ const Materials = () => {
         );
     });
 
-    // Calculate totals
     const filteredMaterialsCount = filteredMaterials.length;
 
-    // For statistics - filter by selected categories or use all
     const statsMaterials = selectedCategories.length === 0
         ? allMaterials
-        : allMaterials.filter(m => selectedCategories.includes(m.category));
+        : allMaterials.filter(material => selectedCategories.includes(material.category));
 
-    // Calculate statistics data for charts
     const getCategoryStats = () => {
         const stats = {};
         statsMaterials.forEach(material => {
-            const categoryLabel = MATERIAL_CATEGORIES.find(c => c.id === material.category)?.label || material.category;
+            const categoryLabel = MATERIAL_CATEGORIES.find(category => category.id === material.category)?.label || material.category;
             stats[categoryLabel] = (stats[categoryLabel] || 0) + 1;
         });
         return Object.entries(stats).map(([name, value]) => ({ name, value }));
@@ -219,247 +199,437 @@ const Materials = () => {
 
     const getTopMaterials = () => {
         return statsMaterials
-            .map(m => ({ name: m.name, value: 1 }))
+            .map(material => ({ name: material.name, value: 1 }))
             .sort((a, b) => a.name.localeCompare(b.name))
             .slice(0, 10);
     };
 
-    // Chart colors
     const chartColors = [
         '#2563EB', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6',
         '#06B6D4', '#F97316', '#84CC16', '#EC4899', '#6366F1'
     ];
 
+    const categoryOptions = MATERIAL_CATEGORIES.map(category => ({
+        id: category.id,
+        label: category.label,
+        count: allMaterials.filter(material => material.category === category.id).length
+    }));
+
+    const hasActiveFilters = selectedCategories.length > 0;
+
     return (
-        <div className="p-4 sm:p-6 bg-[#F8F9FA] min-h-screen" style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif' }}>
-            {/* Navigation Tabs */}
-            <div className="flex items-center gap-1 mb-6 sm:mb-8 border-b border-[#E5E7EB] overflow-x-auto no-scrollbar">
+        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 w-full flex-1 flex flex-col -mt-2 min-h-0 px-3 md:px-6">
+            <div className="flex items-center gap-1 mb-4 mt-6">
                 <button
                     onClick={() => setActiveView('list')}
-                    className={`px-6 py-3 text-sm font-semibold tracking-wide transition-colors ${activeView === 'list'
-                            ? 'text-[#2563EB] border-b-2 border-[#2563EB]'
-                            : 'text-[#6B7280] hover:text-[#374151]'
-                        }`}
-                    style={activeView === 'list' ? { color: '#2563EB', borderBottomColor: '#2563EB' } : { color: '#6B7280' }}
+                    className={clsx(
+                        'flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-bold transition-all',
+                        activeView === 'list'
+                            ? 'bg-white text-primary shadow-sm ring-1 ring-border'
+                            : 'text-muted-foreground hover:text-foreground'
+                    )}
                 >
+                    <List size={14} />
                     Danh sách
                 </button>
                 <button
                     onClick={() => setActiveView('stats')}
-                    className={`px-6 py-3 text-sm font-semibold tracking-wide transition-colors ${activeView === 'stats'
-                            ? 'text-[#2563EB] border-b-2 border-[#2563EB]'
-                            : 'text-[#6B7280] hover:text-[#374151]'
-                        }`}
-                    style={activeView === 'stats' ? { color: '#2563EB', borderBottomColor: '#2563EB' } : { color: '#6B7280' }}
+                    className={clsx(
+                        'flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-bold transition-all',
+                        activeView === 'stats'
+                            ? 'bg-white text-primary shadow-sm ring-1 ring-border'
+                            : 'text-muted-foreground hover:text-foreground'
+                    )}
                 >
+                    <BarChart2 size={14} />
                     Thống kê
                 </button>
             </div>
 
-            {activeView === 'list' ? (
-                <>
-                    {/* Header with Add Button */}
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
-                        <h1 className="text-xl sm:text-2xl font-semibold text-[#111827] tracking-tight">Danh sách vật tư</h1>
-                        <button onClick={handleCreateNew} className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 text-white font-medium text-sm transition-all duration-200 shadow-sm hover:shadow-md" style={{ backgroundColor: '#2563EB' }} onMouseEnter={(e) => e.target.style.backgroundColor = '#1D4ED8'} onMouseLeave={(e) => e.target.style.backgroundColor = '#2563EB'}><Plus className="w-4 h-4" /> Thêm mới</button>
+            {activeView === 'list' && (
+                <div className="bg-white rounded-2xl border border-border shadow-sm flex flex-col flex-1 min-h-0 w-full">
+                    <div className="md:hidden flex items-center gap-2 p-3 border-b border-border">
+                        <button
+                            onClick={() => navigate(-1)}
+                            className="p-2 rounded-xl border border-border bg-white text-muted-foreground shrink-0"
+                        >
+                            <ChevronLeft size={18} />
+                        </button>
+                        <div className="relative flex-1">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={15} />
+                            <input
+                                type="text"
+                                placeholder="Tìm kiếm . . ."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="w-full pl-9 pr-8 py-2 bg-muted/20 border border-border/80 rounded-xl text-[13px] focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all font-medium"
+                            />
+                            {searchTerm && (
+                                <button onClick={() => setSearchTerm('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                                    <X size={14} />
+                                </button>
+                            )}
+                        </div>
+                        <button
+                            onClick={() => {
+                                setSelectedMaterial(null);
+                                setIsFormModalOpen(true);
+                            }}
+                            className="p-2 rounded-xl bg-primary text-white shrink-0 shadow-md shadow-primary/20"
+                        >
+                            <Plus size={18} />
+                        </button>
                     </div>
 
-                    <div className="mb-6 flex flex-col lg:flex-row lg:items-center gap-4">
-                        <div className="flex-1 relative">
-                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#9CA3AF]" />
-                            <input type="text" placeholder="Tìm theo tên, mô tả..." className="w-full pl-12 pr-4 py-3 border border-[#D1D5DB] focus:outline-none focus:ring-2 focus:ring-[#2563EB] focus:border-[#2563EB] bg-white text-[#111827] placeholder-[#9CA3AF] text-sm transition-all" style={{ fontFamily: '"Roboto", sans-serif' }} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
-                        </div>
-                        <div className="flex items-center gap-4 px-4 py-3 bg-[#EFF6FF] border border-[#BFDBFE]">
-                            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
-                                <span className="text-[10px] sm:text-sm text-[#6B7280]">Vật tư:</span>
-                                <span className="text-sm sm:text-lg font-semibold text-[#2563EB]">{filteredMaterialsCount}</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Category Filter */}
-                    <div className="mb-6">
-                        <div className="relative w-full md:w-64">
+                    <div className="p-3 md:p-4 border-b border-border">
+                        <div className="relative w-full md:w-72">
                             <select
                                 value={categoryFilter}
                                 onChange={(e) => setCategoryFilter(e.target.value)}
-                                className="w-full pl-4 pr-10 py-3 border border-[#D1D5DB] focus:outline-none focus:ring-2 focus:ring-[#2563EB] focus:border-[#2563EB] bg-white text-[#111827] text-sm transition-all"
-                                style={{ fontFamily: '"Roboto", sans-serif' }}
+                                className="w-full pl-4 pr-10 py-2.5 md:py-2 bg-white border border-border rounded-xl text-[13px] font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all appearance-none"
                             >
-                                {MATERIAL_CATEGORIES.map(cat => (
-                                    <option key={cat.id} value={cat.id}>{cat.label}</option>
+                                {MATERIAL_CATEGORIES.map(category => (
+                                    <option key={category.id} value={category.id}>{category.label}</option>
                                 ))}
                             </select>
-                            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9CA3AF] pointer-events-none" />
+                            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
                         </div>
                     </div>
 
-                    {/* Main Content Card */}
-                    <div className="bg-white rounded-lg border border-[#E5E7EB] shadow-sm overflow-hidden">
-                        {/* Mobile Card List */}
-                        <div className="md:hidden divide-y divide-[#E5E7EB]">
-                            {loading ? (
-                                <div className="px-4 py-16 text-center"><div className="flex flex-col items-center gap-4"><div className="w-8 h-8 border-4 border-[#2563EB] border-t-transparent rounded-full animate-spin"></div><p className="text-[#6B7280] text-sm font-medium">Đang tải...</p></div></div>
-                            ) : filteredMaterials.length === 0 ? (
-                                <div className="px-4 py-16 text-center"><div className="flex flex-col items-center gap-4"><PackageOpen className="w-12 h-12 text-[#D1D5DB]" /><p className="text-sm font-medium text-[#6B7280]">Không tìm thấy vật tư nào</p></div></div>
-                            ) : filteredMaterials.map((material, index) => (
-                                <div key={material.id} className="p-4 bg-white hover:bg-gray-50 active:bg-gray-100 transition-colors">
-                                    <div className="flex justify-between items-start mb-3">
-                                        <div className="flex flex-col">
-                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">#{index + 1}</span>
-                                            <h3 className="text-sm font-bold text-[#111827] leading-tight mt-0.5">{material.name}</h3>
-                                            <span className="text-[10px] text-[#6B7280] mt-0.5">ID: {material.id.substring(0, 8)}</span>
+                    <div className="md:hidden flex-1 overflow-y-auto p-3 flex flex-col gap-3">
+                        {isLoading ? (
+                            <div className="py-16 text-center text-[13px] text-muted-foreground italic">Đang tải dữ liệu...</div>
+                        ) : filteredMaterials.length === 0 ? (
+                            <div className="py-16 text-center text-[13px] text-muted-foreground italic">Không tìm thấy kết quả phù hợp</div>
+                        ) : (
+                            filteredMaterials.map((material) => (
+                                <div key={material.id} className="rounded-2xl border border-border bg-white shadow-sm p-4">
+                                    <div className="flex items-start justify-between gap-2 mb-2">
+                                        <div>
+                                            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Vật tư</p>
+                                            <h3 className="text-[15px] font-bold text-foreground leading-tight mt-0.5">{material.name}</h3>
+                                        </div>
+                                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border border-primary/20 text-primary bg-primary/5">
+                                            {currentCategoryDef.label}
+                                        </span>
+                                    </div>
+
+                                    <div className="space-y-1.5 mb-3">
+                                        {currentCategoryDef.hasNumberField && (
+                                            <div className="text-[12px] text-muted-foreground">
+                                                <span className="font-semibold text-foreground/90">{currentCategoryDef.numberFieldLabel}:</span> {material.extra_number || '—'}
+                                            </div>
+                                        )}
+                                        {currentCategoryDef.hasTextField && (
+                                            <div className="text-[12px] text-muted-foreground line-clamp-2">
+                                                <span className="font-semibold text-foreground/90">{currentCategoryDef.textFieldLabel}:</span> {material.extra_text || '—'}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div className="flex items-center justify-end pt-2 border-t border-border/70">
+                                        <div className="flex items-center gap-3">
+                                            <button onClick={() => handleEditMaterial(material)} className="text-muted-foreground hover:text-primary transition-colors"><Edit size={18} /></button>
+                                            <button onClick={() => handleDeleteMaterial(material.id, material.name)} className="text-muted-foreground hover:text-red-500 transition-colors"><Trash2 size={18} /></button>
                                         </div>
                                     </div>
-                                    <div className="grid grid-cols-2 gap-2 mb-3">
-                                        {currentCategoryDef.hasNumberField && <div><span className="text-[9px] font-bold text-slate-400 uppercase">{currentCategoryDef.numberFieldLabel}</span><p className="text-xs text-[#111827] font-semibold">{material.extra_number || '—'}</p></div>}
-                                        {currentCategoryDef.hasTextField && <div className={currentCategoryDef.hasNumberField ? '' : 'col-span-2'}><span className="text-[9px] font-bold text-slate-400 uppercase">{currentCategoryDef.textFieldLabel}</span><p className="text-xs text-slate-700 font-medium line-clamp-2">{material.extra_text || '—'}</p></div>}
-                                    </div>
-                                    <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-50">
-                                        <button onClick={() => handleEditMaterial(material)} className="p-2 text-[#9CA3AF] hover:text-[#2563EB] active:bg-blue-50 rounded-lg transition-colors"><Edit className="w-5 h-5" /></button>
-                                        <button onClick={() => handleDeleteMaterial(material.id, material.name)} className="p-2 text-[#9CA3AF] hover:text-[#DC2626] active:bg-red-50 rounded-lg transition-colors"><Trash2 className="w-5 h-5" /></button>
+                                </div>
+                            ))
+                        )}
+                    </div>
+
+                    <div className="hidden md:block p-4 space-y-4">
+                        <div className="flex items-center justify-between gap-4">
+                            <div className="flex items-center gap-2 flex-1">
+                                <button
+                                    onClick={() => navigate(-1)}
+                                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-border hover:bg-muted text-muted-foreground text-[12px] font-bold transition-all bg-white shadow-sm shrink-0"
+                                >
+                                    <ChevronLeft size={16} />
+                                    Quay lại
+                                </button>
+                                <div className="relative flex-1">
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
+                                    <input
+                                        type="text"
+                                        placeholder="Tìm kiếm . . ."
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                        className="w-full pl-10 pr-8 py-1.5 bg-muted/20 border border-border/80 rounded-xl text-[13px] focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all font-medium"
+                                    />
+                                    {searchTerm && (
+                                        <button onClick={() => setSearchTerm('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                                            <X size={14} />
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => {
+                                    setSelectedMaterial(null);
+                                    setIsFormModalOpen(true);
+                                }}
+                                className="flex items-center gap-2 px-6 py-1.5 rounded-xl bg-primary text-white text-[13px] font-bold hover:bg-primary/90 shadow-md shadow-primary/20 transition-all"
+                            >
+                                <Plus size={18} />
+                                Thêm
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="hidden md:block flex-1 overflow-x-auto border-t border-border">
+                        <table className="w-full border-collapse">
+                            <thead className="bg-muted/20">
+                                <tr>
+                                    <th className="px-4 py-3.5 text-[12px] font-bold text-muted-foreground text-left uppercase tracking-wide">
+                                        {currentCategoryDef.nameLabel || 'Tên vật tư'}
+                                    </th>
+                                    {currentCategoryDef.hasNumberField && (
+                                        <th className="px-4 py-3.5 text-[12px] font-bold text-muted-foreground text-center uppercase tracking-wide">
+                                            {currentCategoryDef.numberFieldLabel}
+                                        </th>
+                                    )}
+                                    {currentCategoryDef.hasTextField && (
+                                        <th className="px-4 py-3.5 text-[12px] font-bold text-muted-foreground text-left uppercase tracking-wide">
+                                            {currentCategoryDef.textFieldLabel}
+                                        </th>
+                                    )}
+                                    <th className="px-4 py-3.5 text-[12px] font-bold text-muted-foreground text-center uppercase tracking-wide">Thao tác</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-border">
+                                {isLoading ? (
+                                    <tr>
+                                        <td colSpan={3 + (currentCategoryDef.hasNumberField ? 1 : 0)} className="px-4 py-16 text-center text-muted-foreground">
+                                            Đang tải dữ liệu...
+                                        </td>
+                                    </tr>
+                                ) : filteredMaterials.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={3 + (currentCategoryDef.hasNumberField ? 1 : 0)} className="px-4 py-16 text-center text-muted-foreground">
+                                            Không tìm thấy vật tư nào
+                                        </td>
+                                    </tr>
+                                ) : filteredMaterials.map((material) => (
+                                    <tr key={material.id} className="hover:bg-muted/20 transition-colors">
+                                        <td className="px-4 py-4 text-sm font-semibold text-foreground">{material.name || '—'}</td>
+                                        {currentCategoryDef.hasNumberField && (
+                                            <td className="px-4 py-4 text-sm font-semibold text-foreground text-center">{material.extra_number || '—'}</td>
+                                        )}
+                                        {currentCategoryDef.hasTextField && (
+                                            <td className="px-4 py-4 text-sm text-muted-foreground">{material.extra_text || '—'}</td>
+                                        )}
+                                        <td className="px-4 py-4 text-center">
+                                            <div className="flex items-center justify-center gap-3">
+                                                <button onClick={() => handleEditMaterial(material)} className="text-muted-foreground hover:text-primary transition-colors p-1" title="Chỉnh sửa">
+                                                    <Edit className="w-4 h-4" />
+                                                </button>
+                                                <button onClick={() => handleDeleteMaterial(material.id, material.name)} className="text-muted-foreground hover:text-red-500 transition-colors p-1" title="Xóa">
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div className="hidden md:flex px-4 py-4 border-t border-border items-center justify-between bg-muted/5">
+                        <div className="flex items-center gap-3 text-[12px] text-muted-foreground font-medium">
+                            <span>{filteredMaterials.length > 0 ? `1–${filteredMaterials.length}` : '0'}/Tổng {filteredMaterials.length}</span>
+                            <div className="flex items-center gap-1 ml-2">
+                                <span className="text-[11px] font-bold">│</span>
+                                <span className="text-primary font-bold">{formatNumber(filteredMaterialsCount)} vật tư</span>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-1">
+                            <button className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors disabled:opacity-20" disabled>
+                                <ChevronLeft size={16} />
+                                <ChevronLeft size={16} className="-ml-2.5" />
+                            </button>
+                            <button className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors disabled:opacity-20" disabled>
+                                <ChevronLeft size={16} />
+                            </button>
+                            <div className="w-8 h-8 rounded-lg bg-primary text-white flex items-center justify-center text-[12px] font-bold shadow-md shadow-primary/25">1</div>
+                            <button className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors disabled:opacity-20" disabled>
+                                <ChevronRight size={16} />
+                            </button>
+                            <button className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors disabled:opacity-20" disabled>
+                                <ChevronRight size={16} />
+                                <ChevronRight size={16} className="-ml-2.5" />
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {activeView === 'stats' && (
+                <div className="bg-white rounded-2xl border border-border shadow-sm flex flex-col flex-1 min-h-0 w-full">
+                    <div className="space-y-0">
+                        <div className="md:hidden flex items-center gap-2 p-3 border-b border-border">
+                            <button
+                                onClick={() => navigate(-1)}
+                                className="p-2 rounded-xl border border-border bg-white text-muted-foreground shrink-0"
+                            >
+                                <ChevronLeft size={18} />
+                            </button>
+                            <h2 className="text-base font-bold text-foreground flex-1 text-center">Thống kê</h2>
+                            <button
+                                onClick={openMobileFilter}
+                                className={clsx(
+                                    'relative p-2 rounded-xl border shrink-0 transition-all',
+                                    hasActiveFilters ? 'border-primary bg-primary/5 text-primary' : 'border-border bg-white text-muted-foreground',
+                                )}
+                            >
+                                <Filter size={18} />
+                                {hasActiveFilters && (
+                                    <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-primary text-white text-[9px] font-bold flex items-center justify-center">
+                                        {selectedCategories.length}
+                                    </span>
+                                )}
+                            </button>
+                        </div>
+
+                        <div className="hidden md:block p-4 border-b border-border" ref={dropdownRef}>
+                            <div className="flex flex-wrap items-center gap-2">
+                                <button
+                                    onClick={() => navigate(-1)}
+                                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-border hover:bg-muted text-muted-foreground text-[12px] font-bold transition-all bg-white shadow-sm shrink-0"
+                                >
+                                    <ChevronLeft size={16} />
+                                    Quay lại
+                                </button>
+
+                                <div className="relative">
+                                    <button
+                                        onClick={() => setActiveDropdown(activeDropdown === 'categories' ? null : 'categories')}
+                                        className={clsx(
+                                            'flex items-center gap-2.5 px-4 py-2 rounded-xl border text-[13px] font-bold transition-all',
+                                            activeDropdown === 'categories' || selectedCategories.length > 0
+                                                ? 'border-primary bg-primary/5 text-primary'
+                                                : 'border-border bg-white text-muted-foreground hover:text-foreground'
+                                        )}
+                                    >
+                                        <PackageOpen size={14} />
+                                        Phân loại
+                                        {selectedCategories.length > 0 && (
+                                            <span className="px-1.5 py-0.5 rounded-full bg-primary text-white text-[10px] font-bold">
+                                                {selectedCategories.length}
+                                            </span>
+                                        )}
+                                        <ChevronDown size={14} className={clsx('transition-transform', activeDropdown === 'categories' ? 'rotate-180' : '')} />
+                                    </button>
+                                    {activeDropdown === 'categories' && (
+                                        <FilterDropdown
+                                            options={categoryOptions}
+                                            selected={selectedCategories}
+                                            setSelected={setSelectedCategories}
+                                            filterSearch={filterSearch}
+                                            setFilterSearch={setFilterSearch}
+                                        />
+                                    )}
+                                </div>
+
+                                {hasActiveFilters && (
+                                    <button
+                                        onClick={() => setSelectedCategories([])}
+                                        className="flex items-center gap-2 px-3 py-2 rounded-xl border border-dashed border-red-300 text-red-500 text-[12px] font-bold hover:bg-red-50 transition-all"
+                                    >
+                                        <X size={14} />
+                                        Xóa bộ lọc
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="px-3 md:px-4 pt-4 md:pt-5 pb-5 md:pb-6 space-y-5">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                <div className="bg-blue-50 rounded-2xl p-3.5 md:p-5 shadow-sm col-span-1">
+                                    <div className="flex items-center justify-start gap-3 md:gap-4">
+                                        <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center shrink-0">
+                                            <PackageOpen className="w-5 h-5 md:w-6 md:h-6 text-blue-600" />
+                                        </div>
+                                        <div>
+                                            <p className="text-[11px] font-semibold text-blue-600 uppercase tracking-wider">Tổng vật tư</p>
+                                            <p className="text-[34px] md:text-3xl font-bold text-blue-900 mt-0.5 md:mt-1 leading-none">{formatNumber(statsMaterials.length)}</p>
+                                        </div>
                                     </div>
                                 </div>
-                            ))}
-                        </div>
-                        {/* Desktop Table View */}
-                        <div className="hidden md:block w-full overflow-x-auto">
-                            <table className="w-full border-collapse">
-                                <thead className="bg-[#F9FAFB]"><tr><th className="px-4 py-3.5 text-xs font-semibold text-[#374151] text-center uppercase tracking-wider w-16">STT</th><th className="px-4 py-3.5 text-xs font-semibold text-[#374151] text-left uppercase tracking-wider">{currentCategoryDef.nameLabel || 'Tên vật tư'}</th>{currentCategoryDef.hasNumberField && (<th className="px-4 py-3.5 text-xs font-semibold text-[#374151] text-center uppercase tracking-wider">{currentCategoryDef.numberFieldLabel}</th>)}{currentCategoryDef.hasTextField && (<th className="px-4 py-3.5 text-xs font-semibold text-[#374151] text-left uppercase tracking-wider">{currentCategoryDef.textFieldLabel}</th>)}<th className="px-4 py-3.5 text-xs font-semibold text-[#374151] text-center uppercase tracking-wider">Thao tác</th></tr></thead>
-                                <tbody className="divide-y divide-[#E5E7EB]">
-                                    {loading ? (
-                                        <tr><td colSpan={2 + (currentCategoryDef.hasNumberField ? 1 : 0) + (currentCategoryDef.hasTextField ? 1 : 0) + 1} className="px-4 py-16 text-center"><div className="flex flex-col items-center gap-4"><div className="w-8 h-8 border-4 border-[#2563EB] border-t-transparent rounded-full animate-spin"></div><p className="text-[#6B7280] text-sm font-medium">Đang tải dữ liệu...</p></div></td></tr>
-                                    ) : filteredMaterials.length === 0 ? (
-                                        <tr><td colSpan={2 + (currentCategoryDef.hasNumberField ? 1 : 0) + (currentCategoryDef.hasTextField ? 1 : 0) + 1} className="px-4 py-16 text-center"><div className="flex flex-col items-center gap-4"><PackageOpen className="w-12 h-12 text-[#D1D5DB]" /><p className="text-sm font-medium text-[#6B7280]">Không tìm thấy vật tư nào</p></div></td></tr>
-                                    ) : filteredMaterials.map((material, index) => (
-                                        <tr key={material.id} className="hover:bg-[#F9FAFB] transition-colors">
-                                            <td className="px-4 py-4 text-center"><span className="text-sm text-[#6B7280]">{index + 1}</span></td>
-                                            <td className="px-4 py-4"><div><div className="text-sm font-medium text-[#111827]">{material.name}</div><div className="text-xs text-[#6B7280] mt-1">ID: {material.id.substring(0, 8)}</div></div></td>
-                                            {currentCategoryDef.hasNumberField && (<td className="px-4 py-4 text-center"><span className="text-sm font-semibold text-[#111827]">{material.extra_number || '—'}</span></td>)}
-                                            {currentCategoryDef.hasTextField && (<td className="px-4 py-4 text-sm text-[#374151] font-normal">{material.extra_text || '—'}</td>)}
-                                            <td className="px-4 py-4 text-center"><div className="flex items-center justify-center gap-3">
-                                                <button onClick={() => handleEditMaterial(material)} className="text-[#9CA3AF] hover:text-[#2563EB] transition-colors p-1 hover:bg-[#EFF6FF]" title="Chỉnh sửa"><Edit className="w-4 h-4" /></button>
-                                                <button onClick={() => handleDeleteMaterial(material.id, material.name)} className="text-[#9CA3AF] hover:text-[#DC2626] transition-colors p-1 hover:bg-[#FEF2F2]" title="Xóa"><Trash2 className="w-4 h-4" /></button>
-                                            </div></td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </>
-            ) : (
-                /* Statistics View */
-                <div className="space-y-6">
-                    {/* Summary Stats */}
-                    <div className="bg-white p-4 sm:p-6 border border-[#E5E7EB]">
-                        <div className="text-[10px] sm:text-sm text-[#6B7280] mb-2 uppercase tracking-wider font-bold">Tổng vật tư</div>
-                        <div className="text-lg sm:text-2xl font-black text-[#111827]">{statsMaterials.length}</div>
-                    </div>
+                            </div>
 
-                    {/* Filter Section for Statistics */}
-                    <div className="mb-6 flex items-center gap-3 flex-wrap">
-                        <FilterDropdown
-                            label="Phân loại"
-                            selectedCount={selectedCategories.length}
-                            totalCount={MATERIAL_CATEGORIES.length}
-                            onSelectAll={() => {
-                                if (selectedCategories.length === MATERIAL_CATEGORIES.length) {
-                                    setSelectedCategories([]);
-                                } else {
-                                    setSelectedCategories(MATERIAL_CATEGORIES.map(c => c.id));
-                                }
-                            }}
-                        >
-                            <div className="space-y-1 p-2">
-                                {MATERIAL_CATEGORIES.map(cat => (
-                                    <label key={cat.id} className="flex items-center gap-2 cursor-pointer hover:bg-[#F3F4F6] p-2">
-                                        <input
-                                            type="checkbox"
-                                            checked={selectedCategories.includes(cat.id)}
-                                            onChange={(e) => {
-                                                if (e.target.checked) {
-                                                    setSelectedCategories([...selectedCategories, cat.id]);
-                                                } else {
-                                                    setSelectedCategories(selectedCategories.filter(id => id !== cat.id));
-                                                }
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                                <div className="bg-card border border-border rounded-xl p-6 shadow-sm">
+                                    <h3 className="text-lg font-bold text-foreground mb-4">Phân bổ theo Phân loại</h3>
+                                    <div style={{ height: '300px' }}>
+                                        <PieChartJS
+                                            data={{
+                                                labels: getCategoryStats().map(item => item.name),
+                                                datasets: [{
+                                                    data: getCategoryStats().map(item => item.value),
+                                                    backgroundColor: chartColors.slice(0, getCategoryStats().length),
+                                                    borderColor: '#fff',
+                                                    borderWidth: 2
+                                                }]
                                             }}
-                                            className="w-4 h-4 text-[#2563EB] border-[#D1D5DB] focus:ring-[#2563EB]"
+                                            options={{
+                                                responsive: true,
+                                                maintainAspectRatio: false,
+                                                plugins: { legend: { position: 'bottom' } }
+                                            }}
                                         />
-                                        <span className="text-sm text-[#374151]" style={{ fontFamily: '"Roboto", sans-serif' }}>{cat.label}</span>
-                                    </label>
-                                ))}
-                            </div>
-                        </FilterDropdown>
-                    </div>
+                                    </div>
+                                </div>
 
-                    {/* Charts Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {/* Category Chart */}
-                        <div className="bg-white p-6 border border-[#E5E7EB]">
-                            <h3 className="text-lg font-semibold text-[#111827] mb-4" style={{ fontFamily: '"Roboto", sans-serif' }}>Phân bổ theo Phân loại</h3>
-                            <div style={{ height: '300px' }}>
-                                <PieChartJS
-                                    data={{
-                                        labels: getCategoryStats().map(item => item.name),
-                                        datasets: [{
-                                            data: getCategoryStats().map(item => item.value),
-                                            backgroundColor: chartColors.slice(0, getCategoryStats().length),
-                                            borderColor: '#fff',
-                                            borderWidth: 2
-                                        }]
-                                    }}
-                                    options={{
-                                        responsive: true,
-                                        maintainAspectRatio: false,
-                                        plugins: {
-                                            legend: {
-                                                position: 'bottom'
-                                            }
-                                        }
-                                    }}
-                                />
-                            </div>
-                        </div>
-
-                        {/* Top Materials Chart */}
-                        <div className="bg-white p-6 border border-[#E5E7EB]">
-                            <h3 className="text-lg font-semibold text-[#111827] mb-4" style={{ fontFamily: '"Roboto", sans-serif' }}>Top 10 Vật tư</h3>
-                            <div style={{ height: '300px' }}>
-                                <BarChartJS
-                                    data={{
-                                        labels: getTopMaterials().map(item => item.name.length > 20 ? item.name.substring(0, 20) + '...' : item.name),
-                                        datasets: [{
-                                            label: 'Số lượng',
-                                            data: getTopMaterials().map(item => item.value),
-                                            backgroundColor: chartColors[0],
-                                            borderColor: chartColors[0],
-                                            borderWidth: 1
-                                        }]
-                                    }}
-                                    options={{
-                                        responsive: true,
-                                        maintainAspectRatio: false,
-                                        indexAxis: 'y',
-                                        plugins: {
-                                            legend: {
-                                                display: false
-                                            }
-                                        },
-                                        scales: {
-                                            x: {
-                                                beginAtZero: true
-                                            }
-                                        }
-                                    }}
-                                />
+                                <div className="bg-card border border-border rounded-xl p-6 shadow-sm">
+                                    <h3 className="text-lg font-bold text-foreground mb-4">Top 10 Vật tư</h3>
+                                    <div style={{ height: '300px' }}>
+                                        <BarChartJS
+                                            data={{
+                                                labels: getTopMaterials().map(item => item.name.length > 20 ? item.name.substring(0, 20) + '...' : item.name),
+                                                datasets: [{
+                                                    label: 'Số lượng',
+                                                    data: getTopMaterials().map(item => item.value),
+                                                    backgroundColor: chartColors[0],
+                                                    borderColor: chartColors[0],
+                                                    borderWidth: 1
+                                                }]
+                                            }}
+                                            options={{
+                                                responsive: true,
+                                                maintainAspectRatio: false,
+                                                indexAxis: 'y',
+                                                plugins: { legend: { display: false } },
+                                                scales: { x: { beginAtZero: true } }
+                                            }}
+                                        />
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
             )}
 
-            {/* Modal */}
+            {showMobileFilter && (
+                <MobileFilterSheet
+                    isOpen={showMobileFilter}
+                    isClosing={mobileFilterClosing}
+                    onClose={closeMobileFilter}
+                    onApply={applyMobileFilter}
+                    sections={[
+                        {
+                            id: 'categories',
+                            label: 'Phân loại',
+                            icon: <PackageOpen size={16} />,
+                            options: categoryOptions,
+                            selectedValues: pendingCategories,
+                            onSelectionChange: setPendingCategories,
+                        }
+                    ]}
+                />
+            )}
+
             {isFormModalOpen && (
                 <MaterialFormModal
                     material={selectedMaterial}

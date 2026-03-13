@@ -11,26 +11,34 @@ import {
     Title
 } from 'chart.js';
 import {
+    BarChart2,
     ChevronDown,
+    ChevronLeft,
+    ChevronRight,
     Edit,
     Eye,
     Filter,
+    List,
     Plus,
     Search,
     Trash2,
-    Warehouse
+    User,
+    Warehouse,
+    X
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Bar as BarChartJS, Pie as PieChartJS } from 'react-chartjs-2';
 import { useNavigate } from 'react-router-dom';
+import { clsx } from 'clsx';
 import WarehouseDetailsModal from '../components/Warehouses/WarehouseDetailsModal';
 import WarehouseFormModal from '../components/Warehouses/WarehouseFormModal';
+import FilterDropdown from '../components/ui/FilterDropdown';
+import MobileFilterSheet from '../components/ui/MobileFilterSheet';
 import { WAREHOUSE_STATUSES } from '../constants/warehouseConstants';
 import useColumnVisibility from '../hooks/useColumnVisibility';
 import usePermissions from '../hooks/usePermissions';
 import { supabase } from '../supabase/config';
 
-// Register Chart.js components
 ChartJS.register(
     CategoryScale,
     LinearScale,
@@ -43,41 +51,81 @@ ChartJS.register(
     ChartLegend
 );
 
-const TABLE_COLUMNS = [
-    { key: 'name', label: 'Tên Kho' },
-    { key: 'manager_name', label: 'Thủ Kho' },
-    { key: 'address', label: 'Địa Chỉ' },
-    { key: 'capacity', label: 'Sức Chứa' },
-    { key: 'status', label: 'Trạng Thái' }
+const TABLE_COLUMNS_DEF = [
+    { key: 'name', label: 'Tên kho' },
+    { key: 'manager_name', label: 'Thủ kho' },
+    { key: 'address', label: 'Địa chỉ' },
+    { key: 'capacity', label: 'Sức chứa' },
+    { key: 'status', label: 'Trạng thái' }
 ];
 
 const Warehouses = () => {
-    const navigate = useNavigate();
     const { role } = usePermissions();
-    const [activeView, setActiveView] = useState('list'); // 'list' or 'stats'
+    const navigate = useNavigate();
+
+    const [activeView, setActiveView] = useState('list');
     const [searchTerm, setSearchTerm] = useState('');
     const [warehouses, setWarehouses] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isFormModalOpen, setIsFormModalOpen] = useState(false);
     const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
     const [selectedWarehouse, setSelectedWarehouse] = useState(null);
-    const { visibleColumns, toggleColumn, isColumnVisible, resetColumns, visibleCount, totalCount } = useColumnVisibility('columns_warehouses', TABLE_COLUMNS);
-    const visibleTableColumns = TABLE_COLUMNS.filter(col => isColumnVisible(col.key));
 
-    // Filter states
     const [selectedStatuses, setSelectedStatuses] = useState([]);
     const [selectedManagers, setSelectedManagers] = useState([]);
     const [uniqueManagers, setUniqueManagers] = useState([]);
+
+    const [showMobileFilter, setShowMobileFilter] = useState(false);
+    const [mobileFilterClosing, setMobileFilterClosing] = useState(false);
+    const [pendingStatuses, setPendingStatuses] = useState([]);
+    const [pendingManagers, setPendingManagers] = useState([]);
+
+    const [activeDropdown, setActiveDropdown] = useState(null);
+    const [filterSearch, setFilterSearch] = useState('');
+    const dropdownRef = useRef(null);
+
+    const { isColumnVisible } = useColumnVisibility('columns_warehouses', TABLE_COLUMNS_DEF);
+    const visibleTableColumns = TABLE_COLUMNS_DEF.filter(col => isColumnVisible(col.key));
 
     useEffect(() => {
         fetchWarehouses();
     }, []);
 
     useEffect(() => {
-        // Extract unique managers for filters
         const managers = [...new Set(warehouses.map(w => w.manager_name).filter(Boolean))];
         setUniqueManagers(managers);
     }, [warehouses]);
+
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+                setActiveDropdown(null);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    const closeMobileFilter = () => {
+        setMobileFilterClosing(true);
+        setTimeout(() => {
+            setShowMobileFilter(false);
+            setMobileFilterClosing(false);
+        }, 280);
+    };
+
+    const openMobileFilter = () => {
+        setPendingStatuses(selectedStatuses);
+        setPendingManagers(selectedManagers);
+        setShowMobileFilter(true);
+    };
+
+    const applyMobileFilter = () => {
+        setSelectedStatuses(pendingStatuses);
+        setSelectedManagers(pendingManagers);
+        closeMobileFilter();
+    };
 
     const fetchWarehouses = async () => {
         setIsLoading(true);
@@ -91,13 +139,14 @@ const Warehouses = () => {
             setWarehouses(data || []);
         } catch (error) {
             console.error('Error fetching warehouses:', error);
+            alert('❌ Không thể tải danh sách kho hàng: ' + error.message);
         } finally {
             setIsLoading(false);
         }
     };
 
     const handleDeleteWarehouse = async (id, name) => {
-        if (!window.confirm(`Bạn có chắc chắn muốn xóa kho "${name}" không?`)) {
+        if (!window.confirm(`Bạn có chắc chắn muốn xóa kho "${name}" không? Dữ liệu liên quan có thể bị ảnh hưởng và không thể khôi phục.`)) {
             return;
         }
 
@@ -125,73 +174,54 @@ const Warehouses = () => {
         setIsDetailsModalOpen(true);
     };
 
-    const handleCreateNew = () => {
-        setSelectedWarehouse(null);
-        setIsFormModalOpen(true);
-    };
-
     const handleFormSubmitSuccess = () => {
         fetchWarehouses();
         setIsFormModalOpen(false);
     };
 
-    // Filter Dropdown Component
-    const FilterDropdown = ({ label, selectedCount, totalCount, onSelectAll, children }) => {
-        const [isOpen, setIsOpen] = useState(false);
-
-        return (
-            <div className="relative">
-                <button
-                    onClick={() => setIsOpen(!isOpen)}
-                    className="flex items-center gap-2 px-4 py-2.5 border border-[#D1D5DB] bg-white text-sm font-medium text-[#374151] hover:bg-[#F9FAFB] transition-all"
-                    style={{ fontFamily: '"Roboto", sans-serif' }}
-                >
-                    <Filter className="w-4 h-4" />
-                    <span>{label}</span>
-                    {selectedCount > 0 && (
-                        <span className="px-2 py-0.5 bg-[#2563EB] text-white text-xs rounded-full">
-                            {selectedCount}
-                        </span>
-                    )}
-                    <ChevronDown className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
-                </button>
-                {isOpen && (
-                    <>
-                        <div
-                            className="fixed inset-0 z-10"
-                            onClick={() => setIsOpen(false)}
-                        ></div>
-                        <div className="absolute top-full left-0 mt-1 bg-white border border-[#E5E7EB] shadow-lg z-20 min-w-[250px] max-h-80">
-                            <div className="p-3 border-b border-[#E5E7EB] flex items-center justify-between bg-[#F9FAFB]">
-                                <span className="text-sm font-medium text-[#374151]" style={{ fontFamily: '"Roboto", sans-serif' }}>
-                                    {selectedCount > 0 ? `Đã chọn ${selectedCount}/${totalCount}` : `Chọn ${label.toLowerCase()}`}
-                                </span>
-                                <button
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        onSelectAll();
-                                    }}
-                                    className="text-xs text-[#2563EB] hover:text-[#1D4ED8] font-medium"
-                                    style={{ fontFamily: '"Roboto", sans-serif' }}
-                                >
-                                    {selectedCount === totalCount ? 'Bỏ chọn tất cả' : 'Chọn tất cả'}
-                                </button>
-                            </div>
-                            <div className="overflow-y-auto max-h-64">
-                                {children}
-                            </div>
-                        </div>
-                    </>
-                )}
-            </div>
-        );
+    const formatNumber = (num) => {
+        if (!num) return '0';
+        return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
     };
 
-    // Calculate statistics data for charts
+    const filteredWarehouses = warehouses.filter(w => {
+        const search = searchTerm.toLowerCase();
+        const matchesSearch = (
+            (w.name?.toLowerCase().includes(search)) ||
+            (w.manager_name?.toLowerCase().includes(search)) ||
+            (w.address?.toLowerCase().includes(search))
+        );
+
+        const matchesStatus = selectedStatuses.length === 0 || selectedStatuses.includes(w.status);
+        const matchesManager = selectedManagers.length === 0 || selectedManagers.includes(w.manager_name);
+
+        return matchesSearch && matchesStatus && matchesManager;
+    });
+
+    const filteredWarehousesCount = filteredWarehouses.length;
+    const totalCapacity = filteredWarehouses.reduce((sum, w) => sum + (w.capacity || 0), 0);
+    const activeCount = filteredWarehouses.filter(w => w.status === 'Đang hoạt động').length;
+
+    const hasActiveFilters = selectedStatuses.length > 0 || selectedManagers.length > 0;
+    const totalActiveFilters = selectedStatuses.length + selectedManagers.length;
+
+    const statusOptions = WAREHOUSE_STATUSES.map(status => ({
+        id: status.id,
+        label: status.label,
+        count: warehouses.filter(x => x.status === status.id).length
+    }));
+
+    const managerOptions = uniqueManagers.map(name => ({
+        id: name,
+        label: name,
+        count: warehouses.filter(x => x.manager_name === name).length
+    }));
+
     const getStatusStats = () => {
         const stats = {};
         filteredWarehouses.forEach(warehouse => {
-            stats[warehouse.status] = (stats[warehouse.status] || 0) + 1;
+            const status = warehouse.status || 'Không xác định';
+            stats[status] = (stats[status] || 0) + 1;
         });
         return Object.entries(stats).map(([name, value]) => ({ name, value }));
     };
@@ -204,395 +234,631 @@ const Warehouses = () => {
         });
         return Object.entries(stats)
             .map(([name, value]) => ({ name, value }))
-            .sort((a, b) => b.value - a.value);
+            .sort((a, b) => b.value - a.value)
+            .slice(0, 10);
     };
 
     const getCapacityStats = () => {
         return filteredWarehouses
-            .map(w => ({ name: w.name, value: w.capacity || 0 }))
-            .sort((a, b) => b.value - a.value);
+            .map(w => ({ name: w.name || 'Không tên', value: w.capacity || 0 }))
+            .sort((a, b) => b.value - a.value)
+            .slice(0, 10);
     };
 
-    // Chart colors
     const chartColors = [
         '#2563EB', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6',
         '#06B6D4', '#F97316', '#84CC16', '#EC4899', '#6366F1'
     ];
 
+    const clearAllFilters = () => {
+        setSelectedStatuses([]);
+        setSelectedManagers([]);
+    };
+
     const getStatusStyle = (status) => {
         switch (status) {
-            case 'Đang hoạt động': return "bg-emerald-50 text-emerald-600 border-emerald-100 group-hover:bg-white";
-            case 'Tạm ngưng': return "bg-amber-50 text-amber-600 border-amber-100 group-hover:bg-white";
-            case 'Đóng cửa': return "bg-rose-50 text-rose-500 border-rose-100 group-hover:bg-white";
-            default: return "bg-slate-50 text-slate-500 border-slate-100 group-hover:bg-white";
+            case 'Đang hoạt động': return 'bg-emerald-50 text-emerald-600 border-emerald-100 group-hover:bg-white';
+            case 'Tạm ngưng': return 'bg-amber-50 text-amber-600 border-amber-100 group-hover:bg-white';
+            case 'Đóng cửa': return 'bg-rose-50 text-rose-500 border-rose-100 group-hover:bg-white';
+            default: return 'bg-slate-50 text-slate-500 border-slate-100 group-hover:bg-white';
         }
     };
 
-    const formatNumber = (num) => {
-        if (!num) return '0';
-        return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-    };
-
-    const filteredWarehouses = warehouses.filter(w => {
-        const search = searchTerm.toLowerCase();
-        const matchesSearch = (
-            (w.name?.toLowerCase().includes(search)) ||
-            (w.manager_name?.toLowerCase().includes(search)) ||
-            (w.address?.toLowerCase().includes(search))
-        );
-
-        // Filter by status
-        const matchesStatus = selectedStatuses.length === 0 ||
-            selectedStatuses.includes(w.status);
-
-        // Filter by manager
-        const matchesManager = selectedManagers.length === 0 ||
-            selectedManagers.includes(w.manager_name);
-
-        return matchesSearch && matchesStatus && matchesManager;
-    });
-
-    // Calculate totals
-    const filteredWarehousesCount = filteredWarehouses.length;
-    const totalCapacity = filteredWarehouses.reduce((sum, w) => sum + (w.capacity || 0), 0);
-    const activeCount = filteredWarehouses.filter(w => w.status === 'Đang hoạt động').length;
-
     return (
-        <div className="p-4 sm:p-6 bg-[#F8F9FA] min-h-screen" style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif' }}>
-            {/* Navigation Tabs */}
-            <div className="flex items-center gap-1 mb-6 sm:mb-8 border-b border-[#E5E7EB] overflow-x-auto no-scrollbar">
+        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 w-full flex-1 flex flex-col -mt-2 min-h-0 px-3 md:px-6">
+            <div className="flex items-center gap-1 mb-4 mt-6">
                 <button
                     onClick={() => setActiveView('list')}
-                    className={`px-6 py-3 text-sm font-semibold tracking-wide transition-colors ${activeView === 'list'
-                        ? 'text-[#2563EB] border-b-2 border-[#2563EB]'
-                        : 'text-[#6B7280] hover:text-[#374151]'
-                        }`}
-                    style={activeView === 'list' ? { color: '#2563EB', borderBottomColor: '#2563EB' } : { color: '#6B7280' }}
+                    className={clsx(
+                        'flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-bold transition-all',
+                        activeView === 'list'
+                            ? 'bg-white text-primary shadow-sm ring-1 ring-border'
+                            : 'text-muted-foreground hover:text-foreground'
+                    )}
                 >
+                    <List size={14} />
                     Danh sách
                 </button>
                 <button
                     onClick={() => setActiveView('stats')}
-                    className={`px-6 py-3 text-sm font-semibold tracking-wide transition-colors ${activeView === 'stats'
-                        ? 'text-[#2563EB] border-b-2 border-[#2563EB]'
-                        : 'text-[#6B7280] hover:text-[#374151]'
-                        }`}
-                    style={activeView === 'stats' ? { color: '#2563EB', borderBottomColor: '#2563EB' } : { color: '#6B7280' }}
+                    className={clsx(
+                        'flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-bold transition-all',
+                        activeView === 'stats'
+                            ? 'bg-white text-primary shadow-sm ring-1 ring-border'
+                            : 'text-muted-foreground hover:text-foreground'
+                    )}
                 >
+                    <BarChart2 size={14} />
                     Thống kê
                 </button>
             </div>
 
-            {activeView === 'list' ? (
-                <>
-                    {/* Header with Add Button */}
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
-                        <h1 className="text-xl sm:text-2xl font-semibold text-[#111827] tracking-tight">Danh sách kho hàng</h1>
+            {activeView === 'list' && (
+                <div className="bg-white rounded-2xl border border-border shadow-sm flex flex-col flex-1 min-h-0 w-full">
+                    <div className="md:hidden flex items-center gap-2 p-3 border-b border-border">
                         <button
-                            onClick={handleCreateNew}
-                            className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 text-white font-medium text-sm transition-all duration-200 shadow-sm hover:shadow-md"
-                            style={{ backgroundColor: '#2563EB' }}
-                            onMouseEnter={(e) => e.target.style.backgroundColor = '#1D4ED8'}
-                            onMouseLeave={(e) => e.target.style.backgroundColor = '#2563EB'}
+                            onClick={() => navigate(-1)}
+                            className="p-2 rounded-xl border border-border bg-white text-muted-foreground shrink-0"
                         >
-                            <Plus className="w-4 h-4" />
-                            Thêm mới
+                            <ChevronLeft size={18} />
+                        </button>
+                        <div className="relative flex-1">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={15} />
+                            <input
+                                type="text"
+                                placeholder="Tìm kiếm . . ."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="w-full pl-9 pr-8 py-2 bg-muted/20 border border-border/80 rounded-xl text-[13px] focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all font-medium"
+                            />
+                            {searchTerm && (
+                                <button onClick={() => setSearchTerm('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                                    <X size={14} />
+                                </button>
+                            )}
+                        </div>
+                        <button
+                            onClick={openMobileFilter}
+                            className={clsx(
+                                'relative p-2 rounded-xl border shrink-0 transition-all',
+                                hasActiveFilters ? 'border-primary bg-primary/5 text-primary' : 'border-border bg-white text-muted-foreground',
+                            )}
+                        >
+                            <Filter size={18} />
+                            {hasActiveFilters && (
+                                <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-primary text-white text-[9px] font-bold flex items-center justify-center">
+                                    {totalActiveFilters}
+                                </span>
+                            )}
+                        </button>
+                        <button
+                            onClick={() => {
+                                setSelectedWarehouse(null);
+                                setIsFormModalOpen(true);
+                            }}
+                            className="p-2 rounded-xl bg-primary text-white shrink-0 shadow-md shadow-primary/20"
+                        >
+                            <Plus size={18} />
                         </button>
                     </div>
 
-                    {/* Search Bar and Summary Stats - Same Row */}
-                    <div className="mb-6 flex flex-col lg:flex-row lg:items-center gap-4">
-                        <div className="flex-1 relative">
-                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#9CA3AF]" />
-                            <input type="text" placeholder="Tìm theo tên kho, thủ kho, địa chỉ..." className="w-full pl-12 pr-4 py-3 border border-[#D1D5DB] focus:outline-none focus:ring-2 focus:ring-[#2563EB] focus:border-[#2563EB] bg-white text-[#111827] placeholder-[#9CA3AF] text-sm transition-all" style={{ fontFamily: '"Roboto", sans-serif' }} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
-                        </div>
-                        <div className="flex items-center justify-around sm:justify-start gap-4 sm:gap-6 px-4 py-3 bg-[#EFF6FF] border border-[#BFDBFE]">
-                            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 text-center sm:text-left">
-                                <span className="text-[10px] sm:text-sm text-[#6B7280]">Số kho:</span>
-                                <span className="text-sm sm:text-lg font-semibold text-[#2563EB]">{filteredWarehousesCount}</span>
-                            </div>
-                            <div className="hidden sm:block w-px h-8 bg-[#BFDBFE]"></div>
-                            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 text-center sm:text-left border-l border-[#BFDBFE] sm:border-none pl-4 sm:pl-0">
-                                <span className="text-[10px] sm:text-sm text-[#6B7280]">Sức chứa:</span>
-                                <span className="text-sm sm:text-lg font-semibold text-[#2563EB]">{formatNumber(totalCapacity)}</span>
-                            </div>
-                            <div className="hidden sm:block w-px h-8 bg-[#BFDBFE]"></div>
-                            <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 text-center sm:text-left border-l border-[#BFDBFE] sm:border-none pl-4 sm:pl-0">
-                                <span className="text-[10px] sm:text-sm text-[#6B7280]">Hoạt động:</span>
-                                <span className="text-sm sm:text-lg font-semibold text-[#2563EB]">{activeCount}</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Filter Section */}
-                    <div className="mb-6 flex items-center gap-3 flex-wrap">
-                        {/* Trạng thái Dropdown */}
-                        <FilterDropdown
-                            label="Trạng thái"
-                            selectedCount={selectedStatuses.length}
-                            totalCount={WAREHOUSE_STATUSES.length}
-                            onSelectAll={() => {
-                                if (selectedStatuses.length === WAREHOUSE_STATUSES.length) {
-                                    setSelectedStatuses([]);
-                                } else {
-                                    setSelectedStatuses(WAREHOUSE_STATUSES.map(s => s.id));
-                                }
-                            }}
-                        >
-                            <div className="space-y-1 p-2">
-                                {WAREHOUSE_STATUSES.map(status => (
-                                    <label key={status.id} className="flex items-center gap-2 cursor-pointer hover:bg-[#F3F4F6] p-2">
-                                        <input
-                                            type="checkbox"
-                                            checked={selectedStatuses.includes(status.id)}
-                                            onChange={(e) => {
-                                                if (e.target.checked) {
-                                                    setSelectedStatuses([...selectedStatuses, status.id]);
-                                                } else {
-                                                    setSelectedStatuses(selectedStatuses.filter(id => id !== status.id));
-                                                }
-                                            }}
-                                            className="w-4 h-4 text-[#2563EB] border-[#D1D5DB] focus:ring-[#2563EB]"
-                                        />
-                                        <span className="text-sm text-[#374151]" style={{ fontFamily: '"Roboto", sans-serif' }}>{status.label}</span>
-                                    </label>
-                                ))}
-                            </div>
-                        </FilterDropdown>
-
-                        {/* Thủ kho Dropdown */}
-                        <FilterDropdown
-                            label="Thủ kho"
-                            selectedCount={selectedManagers.length}
-                            totalCount={uniqueManagers.length}
-                            onSelectAll={() => {
-                                if (selectedManagers.length === uniqueManagers.length) {
-                                    setSelectedManagers([]);
-                                } else {
-                                    setSelectedManagers([...uniqueManagers]);
-                                }
-                            }}
-                        >
-                            <div className="space-y-1 p-2">
-                                {uniqueManagers.map(manager => (
-                                    <label key={manager} className="flex items-center gap-2 cursor-pointer hover:bg-[#F3F4F6] p-2">
-                                        <input
-                                            type="checkbox"
-                                            checked={selectedManagers.includes(manager)}
-                                            onChange={(e) => {
-                                                if (e.target.checked) {
-                                                    setSelectedManagers([...selectedManagers, manager]);
-                                                } else {
-                                                    setSelectedManagers(selectedManagers.filter(m => m !== manager));
-                                                }
-                                            }}
-                                            className="w-4 h-4 text-[#2563EB] border-[#D1D5DB] focus:ring-[#2563EB]"
-                                        />
-                                        <span className="text-sm text-[#374151] truncate" style={{ fontFamily: '"Roboto", sans-serif' }} title={manager}>{manager}</span>
-                                    </label>
-                                ))}
-                            </div>
-                        </FilterDropdown>
-                    </div>
-
-                    {/* Main Content Card */}
-                    <div className="bg-white rounded-lg border border-[#E5E7EB] shadow-sm overflow-hidden">
-                        {/* Mobile Card List */}
-                        <div className="md:hidden divide-y divide-[#E5E7EB]">
-                            {isLoading ? (
-                                <div className="px-4 py-16 text-center"><div className="flex flex-col items-center gap-4"><div className="w-8 h-8 border-4 border-[#2563EB] border-t-transparent rounded-full animate-spin"></div><p className="text-[#6B7280] text-sm font-medium">Đang tải...</p></div></div>
-                            ) : filteredWarehouses.length === 0 ? (
-                                <div className="px-4 py-16 text-center"><div className="flex flex-col items-center gap-4"><Warehouse className="w-12 h-12 text-[#D1D5DB]" /><p className="text-sm font-medium text-[#6B7280]">Không tìm thấy kho nào</p></div></div>
-                            ) : filteredWarehouses.map((w, idx) => (
-                                <div key={w.id} className="p-4 bg-white hover:bg-gray-50 active:bg-gray-100 transition-colors">
-                                    <div className="flex justify-between items-start mb-3">
-                                        <div className="flex flex-col">
-                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">#{idx + 1}</span>
-                                            <h3 className="text-sm font-bold text-[#111827] leading-tight mt-0.5">{w.name}</h3>
+                    <div className="md:hidden flex-1 overflow-y-auto p-3 flex flex-col gap-3">
+                        {isLoading ? (
+                            <div className="py-16 text-center text-[13px] text-muted-foreground italic">Đang tải dữ liệu...</div>
+                        ) : filteredWarehouses.length === 0 ? (
+                            <div className="py-16 text-center text-[13px] text-muted-foreground italic">Không tìm thấy kết quả phù hợp</div>
+                        ) : (
+                            filteredWarehouses.map((w) => (
+                                <div key={w.id} className="rounded-2xl border border-border bg-white shadow-sm p-4">
+                                    <div className="flex items-start justify-between gap-2 mb-2">
+                                        <div>
+                                            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Kho hàng</p>
+                                            <h3 className="text-[15px] font-bold text-foreground leading-tight mt-0.5">{w.name}</h3>
                                         </div>
-                                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border uppercase" style={(() => { const colorMap = { 'Đang hoạt động': { bg: '#D1FAE5', text: '#065F46', border: '#A7F3D0' }, 'Tạm ngưng': { bg: '#FEF3C7', text: '#92400E', border: '#FDE68A' }, 'Đóng cửa': { bg: '#FEE2E2', text: '#991B1B', border: '#FECACA' } }; const colors = colorMap[w.status] || { bg: '#F3F4F6', text: '#374151', border: '#E5E7EB' }; return { backgroundColor: colors.bg, color: colors.text, borderColor: colors.border }; })()}>{w.status}</span>
+                                        <span className={clsx('inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border', getStatusStyle(w.status))}>
+                                            {w.status || 'Không xác định'}
+                                        </span>
                                     </div>
-                                    <div className="grid grid-cols-2 gap-2 mb-3">
-                                        <div><span className="text-[9px] font-bold text-slate-400 uppercase">Thủ kho</span><p className="text-xs text-slate-700 font-medium">{w.manager_name || '—'}</p></div>
-                                        <div><span className="text-[9px] font-bold text-slate-400 uppercase">Sức chứa</span><p className="text-xs text-slate-700 font-medium">{formatNumber(w.capacity || 0)} vỏ bình</p></div>
-                                        <div className="col-span-2"><span className="text-[9px] font-bold text-slate-400 uppercase">Địa chỉ</span><p className="text-xs text-slate-700 font-medium line-clamp-2">{w.address || '—'}</p></div>
+
+                                    <div className="space-y-1.5 mb-3">
+                                        <div className="flex items-center gap-2 text-[12px] text-muted-foreground">
+                                            <User className="w-3.5 h-3.5" />
+                                            <span>{w.manager_name || '—'}</span>
+                                        </div>
+                                        <div className="flex items-start gap-2 text-[12px] text-muted-foreground">
+                                            <Warehouse className="w-3.5 h-3.5 mt-0.5" />
+                                            <span className="line-clamp-2">{w.address || '—'}</span>
+                                        </div>
                                     </div>
-                                    <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-50">
-                                        <button onClick={() => handleViewWarehouse(w)} className="p-2 text-[#9CA3AF] hover:text-[#2563EB] active:bg-blue-50 rounded-lg transition-colors"><Eye className="w-5 h-5" /></button>
-                                        <button onClick={() => handleEditWarehouse(w)} className="p-2 text-[#9CA3AF] hover:text-[#2563EB] active:bg-blue-50 rounded-lg transition-colors"><Edit className="w-5 h-5" /></button>
-                                        <button onClick={() => handleDeleteWarehouse(w.id, w.name)} className="p-2 text-[#9CA3AF] hover:text-[#DC2626] active:bg-red-50 rounded-lg transition-colors"><Trash2 className="w-5 h-5" /></button>
+
+                                    <div className="rounded-xl bg-muted/30 border border-border/60 p-2.5 mb-3">
+                                        <div className="text-center">
+                                            <p className="text-[9px] uppercase tracking-wider text-muted-foreground">Sức chứa</p>
+                                            <p className="text-[13px] font-bold text-foreground">{formatNumber(w.capacity || 0)} vỏ bình</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-center justify-end pt-2 border-t border-border/70">
+                                        <div className="flex items-center gap-3">
+                                            <button onClick={() => handleViewWarehouse(w)} className="text-muted-foreground hover:text-primary transition-colors"><Eye size={18} /></button>
+                                            <button onClick={() => handleEditWarehouse(w)} className="text-muted-foreground hover:text-primary transition-colors"><Edit size={18} /></button>
+                                            {(role === 'admin' || role === 'manager') && (
+                                                <button onClick={() => handleDeleteWarehouse(w.id, w.name)} className="text-muted-foreground hover:text-red-500 transition-colors"><Trash2 size={18} /></button>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
-                            ))}
+                            ))
+                        )}
+                    </div>
+
+                    <div className="hidden md:block p-4 space-y-4">
+                        <div className="flex items-center justify-between gap-4">
+                            <div className="flex items-center gap-2 flex-1">
+                                <button
+                                    onClick={() => navigate(-1)}
+                                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-border hover:bg-muted text-muted-foreground text-[12px] font-bold transition-all bg-white shadow-sm shrink-0"
+                                >
+                                    <ChevronLeft size={16} />
+                                    Quay lại
+                                </button>
+                                <div className="relative flex-1">
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
+                                    <input
+                                        type="text"
+                                        placeholder="Tìm kiếm . . ."
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                        className="w-full pl-10 pr-8 py-1.5 bg-muted/20 border border-border/80 rounded-xl text-[13px] focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all font-medium"
+                                    />
+                                    {searchTerm && (
+                                        <button onClick={() => setSearchTerm('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                                            <X size={14} />
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => {
+                                    setSelectedWarehouse(null);
+                                    setIsFormModalOpen(true);
+                                }}
+                                className="flex items-center gap-2 px-6 py-1.5 rounded-xl bg-primary text-white text-[13px] font-bold hover:bg-primary/90 shadow-md shadow-primary/20 transition-all"
+                            >
+                                <Plus size={18} />
+                                Thêm
+                            </button>
                         </div>
-                        {/* Desktop Table View */}
-                        <div className="hidden md:block w-full overflow-x-auto">
-                            <table className="w-full border-collapse">
-                                <thead className="bg-[#F9FAFB]">
-                                    <tr>
-                                        <th className="px-4 py-3.5 text-xs font-semibold text-[#374151] text-center uppercase tracking-wider w-16">STT</th>
-                                        {visibleTableColumns.map(col => (<th key={col.key} className="px-4 py-3.5 text-xs font-semibold text-[#374151] text-left uppercase tracking-wider">{col.label}</th>))}
-                                        <th className="px-4 py-3.5 text-xs font-semibold text-[#374151] text-center uppercase tracking-wider">Thao tác</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-[#E5E7EB]">
-                                    {isLoading ? (
-                                        <tr><td colSpan={visibleTableColumns.length + 2} className="px-4 py-16 text-center"><div className="flex flex-col items-center gap-4"><div className="w-8 h-8 border-4 border-[#2563EB] border-t-transparent rounded-full animate-spin"></div><p className="text-[#6B7280] text-sm font-medium">Đang tải dữ liệu...</p></div></td></tr>
-                                    ) : filteredWarehouses.length === 0 ? (
-                                        <tr><td colSpan={visibleTableColumns.length + 2} className="px-4 py-16 text-center"><div className="flex flex-col items-center gap-4"><Warehouse className="w-12 h-12 text-[#D1D5DB]" /><p className="text-sm font-medium text-[#6B7280]">Không tìm thấy kho nào</p></div></td></tr>
-                                    ) : filteredWarehouses.map((w, idx) => (
-                                        <tr key={w.id} className="hover:bg-[#F9FAFB] transition-colors">
-                                            <td className="px-4 py-4 text-center"><span className="text-sm text-[#6B7280]">{idx + 1}</span></td>
-                                            {isColumnVisible('name') && <td className="px-4 py-4 whitespace-nowrap"><span className="text-sm font-medium text-[#111827]">{w.name}</span></td>}
-                                            {isColumnVisible('manager_name') && <td className="px-4 py-4 text-sm text-[#374151] font-normal">{w.manager_name}</td>}
-                                            {isColumnVisible('address') && <td className="px-4 py-4 text-sm text-[#374151] font-normal" title={w.address}>{w.address}</td>}
-                                            {isColumnVisible('capacity') && <td className="px-4 py-4"><span className="text-sm font-semibold text-[#111827]">{formatNumber(w.capacity || 0)} <span className="text-xs text-[#6B7280] font-normal">vỏ bình</span></span></td>}
-                                            {isColumnVisible('status') && <td className="px-4 py-4"><span className="inline-flex items-center px-3 py-1.5 text-xs font-medium border" style={(() => { const colorMap = { 'Đang hoạt động': { bg: '#D1FAE5', text: '#065F46', border: '#A7F3D0' }, 'Tạm ngưng': { bg: '#FEF3C7', text: '#92400E', border: '#FDE68A' }, 'Đóng cửa': { bg: '#FEE2E2', text: '#991B1B', border: '#FECACA' } }; const colors = colorMap[w.status] || { bg: '#F3F4F6', text: '#374151', border: '#E5E7EB' }; return { backgroundColor: colors.bg, color: colors.text, borderColor: colors.border }; })()}>{w.status}</span></td>}
-                                            <td className="px-4 py-4 text-center">
-                                                <div className="flex items-center justify-center gap-3">
-                                                    <button onClick={() => handleViewWarehouse(w)} className="text-[#9CA3AF] hover:text-[#2563EB] transition-colors p-1 hover:bg-[#EFF6FF]" title="Xem chi tiết"><Eye className="w-4 h-4" /></button>
-                                                    <button onClick={() => handleEditWarehouse(w)} className="text-[#9CA3AF] hover:text-[#2563EB] transition-colors p-1 hover:bg-[#EFF6FF]" title="Chỉnh sửa"><Edit className="w-4 h-4" /></button>
-                                                    <button onClick={() => handleDeleteWarehouse(w.id, w.name)} className="text-[#9CA3AF] hover:text-[#DC2626] transition-colors p-1 hover:bg-[#FEF2F2]" title="Xóa"><Trash2 className="w-4 h-4" /></button>
-                                                </div>
-                                            </td>
-                                        </tr>
+
+                        <div className="flex flex-wrap items-center gap-2" ref={dropdownRef}>
+                            <div className="relative">
+                                <button
+                                    onClick={() => setActiveDropdown(activeDropdown === 'statuses' ? null : 'statuses')}
+                                    className={clsx(
+                                        'flex items-center gap-2.5 px-4 py-2 rounded-xl border text-[13px] font-bold transition-all',
+                                        activeDropdown === 'statuses' || selectedStatuses.length > 0
+                                            ? 'border-primary bg-primary/5 text-primary'
+                                            : 'border-border bg-white text-muted-foreground hover:text-foreground'
+                                    )}
+                                >
+                                    <Filter size={14} />
+                                    Trạng thái
+                                    {selectedStatuses.length > 0 && (
+                                        <span className="px-1.5 py-0.5 rounded-full bg-primary text-white text-[10px] font-bold">
+                                            {selectedStatuses.length}
+                                        </span>
+                                    )}
+                                    <ChevronDown size={14} className={clsx('transition-transform', activeDropdown === 'statuses' ? 'rotate-180' : '')} />
+                                </button>
+                                {activeDropdown === 'statuses' && (
+                                    <FilterDropdown
+                                        options={statusOptions}
+                                        selected={selectedStatuses}
+                                        setSelected={setSelectedStatuses}
+                                        filterSearch={filterSearch}
+                                        setFilterSearch={setFilterSearch}
+                                    />
+                                )}
+                            </div>
+
+                            <div className="relative">
+                                <button
+                                    onClick={() => setActiveDropdown(activeDropdown === 'managers' ? null : 'managers')}
+                                    className={clsx(
+                                        'flex items-center gap-2.5 px-4 py-2 rounded-xl border text-[13px] font-bold transition-all',
+                                        activeDropdown === 'managers' || selectedManagers.length > 0
+                                            ? 'border-primary bg-primary/5 text-primary'
+                                            : 'border-border bg-white text-muted-foreground hover:text-foreground'
+                                    )}
+                                >
+                                    <User size={14} />
+                                    Thủ kho
+                                    {selectedManagers.length > 0 && (
+                                        <span className="px-1.5 py-0.5 rounded-full bg-primary text-white text-[10px] font-bold">
+                                            {selectedManagers.length}
+                                        </span>
+                                    )}
+                                    <ChevronDown size={14} className={clsx('transition-transform', activeDropdown === 'managers' ? 'rotate-180' : '')} />
+                                </button>
+                                {activeDropdown === 'managers' && (
+                                    <FilterDropdown
+                                        options={managerOptions}
+                                        selected={selectedManagers}
+                                        setSelected={setSelectedManagers}
+                                        filterSearch={filterSearch}
+                                        setFilterSearch={setFilterSearch}
+                                    />
+                                )}
+                            </div>
+
+                            {hasActiveFilters && (
+                                <button
+                                    onClick={clearAllFilters}
+                                    className="flex items-center gap-2 px-3 py-2 rounded-xl border border-dashed border-red-300 text-red-500 text-[12px] font-bold hover:bg-red-50 transition-all"
+                                >
+                                    <X size={14} />
+                                    Xóa bộ lọc
+                                </button>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="hidden md:block flex-1 overflow-x-auto border-t border-border">
+                        <table className="w-full border-collapse">
+                            <thead className="bg-muted/20">
+                                <tr>
+                                    {visibleTableColumns.map(col => (
+                                        <th key={col.key} className="px-4 py-3.5 text-[12px] font-bold text-muted-foreground text-left uppercase tracking-wide">
+                                            {col.label}
+                                        </th>
                                     ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </>
-            ) : (
-                /* Statistics View */
-                <div className="space-y-6">
-                    {/* Summary Stats */}
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                        <div className="bg-white p-4 sm:p-6 border border-[#E5E7EB]">
-                            <div className="text-[10px] sm:text-sm text-[#6B7280] mb-2 uppercase tracking-wider font-bold">Tổng kho</div>
-                            <div className="text-lg sm:text-2xl font-black text-[#111827]">{filteredWarehousesCount}</div>
-                        </div>
-                        <div className="bg-white p-4 sm:p-6 border border-[#E5E7EB]">
-                            <div className="text-[10px] sm:text-sm text-[#6B7280] mb-2 uppercase tracking-wider font-bold">Sức chứa</div>
-                            <div className="text-lg sm:text-2xl font-black text-[#111827]">{formatNumber(totalCapacity)}</div>
-                        </div>
-                        <div className="bg-white p-4 sm:p-6 border border-[#E5E7EB] col-span-2 sm:col-span-1">
-                            <div className="text-[10px] sm:text-sm text-[#6B7280] mb-2 uppercase tracking-wider font-bold">Hoạt động</div>
-                            <div className="text-lg sm:text-2xl font-black text-[#111827]">{activeCount}</div>
-                        </div>
+                                    <th className="px-4 py-3.5 text-[12px] font-bold text-muted-foreground text-center uppercase tracking-wide">Thao tác</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-border">
+                                {isLoading ? (
+                                    <tr>
+                                        <td colSpan={visibleTableColumns.length + 1} className="px-4 py-16 text-center text-muted-foreground">
+                                            Đang tải dữ liệu...
+                                        </td>
+                                    </tr>
+                                ) : filteredWarehouses.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={visibleTableColumns.length + 1} className="px-4 py-16 text-center text-muted-foreground">
+                                            Không tìm thấy kho hàng nào
+                                        </td>
+                                    </tr>
+                                ) : filteredWarehouses.map((w) => (
+                                    <tr key={w.id} className="hover:bg-muted/20 transition-colors">
+                                        {isColumnVisible('name') && <td className="px-4 py-4 whitespace-nowrap text-sm font-semibold text-foreground">{w.name}</td>}
+                                        {isColumnVisible('manager_name') && <td className="px-4 py-4 text-sm text-muted-foreground">{w.manager_name || '—'}</td>}
+                                        {isColumnVisible('address') && <td className="px-4 py-4 text-sm text-muted-foreground">{w.address || '—'}</td>}
+                                        {isColumnVisible('capacity') && <td className="px-4 py-4 text-sm font-semibold text-foreground">{formatNumber(w.capacity || 0)}</td>}
+                                        {isColumnVisible('status') && (
+                                            <td className="px-4 py-4">
+                                                <span className={clsx('inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold border', getStatusStyle(w.status))}>
+                                                    {w.status || 'Không xác định'}
+                                                </span>
+                                            </td>
+                                        )}
+                                        <td className="px-4 py-4 text-center">
+                                            <div className="flex items-center justify-center gap-3">
+                                                <button onClick={() => handleViewWarehouse(w)} className="text-muted-foreground hover:text-primary transition-colors p-1" title="Xem chi tiết">
+                                                    <Eye className="w-4 h-4" />
+                                                </button>
+                                                <button onClick={() => handleEditWarehouse(w)} className="text-muted-foreground hover:text-primary transition-colors p-1" title="Chỉnh sửa">
+                                                    <Edit className="w-4 h-4" />
+                                                </button>
+                                                {(role === 'admin' || role === 'manager') && (
+                                                    <button onClick={() => handleDeleteWarehouse(w.id, w.name)} className="text-muted-foreground hover:text-red-500 transition-colors p-1" title="Xóa">
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
                     </div>
 
-                    {/* Charts Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {/* Status Chart */}
-                        <div className="bg-white p-6 border border-[#E5E7EB]">
-                            <h3 className="text-lg font-semibold text-[#111827] mb-4" style={{ fontFamily: '"Roboto", sans-serif' }}>Phân bổ theo Trạng thái</h3>
-                            <div style={{ height: '300px' }}>
-                                <PieChartJS
-                                    data={{
-                                        labels: getStatusStats().map(item => item.name),
-                                        datasets: [{
-                                            data: getStatusStats().map(item => item.value),
-                                            backgroundColor: chartColors.slice(0, getStatusStats().length),
-                                            borderColor: '#fff',
-                                            borderWidth: 2
-                                        }]
-                                    }}
-                                    options={{
-                                        responsive: true,
-                                        maintainAspectRatio: false,
-                                        plugins: {
-                                            legend: {
-                                                position: 'bottom'
-                                            }
-                                        }
-                                    }}
-                                />
+                    <div className="hidden md:flex px-4 py-4 border-t border-border items-center justify-between bg-muted/5">
+                        <div className="flex items-center gap-3 text-[12px] text-muted-foreground font-medium">
+                            <span>{filteredWarehouses.length > 0 ? `1–${filteredWarehouses.length}` : '0'}/Tổng {filteredWarehouses.length}</span>
+                            <div className="flex items-center gap-1 ml-2">
+                                <span className="text-[11px] font-bold">│</span>
+                                <span className="text-primary font-bold">{formatNumber(totalCapacity)} sức chứa</span>
+                                <span className="text-muted-foreground">•</span>
+                                <span className="text-primary font-bold">{activeCount} hoạt động</span>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-1">
+                            <button className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors disabled:opacity-20" disabled>
+                                <ChevronLeft size={16} />
+                                <ChevronLeft size={16} className="-ml-2.5" />
+                            </button>
+                            <button className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors disabled:opacity-20" disabled>
+                                <ChevronLeft size={16} />
+                            </button>
+                            <div className="w-8 h-8 rounded-lg bg-primary text-white flex items-center justify-center text-[12px] font-bold shadow-md shadow-primary/25">1</div>
+                            <button className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors disabled:opacity-20" disabled>
+                                <ChevronRight size={16} />
+                            </button>
+                            <button className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors disabled:opacity-20" disabled>
+                                <ChevronRight size={16} />
+                                <ChevronRight size={16} className="-ml-2.5" />
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {activeView === 'stats' && (
+                <div className="bg-white rounded-2xl border border-border shadow-sm flex flex-col flex-1 min-h-0 w-full">
+                    <div className="space-y-0">
+                        <div className="md:hidden flex items-center gap-2 p-3 border-b border-border">
+                            <button
+                                onClick={() => navigate(-1)}
+                                className="p-2 rounded-xl border border-border bg-white text-muted-foreground shrink-0"
+                            >
+                                <ChevronLeft size={18} />
+                            </button>
+                            <h2 className="text-base font-bold text-foreground flex-1 text-center">Thống kê</h2>
+                            <button
+                                onClick={openMobileFilter}
+                                className={clsx(
+                                    'relative p-2 rounded-xl border shrink-0 transition-all',
+                                    hasActiveFilters ? 'border-primary bg-primary/5 text-primary' : 'border-border bg-white text-muted-foreground',
+                                )}
+                            >
+                                <Filter size={18} />
+                                {hasActiveFilters && (
+                                    <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-primary text-white text-[9px] font-bold flex items-center justify-center">
+                                        {totalActiveFilters}
+                                    </span>
+                                )}
+                            </button>
+                        </div>
+
+                        <div className="hidden md:block p-4 border-b border-border" ref={dropdownRef}>
+                            <div className="flex flex-wrap items-center gap-2">
+                                <button
+                                    onClick={() => navigate(-1)}
+                                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-border hover:bg-muted text-muted-foreground text-[12px] font-bold transition-all bg-white shadow-sm shrink-0"
+                                >
+                                    <ChevronLeft size={16} />
+                                    Quay lại
+                                </button>
+
+                                <div className="relative">
+                                    <button
+                                        onClick={() => setActiveDropdown(activeDropdown === 'statuses' ? null : 'statuses')}
+                                        className={clsx(
+                                            'flex items-center gap-2.5 px-4 py-2 rounded-xl border text-[13px] font-bold transition-all',
+                                            activeDropdown === 'statuses' || selectedStatuses.length > 0
+                                                ? 'border-primary bg-primary/5 text-primary'
+                                                : 'border-border bg-white text-muted-foreground hover:text-foreground'
+                                        )}
+                                    >
+                                        <Filter size={14} />
+                                        Trạng thái
+                                        {selectedStatuses.length > 0 && (
+                                            <span className="px-1.5 py-0.5 rounded-full bg-primary text-white text-[10px] font-bold">
+                                                {selectedStatuses.length}
+                                            </span>
+                                        )}
+                                        <ChevronDown size={14} className={clsx('transition-transform', activeDropdown === 'statuses' ? 'rotate-180' : '')} />
+                                    </button>
+                                    {activeDropdown === 'statuses' && (
+                                        <FilterDropdown
+                                            options={statusOptions}
+                                            selected={selectedStatuses}
+                                            setSelected={setSelectedStatuses}
+                                            filterSearch={filterSearch}
+                                            setFilterSearch={setFilterSearch}
+                                        />
+                                    )}
+                                </div>
+
+                                <div className="relative">
+                                    <button
+                                        onClick={() => setActiveDropdown(activeDropdown === 'managers' ? null : 'managers')}
+                                        className={clsx(
+                                            'flex items-center gap-2.5 px-4 py-2 rounded-xl border text-[13px] font-bold transition-all',
+                                            activeDropdown === 'managers' || selectedManagers.length > 0
+                                                ? 'border-primary bg-primary/5 text-primary'
+                                                : 'border-border bg-white text-muted-foreground hover:text-foreground'
+                                        )}
+                                    >
+                                        <User size={14} />
+                                        Thủ kho
+                                        {selectedManagers.length > 0 && (
+                                            <span className="px-1.5 py-0.5 rounded-full bg-primary text-white text-[10px] font-bold">
+                                                {selectedManagers.length}
+                                            </span>
+                                        )}
+                                        <ChevronDown size={14} className={clsx('transition-transform', activeDropdown === 'managers' ? 'rotate-180' : '')} />
+                                    </button>
+                                    {activeDropdown === 'managers' && (
+                                        <FilterDropdown
+                                            options={managerOptions}
+                                            selected={selectedManagers}
+                                            setSelected={setSelectedManagers}
+                                            filterSearch={filterSearch}
+                                            setFilterSearch={setFilterSearch}
+                                        />
+                                    )}
+                                </div>
+
+                                {hasActiveFilters && (
+                                    <button
+                                        onClick={clearAllFilters}
+                                        className="flex items-center gap-2 px-3 py-2 rounded-xl border border-dashed border-red-300 text-red-500 text-[12px] font-bold hover:bg-red-50 transition-all"
+                                    >
+                                        <X size={14} />
+                                        Xóa bộ lọc
+                                    </button>
+                                )}
                             </div>
                         </div>
 
-                        {/* Manager Chart */}
-                        <div className="bg-white p-6 border border-[#E5E7EB]">
-                            <h3 className="text-lg font-semibold text-[#111827] mb-4" style={{ fontFamily: '"Roboto", sans-serif' }}>Phân bổ theo Thủ kho</h3>
-                            <div style={{ height: '300px' }}>
-                                <BarChartJS
-                                    data={{
-                                        labels: getManagerStats().map(item => item.name.length > 20 ? item.name.substring(0, 20) + '...' : item.name),
-                                        datasets: [{
-                                            label: 'Số kho',
-                                            data: getManagerStats().map(item => item.value),
-                                            backgroundColor: chartColors[0],
-                                            borderColor: chartColors[0],
-                                            borderWidth: 1
-                                        }]
-                                    }}
-                                    options={{
-                                        responsive: true,
-                                        maintainAspectRatio: false,
-                                        indexAxis: 'y',
-                                        plugins: {
-                                            legend: {
-                                                display: false
-                                            }
-                                        },
-                                        scales: {
-                                            x: {
-                                                beginAtZero: true
-                                            }
-                                        }
-                                    }}
-                                />
-                            </div>
-                        </div>
+                        <div className="px-3 md:px-4 pt-4 md:pt-5 pb-5 md:pb-6 space-y-5">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                <div className="bg-blue-50 rounded-2xl p-3.5 md:p-5 shadow-sm col-span-1 md:col-span-1">
+                                    <div className="flex items-center justify-start gap-3 md:gap-4">
+                                        <div className="w-12 h-12  bg-blue-100 rounded-full flex items-center justify-center shrink-0">
+                                            <Warehouse className="w-5 h-5 md:w-6 md:h-6 text-blue-600" />
+                                        </div>
+                                        <div>
+                                            <p className="text-[11px] font-semibold text-blue-600 uppercase tracking-wider">Tổng kho</p>
+                                            <p className="text-[34px] md:text-3xl font-bold text-blue-900 mt-0.5 md:mt-1 leading-none">{formatNumber(filteredWarehousesCount)}</p>
+                                        </div>
+                                    </div>
+                                </div>
 
-                        {/* Capacity Chart */}
-                        <div className="bg-white p-6 border border-[#E5E7EB]">
-                            <h3 className="text-lg font-semibold text-[#111827] mb-4" style={{ fontFamily: '"Roboto", sans-serif' }}>Sức chứa theo Kho</h3>
-                            <div style={{ height: '300px' }}>
-                                <BarChartJS
-                                    data={{
-                                        labels: getCapacityStats().map(item => item.name),
-                                        datasets: [{
-                                            label: 'Sức chứa',
-                                            data: getCapacityStats().map(item => item.value),
-                                            backgroundColor: chartColors[1],
-                                            borderColor: chartColors[1],
-                                            borderWidth: 1
-                                        }]
-                                    }}
-                                    options={{
-                                        responsive: true,
-                                        maintainAspectRatio: false,
-                                        plugins: {
-                                            legend: {
-                                                display: false
-                                            },
-                                            tooltip: {
-                                                callbacks: {
-                                                    label: function (context) {
-                                                        return formatNumber(context.parsed.y) + ' vỏ bình';
+                                <div className="bg-green-50 rounded-2xl p-3.5 md:p-5 shadow-sm col-span-1 md:col-span-1">
+                                    <div className="flex items-center justify-start gap-3 md:gap-4">
+                                        <div className="w-12 h-12  bg-green-100 rounded-full flex items-center justify-center shrink-0">
+                                            <BarChart2 className="w-5 h-5 md:w-6 md:h-6 text-green-600" />
+                                        </div>
+                                        <div>
+                                            <p className="text-[11px] font-semibold text-green-600 uppercase tracking-wider">Tổng sức chứa</p>
+                                            <p className="text-[34px] md:text-3xl font-bold text-green-900 mt-0.5 md:mt-1 leading-none">{formatNumber(totalCapacity)}</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="bg-orange-50 rounded-2xl p-3.5 md:p-5 shadow-sm col-span-1 md:col-span-1">
+                                    <div className="flex items-center justify-start gap-3 md:gap-4">
+                                        <div className="w-12 h-12  bg-orange-100 rounded-full flex items-center justify-center shrink-0">
+                                            <Filter className="w-5 h-5 md:w-6 md:h-6 text-orange-600" />
+                                        </div>
+                                        <div>
+                                            <p className="text-[11px] font-semibold text-orange-600 uppercase tracking-wider">Đang hoạt động</p>
+                                            <p className="text-[34px] md:text-3xl font-bold text-orange-900 mt-0.5 md:mt-1 leading-none">{formatNumber(activeCount)}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                                <div className="bg-card border border-border rounded-xl p-6 shadow-sm">
+                                    <h3 className="text-lg font-bold text-foreground mb-4">Phân bổ theo Trạng thái</h3>
+                                    <div style={{ height: '300px' }}>
+                                        <PieChartJS
+                                            data={{
+                                                labels: getStatusStats().map(item => item.name),
+                                                datasets: [{
+                                                    data: getStatusStats().map(item => item.value),
+                                                    backgroundColor: chartColors.slice(0, getStatusStats().length),
+                                                    borderColor: '#fff',
+                                                    borderWidth: 2
+                                                }]
+                                            }}
+                                            options={{
+                                                responsive: true,
+                                                maintainAspectRatio: false,
+                                                plugins: { legend: { position: 'bottom' } }
+                                            }}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="bg-card border border-border rounded-xl p-6 shadow-sm">
+                                    <h3 className="text-lg font-bold text-foreground mb-4">Top 10 Thủ kho</h3>
+                                    <div style={{ height: '300px' }}>
+                                        <BarChartJS
+                                            data={{
+                                                labels: getManagerStats().map(item => item.name.length > 20 ? item.name.substring(0, 20) + '...' : item.name),
+                                                datasets: [{
+                                                    label: 'Số kho',
+                                                    data: getManagerStats().map(item => item.value),
+                                                    backgroundColor: chartColors[0],
+                                                    borderColor: chartColors[0],
+                                                    borderWidth: 1
+                                                }]
+                                            }}
+                                            options={{
+                                                responsive: true,
+                                                maintainAspectRatio: false,
+                                                indexAxis: 'y',
+                                                plugins: { legend: { display: false } },
+                                                scales: { x: { beginAtZero: true } }
+                                            }}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="bg-card border border-border rounded-xl p-6 shadow-sm lg:col-span-2">
+                                    <h3 className="text-lg font-bold text-foreground mb-4">Top 10 kho theo Sức chứa</h3>
+                                    <div style={{ height: '300px' }}>
+                                        <BarChartJS
+                                            data={{
+                                                labels: getCapacityStats().map(item => item.name.length > 20 ? item.name.substring(0, 20) + '...' : item.name),
+                                                datasets: [{
+                                                    label: 'Sức chứa',
+                                                    data: getCapacityStats().map(item => item.value),
+                                                    backgroundColor: chartColors[1],
+                                                    borderColor: chartColors[1],
+                                                    borderWidth: 1
+                                                }]
+                                            }}
+                                            options={{
+                                                responsive: true,
+                                                maintainAspectRatio: false,
+                                                plugins: {
+                                                    legend: { display: false },
+                                                    tooltip: {
+                                                        callbacks: {
+                                                            label: (context) => `${formatNumber(context.parsed.y)} vỏ bình`
+                                                        }
+                                                    }
+                                                },
+                                                scales: {
+                                                    y: {
+                                                        beginAtZero: true,
+                                                        ticks: {
+                                                            callback: (value) => formatNumber(value)
+                                                        }
                                                     }
                                                 }
-                                            }
-                                        },
-                                        scales: {
-                                            y: {
-                                                beginAtZero: true,
-                                                ticks: {
-                                                    callback: function (value) {
-                                                        return formatNumber(value);
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }}
-                                />
+                                            }}
+                                        />
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
             )}
 
-            {/* Modals */}
+            {showMobileFilter && (
+                <MobileFilterSheet
+                    isOpen={showMobileFilter}
+                    isClosing={mobileFilterClosing}
+                    onClose={closeMobileFilter}
+                    onApply={applyMobileFilter}
+                    sections={[
+                        {
+                            id: 'statuses',
+                            label: 'Trạng thái',
+                            icon: <Filter size={16} />,
+                            options: statusOptions,
+                            selectedValues: pendingStatuses,
+                            onSelectionChange: setPendingStatuses,
+                        },
+                        {
+                            id: 'managers',
+                            label: 'Thủ kho',
+                            icon: <User size={16} />,
+                            options: managerOptions,
+                            selectedValues: pendingManagers,
+                            onSelectionChange: setPendingManagers,
+                        },
+                    ]}
+                />
+            )}
+
             {isFormModalOpen && (
                 <WarehouseFormModal
                     warehouse={selectedWarehouse}
