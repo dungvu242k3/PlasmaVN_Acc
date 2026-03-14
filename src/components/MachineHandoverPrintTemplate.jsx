@@ -8,7 +8,7 @@ const S = {
     page: {
         fontFamily: '"Times New Roman", Times, serif',
         fontSize: '13pt',
-        lineHeight: '1.5',
+        lineHeight: '1.3',
         color: '#000',
         background: '#fff',
         width: '100%',
@@ -17,7 +17,7 @@ const S = {
     },
     headerCompany: {
         textAlign: 'left',
-        marginBottom: '3mm',
+        marginBottom: '1mm',
     },
     companyName: {
         fontSize: '13pt',
@@ -31,7 +31,7 @@ const S = {
     },
     titleSection: {
         textAlign: 'center',
-        margin: '8mm 0 6mm',
+        margin: '4mm 0 3mm',
     },
     titleH1: {
         fontSize: '18pt',
@@ -41,13 +41,13 @@ const S = {
     },
     dateIntro: {
         textAlign: 'left',
-        marginBottom: '4mm',
+        marginBottom: '2mm',
         fontSize: '13pt',
         fontStyle: 'italic',
         fontWeight: 'normal',
     },
     partySection: {
-        marginBottom: '4mm',
+        marginBottom: '2mm',
     },
     partyTitle: {
         fontWeight: 'bold',
@@ -58,7 +58,7 @@ const S = {
     partyRow: {
         display: 'flex',
         alignItems: 'baseline',
-        marginBottom: '2mm',
+        marginBottom: '1mm',
         fontSize: '13pt',
         paddingLeft: '8mm',
     },
@@ -68,9 +68,6 @@ const S = {
     },
     partyValue: {
         flex: '1',
-        borderBottom: '1px dotted #000',
-        fontFamily: '"Times New Roman", Times, serif',
-        fontSize: '13pt',
         padding: '0 4px',
         minHeight: '20px',
         fontWeight: 'normal',
@@ -82,7 +79,7 @@ const S = {
     partyRowInline: {
         display: 'flex',
         alignItems: 'baseline',
-        marginBottom: '2mm',
+        marginBottom: '1mm',
         fontSize: '13pt',
         paddingLeft: '8mm',
     },
@@ -93,18 +90,18 @@ const S = {
     },
     checkText: {
         fontSize: '13pt',
-        margin: '4mm 0 3mm',
+        margin: '2mm 0 1mm',
         fontWeight: 'normal',
     },
     table: {
         width: '100%',
         borderCollapse: 'collapse',
-        margin: '3mm 0 4mm',
+        margin: '2mm 0 3mm',
         fontSize: '12pt',
     },
     th: {
         border: '1px solid #000',
-        padding: '5px 6px',
+        padding: '3px 4px',
         verticalAlign: 'middle',
         fontWeight: 'bold',
         textAlign: 'center',
@@ -115,7 +112,7 @@ const S = {
     },
     td: {
         border: '1px solid #000',
-        padding: '5px 6px',
+        padding: '3px 4px',
         verticalAlign: 'middle',
         fontSize: '12pt',
         fontWeight: 'normal',
@@ -125,7 +122,7 @@ const S = {
     },
     tdLeft: {
         border: '1px solid #000',
-        padding: '5px 6px',
+        padding: '3px 4px',
         verticalAlign: 'middle',
         fontSize: '12pt',
         fontWeight: 'normal',
@@ -135,7 +132,7 @@ const S = {
     },
     footerNote: {
         fontSize: '13pt',
-        margin: '4mm 0 6mm',
+        margin: '2mm 0 4mm',
         textAlign: 'justify',
         fontWeight: 'normal',
     },
@@ -143,7 +140,7 @@ const S = {
         display: 'flex',
         justifyContent: 'space-between',
         textAlign: 'center',
-        marginTop: '8mm',
+        marginTop: '4mm',
     },
     sigBlock: {
         width: '45%',
@@ -299,11 +296,11 @@ const HandoverItem = ({ order }) => {
             <div style={S.signatureSection}>
                 <div style={S.sigBlock}>
                     <div style={S.sigTitle}>Đại diện bên giao</div>
-                    <div style={S.sigLine}>....................................</div>
+                    <div style={S.sigLine}></div>
                 </div>
                 <div style={S.sigBlock}>
                     <div style={S.sigTitle}>Đại diện bên nhận</div>
-                    <div style={S.sigLine}>....................................</div>
+                    <div style={S.sigLine}></div>
                 </div>
             </div>
         </div>
