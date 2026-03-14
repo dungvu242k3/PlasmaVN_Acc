@@ -27,6 +27,7 @@ const CreateOrder = () => {
     const [customersList, setCustomersList] = useState([]);
     const [shippersList, setShippersList] = useState([]);
     const [warehousesList, setWarehousesList] = useState([]);
+    const [promotionsList, setPromotionsList] = useState([]);
 
     // Custom dropdown states
     const [isCustomerDropdownOpen, setIsCustomerDropdownOpen] = useState(false);
@@ -136,9 +137,19 @@ const CreateOrder = () => {
                 }
             }
         };
+        const fetchPromotions = async () => {
+            const { data } = await supabase
+                .from('app_promotions')
+                .select('*')
+                .eq('is_active', true)
+                .lte('start_date', new Date().toISOString().split('T')[0])
+                .gte('end_date', new Date().toISOString().split('T')[0]);
+            if (data) setPromotionsList(data);
+        };
         fetchCustomers();
         fetchShippers();
         fetchWarehouses();
+        fetchPromotions();
     }, [editOrder]);
 
     const formatNumber = (val) => {
@@ -192,7 +203,10 @@ const CreateOrder = () => {
         setFormData({ ...formData, shippingFee: parseInt(value, 10) });
     };
 
-    const calculatedTotalAmount = (formData.quantity || 0) * (formData.unitPrice || 0);
+    const selectedPromo = promotionsList.find(p => p.code === formData.promotion);
+    const freeCylinders = selectedPromo ? (selectedPromo.free_cylinders || 0) : 0;
+    const billedQuantity = Math.max(0, (formData.quantity || 0) - freeCylinders);
+    const calculatedTotalAmount = billedQuantity * (formData.unitPrice || 0);
 
     const handleCustomerSelect = (customer) => {
         setFormData({
@@ -675,13 +689,21 @@ const CreateOrder = () => {
                                     </div>
                                     <div className="space-y-2">
                                         <label className="text-xs font-medium text-[#059669] uppercase tracking-wide" style={{ fontFamily: '"Roboto", sans-serif' }}>11c. Thành tiền (VNĐ)</label>
-                                        <input
-                                            type="text"
-                                            disabled
-                                            value={formatNumber(calculatedTotalAmount)}
-                                            className="w-full px-4 py-3 bg-[#D1FAE5] border border-[#A7F3D0] font-semibold text-base text-[#065F46] cursor-not-allowed"
-                                            style={{ fontFamily: '"Roboto", sans-serif' }}
-                                        />
+                                        <div className="relative">
+                                            <input
+                                                type="text"
+                                                disabled
+                                                value={formatNumber(calculatedTotalAmount)}
+                                                className="w-full px-4 py-3 bg-[#D1FAE5] border border-[#A7F3D0] font-semibold text-base text-[#065F46] cursor-not-allowed"
+                                                style={{ fontFamily: '"Roboto", sans-serif' }}
+                                            />
+                                            {freeCylinders > 0 && (
+                                                <div className="absolute -bottom-5 right-0 text-[10px] font-bold text-orange-600 flex gap-2">
+                                                    <span>Khấu trừ: -{formatNumber(freeCylinders)} bình</span>
+                                                    <span>Tính tiền: {formatNumber(billedQuantity)} bình</span>
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
 
@@ -757,8 +779,11 @@ const CreateOrder = () => {
                                         style={{ fontFamily: '"Roboto", sans-serif' }}
                                     >
                                         <option value="">-- Không có mã khuyến mãi --</option>
-                                        <option value="KMB02">KMB02 - Ưu đãi bình mới</option>
-                                        <option value="KM_MAY_01">KM_MAY_01 - Giảm giá máy</option>
+                                        {promotionsList.map(p => (
+                                            <option key={p.id} value={p.code}>
+                                                {p.code} - Tặng {p.free_cylinders} bình
+                                            </option>
+                                        ))}
                                     </select>
                                 </div>
 
