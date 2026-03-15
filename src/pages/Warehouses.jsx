@@ -20,6 +20,7 @@ import {
     Filter,
     List,
     Plus,
+    Printer,
     Search,
     SlidersHorizontal,
     Trash2,
@@ -29,10 +30,12 @@ import {
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Bar as BarChartJS, Pie as PieChartJS } from 'react-chartjs-2';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { clsx } from 'clsx';
 import WarehouseDetailsModal from '../components/Warehouses/WarehouseDetailsModal';
 import WarehouseFormModal from '../components/Warehouses/WarehouseFormModal';
+import WarehousePrintTemplate from '../components/Warehouses/WarehousePrintTemplate';
 import ColumnPicker from '../components/ui/ColumnPicker';
 import FilterDropdown from '../components/ui/FilterDropdown';
 import MobileFilterSheet from '../components/ui/MobileFilterSheet';
@@ -71,6 +74,7 @@ const Warehouses = () => {
     const [isFormModalOpen, setIsFormModalOpen] = useState(false);
     const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
     const [selectedWarehouse, setSelectedWarehouse] = useState(null);
+    const [warehouseToPrint, setWarehouseToPrint] = useState(null);
 
     const [selectedStatuses, setSelectedStatuses] = useState([]);
     const [selectedManagers, setSelectedManagers] = useState([]);
@@ -216,6 +220,10 @@ const Warehouses = () => {
     const handleViewWarehouse = (warehouse) => {
         setSelectedWarehouse(warehouse);
         setIsDetailsModalOpen(true);
+    };
+
+    const handlePrint = (warehouse) => {
+        setWarehouseToPrint(warehouse);
     };
 
     const handleFormSubmitSuccess = () => {
@@ -485,10 +493,11 @@ const Warehouses = () => {
 
                                     <div className="flex items-center justify-end pt-2 border-t border-border/70">
                                         <div className="flex items-center gap-3">
-                                            <button onClick={() => handleViewWarehouse(w)} className="text-blue-500 hover:text-blue-700 transition-colors"><Eye size={18} /></button>
-                                            <button onClick={() => handleEditWarehouse(w)} className="text-amber-500 hover:text-amber-700 transition-colors"><Edit size={18} /></button>
+                                            <button onClick={() => handleViewWarehouse(w)} className="text-blue-500 hover:text-blue-700 transition-colors" title="Xem chi tiết"><Eye size={18} /></button>
+                                            <button onClick={() => handlePrint(w)} className="text-blue-500 hover:text-blue-700 transition-colors" title="In thông tin"><Printer size={18} /></button>
+                                            <button onClick={() => handleEditWarehouse(w)} className="text-amber-500 hover:text-amber-700 transition-colors" title="Chỉnh sửa"><Edit size={18} /></button>
                                             {(role === 'admin' || role === 'manager') && (
-                                                <button onClick={() => handleDeleteWarehouse(w.id, w.name)} className="text-rose-500 hover:text-rose-700 transition-colors"><Trash2 size={18} /></button>
+                                                <button onClick={() => handleDeleteWarehouse(w.id, w.name)} className="text-rose-500 hover:text-rose-700 transition-colors" title="Xóa"><Trash2 size={18} /></button>
                                             )}
                                         </div>
                                     </div>
@@ -672,10 +681,13 @@ const Warehouses = () => {
                                         <td className="px-4 py-4 text-center border-l border-r border-primary/20">
                                             <div className="flex items-center justify-center gap-3">
                                                 <button onClick={() => handleViewWarehouse(w)} className="text-blue-600/80 hover:text-blue-700 transition-colors p-1 rounded hover:bg-blue-50" title="Xem chi tiết">
-                                                    <Eye className="w-4 h-4" />
+                                                    <Eye size={18} />
+                                                </button>
+                                                <button onClick={() => handlePrint(w)} className="text-blue-600/80 hover:text-blue-700 transition-colors p-1 rounded hover:bg-blue-50" title="In thông tin">
+                                                    <Printer size={18} />
                                                 </button>
                                                 <button onClick={() => handleEditWarehouse(w)} className="text-amber-600/80 hover:text-amber-700 transition-colors p-1 rounded hover:bg-amber-50" title="Chỉnh sửa">
-                                                    <Edit className="w-4 h-4" />
+                                                    <Edit size={18} />
                                                 </button>
                                                 {(role === 'admin' || role === 'manager') && (
                                                     <button onClick={() => handleDeleteWarehouse(w.id, w.name)} className="text-red-600/80 hover:text-red-700 transition-colors p-1 rounded hover:bg-red-50" title="Xóa">
@@ -999,6 +1011,13 @@ const Warehouses = () => {
                     warehouse={selectedWarehouse}
                     onClose={() => setIsDetailsModalOpen(false)}
                 />
+            )}
+            {createPortal(
+                <WarehousePrintTemplate 
+                    warehouse={warehouseToPrint} 
+                    onPrinted={() => setWarehouseToPrint(null)}
+                />,
+                document.body
             )}
         </div>
     );

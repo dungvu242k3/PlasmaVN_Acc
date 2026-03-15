@@ -7,7 +7,9 @@ import {
     Trash2
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
+import CylinderRecoveryPrintTemplate from '../components/CylinderRecovery/CylinderRecoveryPrintTemplate';
 import { RECOVERY_STATUSES } from '../constants/recoveryConstants';
 import { supabase } from '../supabase/config';
 
@@ -20,6 +22,7 @@ const CylinderRecoveries = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('ALL');
     const [selectedIds, setSelectedIds] = useState([]);
+    const [recoveriesToPrint, setRecoveriesToPrint] = useState(null);
 
     const [warehousesList, setWarehousesList] = useState([]);
 
@@ -110,26 +113,25 @@ const CylinderRecoveries = () => {
         }
     };
 
-    const handleBatchPrint = async () => {
+    const handlePrintSingle = (recovery) => {
+        setRecoveriesToPrint([{
+            ...recovery,
+            customerName: getCustomerName(recovery.customer_id)
+        }]);
+    };
+
+    const handleBatchPrint = () => {
         if (selectedIds.length === 0) {
             alert('Vui lòng chọn ít nhất 1 phiếu!');
             return;
         }
-        // Dynamically import PDF generator
-        const { generateRecoveryPDF } = await import('../utils/recoveryPDF');
-        const selected = recoveries.filter(r => selectedIds.includes(r.id));
-
-        for (const recovery of selected) {
-            const { data: items } = await supabase
-                .from('cylinder_recovery_items')
-                .select('*')
-                .eq('recovery_id', recovery.id);
-
-            const customerName = getCustomerName(recovery.customer_id);
-            await generateRecoveryPDF(recovery, items || [], customerName);
-        }
-
-        alert(`🎉 Đã xuất ${selected.length} phiếu PDF!`);
+        const selected = recoveries
+            .filter(r => selectedIds.includes(r.id))
+            .map(r => ({
+                ...r,
+                customerName: getCustomerName(r.customer_id)
+            }));
+        setRecoveriesToPrint(selected);
     };
 
     const filteredRecoveries = recoveries.filter(r => {
@@ -145,9 +147,6 @@ const CylinderRecoveries = () => {
 
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 md:mb-8 relative z-10">
                 <div className="flex items-center gap-3">
-                    <button onClick={() => navigate('/trang-chu')} className="w-10 h-10 bg-white border border-gray-200 rounded-xl flex items-center justify-center text-gray-400 hover:text-gray-900 hover:border-gray-400 transition-all shadow-sm">
-                        ←
-                    </button>
                     <h1 className="text-2xl md:text-3xl font-black text-gray-900 tracking-tight flex items-center gap-3">
                         <PackageCheck className="w-8 h-8 text-blue-600" />
                         Phiếu thu hồi vỏ bình
@@ -226,7 +225,7 @@ const CylinderRecoveries = () => {
                                         <div className="col-span-2"><span className="text-[9px] font-bold text-gray-400 uppercase">Kho nhận</span><p className="text-xs text-slate-600">{getWarehouseLabel(r.warehouse_id)}</p></div>
                                     </div>
                                     <div className="flex items-center justify-end gap-2 pt-3 border-t border-gray-50">
-                                        <button onClick={async () => { const { generateRecoveryPDF } = await import('../utils/recoveryPDF'); const { data: items } = await supabase.from('cylinder_recovery_items').select('*').eq('recovery_id', r.id); generateRecoveryPDF(r, items || [], getCustomerName(r.customer_id)); }} className="p-2 text-slate-400 hover:text-amber-600 rounded-lg transition-colors" title="Xuất PDF"><FileText className="w-5 h-5" /></button>
+                                        <button onClick={() => handlePrintSingle(r)} className="p-2 text-slate-400 hover:text-amber-600 rounded-lg transition-colors" title="In phiếu"><Printer className="w-5 h-5" /></button>
                                         <button onClick={() => navigate('/tao-phieu-thu-hoi', { state: { recovery: r } })} className="p-2 text-slate-400 hover:text-slate-900 rounded-lg transition-colors"><Edit className="w-5 h-5" /></button>
                                         <button onClick={() => handleDelete(r.id, r.recovery_code)} className="p-2 text-slate-400 hover:text-red-500 rounded-lg transition-colors"><Trash2 className="w-5 h-5" /></button>
                                     </div>
@@ -261,7 +260,7 @@ const CylinderRecoveries = () => {
                                             <td className="px-6 py-4 text-center font-black text-slate-700">{r.total_items}</td>
                                             <td className="px-6 py-4 text-center">{getStatusBadge(r.status)}</td>
                                             <td className="px-6 py-4"><div className="flex justify-end gap-2">
-                                                <button onClick={async () => { const { generateRecoveryPDF } = await import('../utils/recoveryPDF'); const { data: items } = await supabase.from('cylinder_recovery_items').select('*').eq('recovery_id', r.id); generateRecoveryPDF(r, items || [], getCustomerName(r.customer_id)); }} className="p-2 text-slate-400 hover:text-amber-600 transition-colors" title="Xuất PDF"><FileText className="w-4 h-4" /></button>
+                                                <button onClick={() => handlePrintSingle(r)} className="p-2 text-slate-400 hover:text-amber-600 transition-colors" title="In phiếu"><Printer className="w-4 h-4" /></button>
                                                 <button onClick={() => navigate('/tao-phieu-thu-hoi', { state: { recovery: r } })} className="p-2 text-slate-400 hover:text-slate-900 transition-colors"><Edit className="w-4 h-4" /></button>
                                                 <button onClick={() => handleDelete(r.id, r.recovery_code)} className="p-2 text-slate-400 hover:text-red-500 transition-colors"><Trash2 className="w-4 h-4" /></button>
                                             </div></td>
@@ -273,6 +272,23 @@ const CylinderRecoveries = () => {
                     </>
                 )}
             </div>
+
+            {/* Hidden Print Template */}
+            {createPortal(
+                <div className="print-only-container">
+                    {recoveriesToPrint?.map((rec, idx) => (
+                        <div key={rec.id}>
+                            <CylinderRecoveryPrintTemplate 
+                                recovery={rec} 
+                                customerName={rec.customerName}
+                                onPrinted={idx === recoveriesToPrint.length - 1 ? () => setRecoveriesToPrint(null) : null}
+                            />
+                            {idx < recoveriesToPrint.length - 1 && <div style={{ pageBreakAfter: 'always' }} />}
+                        </div>
+                    ))}
+                </div>,
+                document.body
+            )}
         </div>
     );
 };
