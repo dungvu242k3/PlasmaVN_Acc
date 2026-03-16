@@ -24,9 +24,12 @@ const BarcodeScanner = ({
 
     const handleConfirm = () => {
         if (pendingScan) {
-            onScanSuccess(pendingScan, scanTime);
+            // Ensure we have a time even if state hasn't updated immediately
+            const fallbackTime = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+            onScanSuccess(pendingScan, scanTime || fallbackTime);
+            
             setPendingScan(null);
-            setScanTime(null);
+            setScanTime('');
             // Resume scanning after a short delay to prevent immediate re-scan
             setTimeout(() => {
                 resetLastScanned();

@@ -1,10 +1,6 @@
 import {
-    ChevronDown,
-    Package,
-    Plus,
-    ScanLine,
-    Search,
-    X
+    ScanLine, Plus, X, ChevronDown, Trash2,
+    Link2, User, Phone, MapPin, Package, Clock
 } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -59,6 +55,19 @@ const CreateOrder = () => {
     useEffect(() => { assignedCylindersRef.current = assignedCylinders; }, [assignedCylinders]);
     const isBatchScanningRef = useRef(isBatchScanning);
     useEffect(() => { isBatchScanningRef.current = isBatchScanning; }, [isBatchScanning]);
+
+    // Sync scan times array length with cylinders array
+    useEffect(() => {
+        setAssignedCylinderTimes(prev => {
+            if (prev.length === assignedCylinders.length) return prev;
+            const newArr = [...prev];
+            if (assignedCylinders.length > newArr.length) {
+                return [...newArr, ...new Array(assignedCylinders.length - newArr.length).fill('')];
+            } else {
+                return newArr.slice(0, assignedCylinders.length);
+            }
+        });
+    }, [assignedCylinders.length]);
 
     const getNewOrderCode = () => Math.floor(1000 + Math.random() * 9000).toString();
 
@@ -181,15 +190,6 @@ const CreateOrder = () => {
         // Only auto-resize for BINH product type
         if (formData.productType.startsWith('BINH')) {
             setAssignedCylinders(prev => {
-                const newArr = [...prev];
-                if (parsedValue > newArr.length) {
-                    for (let i = newArr.length; i < parsedValue; i++) newArr.push('');
-                } else {
-                    newArr.length = parsedValue;
-                }
-                return newArr;
-            });
-            setAssignedCylinderTimes(prev => {
                 const newArr = [...prev];
                 if (parsedValue > newArr.length) {
                     for (let i = newArr.length; i < parsedValue; i++) newArr.push('');
@@ -802,9 +802,11 @@ const CreateOrder = () => {
                                                         )}
                                                     </div>
                                                     {assignedCylinderTimes[idx] && (
-                                                        <div className="ml-8 text-[11px] text-[#2563EB] font-bold flex items-center gap-1.5 py-0.5">
-                                                            <span className="w-2 h-2 bg-[#2563EB] rounded-full animate-pulse shadow-[0_0_5px_rgba(37,99,235,0.5)]"></span>
-                                                            <span>Đã quét lúc: {assignedCylinderTimes[idx]}</span>
+                                                        <div className="ml-8 mt-1">
+                                                            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-blue-600 text-white text-[10px] font-bold rounded shadow-sm border border-blue-500">
+                                                                <Clock className="w-3 h-3" />
+                                                                ĐÃ QUÉT: {assignedCylinderTimes[idx]}
+                                                            </span>
                                                         </div>
                                                     )}
                                                 </div>
