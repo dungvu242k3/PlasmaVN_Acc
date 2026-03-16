@@ -130,23 +130,23 @@ const BarcodeScanner = ({
                             <ScanLine className="w-10 h-10 text-white" />
                         </div>
                         
-                        <h4 className="text-2xl font-black mb-2 tracking-tight text-white">ĐÃ QUÉT MÃ</h4>
+                        <h4 className="text-2xl font-black mb-2 tracking-tight !text-white">ĐÃ QUÉT MÃ</h4>
                         <div className="bg-white/10 px-6 py-4 rounded-2xl mb-2 border border-white/20 w-full shadow-inner">
-                            <span className="text-2xl md:text-3xl font-mono font-bold tracking-widest text-white break-all">{pendingScan}</span>
+                            <span className="text-2xl md:text-3xl font-mono font-bold tracking-widest !text-white break-all">{pendingScan}</span>
                         </div>
-                        <p className="text-gray-300 text-sm font-medium mb-8">Thời gian quét: <span className="text-white font-bold">{scanTime}</span></p>
+                        <p className="text-gray-300 text-sm font-medium mb-8">Thời gian quét: <span className="!text-white font-bold">{scanTime}</span></p>
 
                         <div className="w-full space-y-4">
                             <button
                                 onClick={handleConfirm}
-                                className="w-full py-5 bg-blue-600 hover:bg-blue-700 text-white font-black text-xl rounded-2xl shadow-xl shadow-blue-600/30 transition-all flex items-center justify-center gap-3 active:scale-95"
+                                className="w-full py-5 bg-blue-600 hover:bg-blue-700 !text-white font-black text-xl rounded-2xl shadow-xl shadow-blue-600/30 transition-all flex items-center justify-center gap-3 active:scale-95"
                             >
                                 XÁC NHẬN {totalCount ? `(${currentCount + 1}/${totalCount})` : `(${currentCount + 1})`}
                             </button>
                             
                             <button
                                 onClick={handleCancel}
-                                className="w-full py-4 bg-white/5 hover:bg-white/10 text-gray-400 font-bold text-lg rounded-2xl transition-all active:scale-95"
+                                className="w-full py-4 bg-white/5 hover:bg-white/10 !text-white font-bold text-lg rounded-2xl transition-all active:scale-95 border border-white/10"
                             >
                                 Quét lại mã này
                             </button>

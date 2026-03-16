@@ -54,7 +54,7 @@ const CreateOrder = () => {
     useEffect(() => { scanTargetIndexRef.current = scanTargetIndex; }, [scanTargetIndex]);
     const [scanCount, setScanCount] = useState(0);
     const [isBatchScanning, setIsBatchScanning] = useState(false);
-    const [assignedCylinderTimes, setAssignedCylinderTimes] = useState([]);
+    const [assignedCylinderTimes, setAssignedCylinderTimes] = useState(new Array(editOrder?.quantity || 0).fill(''));
     const assignedCylindersRef = useRef(assignedCylinders);
     useEffect(() => { assignedCylindersRef.current = assignedCylinders; }, [assignedCylinders]);
     const isBatchScanningRef = useRef(isBatchScanning);
@@ -802,9 +802,9 @@ const CreateOrder = () => {
                                                         )}
                                                     </div>
                                                     {assignedCylinderTimes[idx] && (
-                                                        <div className="ml-8 text-[10px] text-blue-500 font-bold flex items-center gap-1">
-                                                            <span className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse"></span>
-                                                            Thời gian quét: {assignedCylinderTimes[idx]}
+                                                        <div className="ml-8 text-[11px] text-[#2563EB] font-bold flex items-center gap-1.5 py-0.5">
+                                                            <span className="w-2 h-2 bg-[#2563EB] rounded-full animate-pulse shadow-[0_0_5px_rgba(37,99,235,0.5)]"></span>
+                                                            <span>Đã quét lúc: {assignedCylinderTimes[idx]}</span>
                                                         </div>
                                                     )}
                                                 </div>

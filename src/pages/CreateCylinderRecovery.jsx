@@ -461,9 +461,9 @@ const CreateCylinderRecovery = () => {
                                         <div className="md:col-span-5 space-y-1">
                                             <input value={item.serial_number} onChange={(e) => updateItem(item._id, 'serial_number', e.target.value)} placeholder="Mã serial vỏ bình" className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl font-bold text-gray-900 focus:ring-2 focus:ring-blue-500 outline-none" />
                                             {item.scan_time && (
-                                                <div className="text-[10px] text-blue-500 font-bold flex items-center gap-1 ml-1">
-                                                    <span className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse"></span>
-                                                    Thời gian quét: {item.scan_time}
+                                                <div className="text-[11px] text-[#2563EB] font-bold flex items-center gap-1.5 mt-1 ml-1">
+                                                    <span className="w-2 h-2 bg-[#2563EB] rounded-full animate-pulse shadow-[0_0_5px_rgba(37,99,235,0.5)]"></span>
+                                                    <span>Đã quét lúc: {item.scan_time}</span>
                                                 </div>
                                             )}
                                         </div>
