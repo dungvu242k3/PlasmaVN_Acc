@@ -900,7 +900,9 @@ const CreateOrder = () => {
                 isOpen={isScannerOpen}
                 onClose={stopCylinderScanner}
                 onScanSuccess={handleScanSuccess}
-                title={`Quét liên tục (#${scanTargetIndex + 1}) - Đã quét: ${scanCount}`}
+                title={`Quét mã bình (${assignedCylinders.filter(Boolean).length}/${formData.quantity})`}
+                currentCount={assignedCylinders.filter(Boolean).length}
+                totalCount={formData.quantity}
             />
         </>
     );

@@ -9,25 +9,53 @@ const BarcodeScanner = ({
     title = 'Quét mã vạch',
     elementId = 'barcode-reader',
     debounceMs = 1500,
-    allowDuplicateScans = false
+    allowDuplicateScans = false,
+    currentCount = 0,
+    totalCount = null
 }) => {
+    const [pendingScan, setPendingScan] = React.useState(null);
+
     const { isScanning, scanError, hasPermission, start, stop, resetLastScanned } = useBarcodeScanner({
         elementId,
         debounceMs,
         allowDuplicateScans
     });
 
+    const handleConfirm = () => {
+        if (pendingScan) {
+            onScanSuccess(pendingScan);
+            setPendingScan(null);
+            // Resume scanning after a short delay to prevent immediate re-scan
+            setTimeout(() => {
+                resetLastScanned();
+            }, 500);
+        }
+    };
+
+    const handleCancel = () => {
+        setPendingScan(null);
+        setTimeout(() => {
+            resetLastScanned();
+        }, 500);
+    };
+
     useEffect(() => {
+        const wrapScanSuccess = (decodedText) => {
+            // Pause further scans while confirming
+            setPendingScan(decodedText);
+        };
+
         if (isOpen) {
-            start(onScanSuccess);
+            start(wrapScanSuccess);
         } else {
             stop();
+            setPendingScan(null);
         }
         
         return () => {
             stop();
         };
-    }, [isOpen, start, stop, onScanSuccess]);
+    }, [isOpen, start, stop]);
 
     if (!isOpen) return null;
 
@@ -89,6 +117,38 @@ const BarcodeScanner = ({
                     </div>
                 )}
             </div>
+
+            {/* Confirmation Overlay */}
+            {pendingScan && (
+                <div className="absolute inset-0 z-[100] bg-black/90 backdrop-blur-xl flex flex-col items-center justify-center p-6 text-white animate-in fade-in duration-300">
+                    <div className="w-full max-w-sm bg-white/10 rounded-3xl border border-white/20 p-8 flex flex-col items-center text-center shadow-2xl">
+                        <div className="w-20 h-20 bg-blue-600 rounded-full flex items-center justify-center mb-6 shadow-lg shadow-blue-500/50">
+                            <ScanLine className="w-10 h-10 text-white" />
+                        </div>
+                        
+                        <h4 className="text-2xl font-black mb-2 tracking-tight">ĐÃ QUÉT MÃ</h4>
+                        <div className="bg-white/10 px-6 py-3 rounded-2xl mb-8 border border-white/10">
+                            <span className="text-3xl font-mono font-bold tracking-widest text-blue-400">{pendingScan}</span>
+                        </div>
+
+                        <div className="w-full space-y-4">
+                            <button
+                                onClick={handleConfirm}
+                                className="w-full py-5 bg-blue-600 hover:bg-blue-700 text-white font-black text-xl rounded-2xl shadow-xl shadow-blue-600/30 transition-all flex items-center justify-center gap-3 active:scale-95"
+                            >
+                                XÁC NHẬN {totalCount ? `(${currentCount + 1}/${totalCount})` : `(${currentCount + 1})`}
+                            </button>
+                            
+                            <button
+                                onClick={handleCancel}
+                                className="w-full py-4 bg-white/5 hover:bg-white/10 text-gray-300 font-bold text-lg rounded-2xl transition-all active:scale-95"
+                            >
+                                Quét lại mã này
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Footer / Instructions */}
             <div className="flex-none bg-black/80 backdrop-blur-md p-5 text-center shadow-[0_-10px_20px_rgba(0,0,0,0.5)] z-50">
