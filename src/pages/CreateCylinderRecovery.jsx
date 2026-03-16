@@ -139,7 +139,7 @@ const CreateCylinderRecovery = () => {
     };
 
     // Barcode scanner optimized for 1D barcodes (mã vạch)
-    const handleScanSuccess = useCallback(async (decodedText) => {
+    const handleScanSuccess = useCallback(async (decodedText, time) => {
         const currentItems = itemsRef.current;
         if (currentItems.some(i => i.serial_number === decodedText)) {
             toast.info(`Mã ${decodedText} đã được quét!`);
@@ -147,7 +147,7 @@ const CreateCylinderRecovery = () => {
         }
         
         // Add to items list immediately for smooth UI
-        setItems(prev => [...prev, { _id: crypto.randomUUID(), serial_number: decodedText, condition: 'tot', note: '' }]);
+        setItems(prev => [...prev, { _id: crypto.randomUUID(), serial_number: decodedText, condition: 'tot', note: '', scan_time: time }]);
 
         // Background auto-fetch logic
         const fetchInfo = async () => {
@@ -458,8 +458,14 @@ const CreateCylinderRecovery = () => {
                                 <div key={item._id} className="flex flex-col md:flex-row items-center gap-3 bg-gray-50/50 p-4 rounded-2xl border border-gray-100 hover:border-blue-200 transition-all">
                                     <span className="font-bold text-gray-400 w-6 shrink-0">{idx + 1}.</span>
                                     <div className="flex-1 grid grid-cols-1 md:grid-cols-12 gap-3 w-full">
-                                        <div className="md:col-span-5">
+                                        <div className="md:col-span-5 space-y-1">
                                             <input value={item.serial_number} onChange={(e) => updateItem(item._id, 'serial_number', e.target.value)} placeholder="Mã serial vỏ bình" className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl font-bold text-gray-900 focus:ring-2 focus:ring-blue-500 outline-none" />
+                                            {item.scan_time && (
+                                                <div className="text-[10px] text-blue-500 font-bold flex items-center gap-1 ml-1">
+                                                    <span className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse"></span>
+                                                    Thời gian quét: {item.scan_time}
+                                                </div>
+                                            )}
                                         </div>
                                         <div className="md:col-span-3">
                                             <select value={item.condition} onChange={(e) => updateItem(item._id, 'condition', e.target.value)} className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl font-bold text-gray-900 focus:ring-2 focus:ring-blue-500 outline-none cursor-pointer">

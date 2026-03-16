@@ -54,6 +54,7 @@ const CreateOrder = () => {
     useEffect(() => { scanTargetIndexRef.current = scanTargetIndex; }, [scanTargetIndex]);
     const [scanCount, setScanCount] = useState(0);
     const [isBatchScanning, setIsBatchScanning] = useState(false);
+    const [assignedCylinderTimes, setAssignedCylinderTimes] = useState([]);
     const assignedCylindersRef = useRef(assignedCylinders);
     useEffect(() => { assignedCylindersRef.current = assignedCylinders; }, [assignedCylinders]);
     const isBatchScanningRef = useRef(isBatchScanning);
@@ -188,6 +189,15 @@ const CreateOrder = () => {
                 }
                 return newArr;
             });
+            setAssignedCylinderTimes(prev => {
+                const newArr = [...prev];
+                if (parsedValue > newArr.length) {
+                    for (let i = newArr.length; i < parsedValue; i++) newArr.push('');
+                } else {
+                    newArr.length = parsedValue;
+                }
+                return newArr;
+            });
         }
     };
 
@@ -239,6 +249,7 @@ const CreateOrder = () => {
     useEffect(() => {
         if (editOrder?.assigned_cylinders) {
             setAssignedCylinders(editOrder.assigned_cylinders);
+            setAssignedCylinderTimes(new Array(editOrder.assigned_cylinders.length).fill(''));
         }
     }, [editOrder]);
 
@@ -274,7 +285,7 @@ const CreateOrder = () => {
 
     // Handle the scanning event coming from the new 3-tier generic Barcode Scanner
     // that uses Native/ZXing behind the scenes
-    const handleScanSuccess = useCallback((decodedText) => {
+    const handleScanSuccess = useCallback((decodedText, time) => {
         const currentArr = assignedCylindersRef.current;
         const currentIdx = scanTargetIndexRef.current;
         
@@ -290,6 +301,11 @@ const CreateOrder = () => {
         setAssignedCylinders(prev => {
             const newArr = [...prev];
             newArr[currentIdx] = decodedText;
+            return newArr;
+        });
+        setAssignedCylinderTimes(prev => {
+            const newArr = [...prev];
+            newArr[currentIdx] = time;
             return newArr;
         });
         setScanCount(prev => prev + 1);
@@ -748,33 +764,48 @@ const CreateOrder = () => {
                                         </div>
                                         <div className="space-y-2">
                                             {assignedCylinders.map((serial, idx) => (
-                                                <div key={idx} className="flex items-center gap-2">
-                                                    <span className="text-xs font-bold text-gray-400 w-6 text-right">{idx + 1}.</span>
-                                                    <input
-                                                        type="text"
-                                                        value={serial}
-                                                        onChange={(e) => handleCylinderSerialChange(idx, e.target.value)}
-                                                        placeholder={`Mã serial bình ${idx + 1}...`}
-                                                        className="flex-1 px-3 py-2.5 bg-white border border-[#D1D5DB] outline-none focus:ring-2 focus:ring-[#2563EB] focus:border-[#2563EB] font-medium text-sm transition-all"
-                                                        style={{ fontFamily: '"Roboto", sans-serif' }}
-                                                    />
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => startCylinderScanner(idx)}
-                                                        className="px-3 py-2.5 bg-[#2563EB] text-white hover:bg-[#1D4ED8] transition-all flex items-center gap-1 text-xs font-medium"
-                                                        title="Quét barcode"
-                                                    >
-                                                        <ScanLine className="w-4 h-4" />
-                                                    </button>
-                                                    {serial && (
+                                                <div key={idx} className="space-y-1">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-xs font-bold text-gray-400 w-6 text-right">{idx + 1}.</span>
+                                                        <input
+                                                            type="text"
+                                                            value={serial}
+                                                            onChange={(e) => handleCylinderSerialChange(idx, e.target.value)}
+                                                            placeholder={`Mã serial bình ${idx + 1}...`}
+                                                            className="flex-1 px-3 py-2.5 bg-white border border-[#D1D5DB] outline-none focus:ring-2 focus:ring-[#2563EB] focus:border-[#2563EB] font-medium text-sm transition-all"
+                                                            style={{ fontFamily: '"Roboto", sans-serif' }}
+                                                        />
                                                         <button
                                                             type="button"
-                                                            onClick={() => handleCylinderSerialChange(idx, '')}
-                                                            className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 transition-all"
-                                                            title="Xóa"
+                                                            onClick={() => startCylinderScanner(idx)}
+                                                            className="px-3 py-2.5 bg-[#2563EB] text-white hover:bg-[#1D4ED8] transition-all flex items-center gap-1 text-xs font-medium"
+                                                            title="Quét barcode"
                                                         >
-                                                            <X className="w-4 h-4" />
+                                                            <ScanLine className="w-4 h-4" />
                                                         </button>
+                                                        {serial && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    handleCylinderSerialChange(idx, '');
+                                                                    setAssignedCylinderTimes(prev => {
+                                                                        const newArr = [...prev];
+                                                                        newArr[idx] = '';
+                                                                        return newArr;
+                                                                    });
+                                                                }}
+                                                                className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 transition-all"
+                                                                title="Xóa"
+                                                            >
+                                                                <X className="w-4 h-4" />
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                    {assignedCylinderTimes[idx] && (
+                                                        <div className="ml-8 text-[10px] text-blue-500 font-bold flex items-center gap-1">
+                                                            <span className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse"></span>
+                                                            Thời gian quét: {assignedCylinderTimes[idx]}
+                                                        </div>
                                                     )}
                                                 </div>
                                             ))}

@@ -24,7 +24,7 @@ const BarcodeScanner = ({
 
     const handleConfirm = () => {
         if (pendingScan) {
-            onScanSuccess(pendingScan);
+            onScanSuccess(pendingScan, scanTime);
             setPendingScan(null);
             setScanTime(null);
             // Resume scanning after a short delay to prevent immediate re-scan
@@ -130,11 +130,11 @@ const BarcodeScanner = ({
                             <ScanLine className="w-10 h-10 text-white" />
                         </div>
                         
-                        <h4 className="text-2xl font-black mb-2 tracking-tight">ĐÃ QUÉT MÃ</h4>
-                        <div className="bg-white/10 px-6 py-3 rounded-2xl mb-2 border border-white/10 w-full">
-                            <span className="text-2xl font-mono font-bold tracking-widest text-blue-400 break-all">{pendingScan}</span>
+                        <h4 className="text-2xl font-black mb-2 tracking-tight text-white">ĐÃ QUÉT MÃ</h4>
+                        <div className="bg-white/10 px-6 py-4 rounded-2xl mb-2 border border-white/20 w-full shadow-inner">
+                            <span className="text-2xl md:text-3xl font-mono font-bold tracking-widest text-white break-all">{pendingScan}</span>
                         </div>
-                        <p className="text-gray-400 text-sm font-medium mb-8">Thời gian quét: <span className="text-white">{scanTime}</span></p>
+                        <p className="text-gray-300 text-sm font-medium mb-8">Thời gian quét: <span className="text-white font-bold">{scanTime}</span></p>
 
                         <div className="w-full space-y-4">
                             <button
