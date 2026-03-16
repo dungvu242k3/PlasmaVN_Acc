@@ -8,9 +8,20 @@ const FilterDropdown = ({
   filterSearch,
   setFilterSearch,
 }) => {
-  const filteredOptions = options.filter(opt =>
-    opt.label.toLowerCase().includes(filterSearch.toLowerCase())
-  );
+  const normalizeText = (text) => {
+    return text
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[đĐ]/g, (m) => (m === 'đ' ? 'd' : 'D'));
+  };
+
+  const filteredOptions = options.filter(opt => {
+    const normalizedLabel = normalizeText(opt.label);
+    const normalizedSearch = normalizeText(filterSearch);
+    return opt.label.toLowerCase().includes(filterSearch.toLowerCase()) || 
+           normalizedLabel.includes(normalizedSearch);
+  });
 
   const toggleOption = (id) => {
     if (selected.includes(id)) {
@@ -29,7 +40,7 @@ const FilterDropdown = ({
   };
 
   return (
-    <div className="absolute top-full left-0 mt-2 w-64 bg-white rounded-2xl shadow-xl border border-border z-60 overflow-hidden animate-in fade-in zoom-in-95 duration-200 origin-top">
+    <div className="absolute top-full left-0 mt-2 w-64 bg-white rounded-2xl shadow-xl border border-border z-[99999] overflow-hidden animate-in fade-in zoom-in-95 duration-200 origin-top">
       <div className="p-3 border-b border-border">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/50" size={14} />

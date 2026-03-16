@@ -3,8 +3,22 @@ import { createPortal } from 'react-dom';
 import { X, Filter, Search, ChevronRight } from 'lucide-react';
 import { clsx } from 'clsx';
 
-const defaultFilterMatcher = (option, searchValue) =>
-  option.label.toLowerCase().includes(searchValue.toLowerCase());
+const normalizeText = (text) => {
+  return text
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[đĐ]/g, (m) => (m === 'đ' ? 'd' : 'D'));
+};
+
+const defaultFilterMatcher = (option, searchValue) => {
+  const normalizedLabel = normalizeText(option.label);
+  const normalizedSearch = normalizeText(searchValue);
+  return (
+    option.label.toLowerCase().includes(searchValue.toLowerCase()) ||
+    normalizedLabel.includes(normalizedSearch)
+  );
+};
 
 const MobileFilterSheet = ({
   isOpen,

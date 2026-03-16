@@ -145,7 +145,9 @@ const Orders = () => {
     // Dropdown state
     const [activeDropdown, setActiveDropdown] = useState(null);
     const [filterSearch, setFilterSearch] = useState('');
-    const dropdownRef = useRef(null);
+    const dropdownRef = useRef(null); // Keep this for backward compatibility if used elsewhere, but we'll use specific refs
+    const listDropdownRef = useRef(null);
+    const statsDropdownRef = useRef(null);
 
     useEffect(() => {
         fetchOrders();
@@ -208,7 +210,10 @@ const Orders = () => {
     // Dropdown handlers
     useEffect(() => {
         const handleClickOutside = (event) => {
-            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+            const isClickInsideList = listDropdownRef.current && listDropdownRef.current.contains(event.target);
+            const isClickInsideStats = statsDropdownRef.current && statsDropdownRef.current.contains(event.target);
+            
+            if (activeDropdown && !isClickInsideList && !isClickInsideStats) {
                 setActiveDropdown(null);
                 setFilterSearch('');
             }
@@ -357,8 +362,11 @@ const Orders = () => {
 
     const getCategoryBadgeClass = (categoryId) => clsx(
         'inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase border',
-        categoryId === 'KH_SI' && 'bg-indigo-50 text-indigo-700 border-indigo-200',
-        categoryId === 'KH_LE' && 'bg-emerald-50 text-emerald-700 border-emerald-200',
+        categoryId === 'BV' && 'bg-blue-50 text-blue-700 border-blue-200',
+        categoryId === 'TM' && 'bg-pink-50 text-pink-700 border-pink-200',
+        categoryId === 'PK' && 'bg-emerald-50 text-emerald-700 border-emerald-200',
+        categoryId === 'NG' && 'bg-violet-50 text-violet-700 border-violet-200',
+        categoryId === 'SP' && 'bg-amber-50 text-amber-700 border-amber-200',
         !categoryId && 'bg-muted text-muted-foreground border-border'
     );
 
@@ -499,8 +507,11 @@ const Orders = () => {
         if (isSelected) baseStyle += "bg-blue-50/40 border-l-blue-500 ";
         else {
             switch (category) {
-                case 'KH_SI': baseStyle += "border-l-indigo-400 hover:bg-indigo-50/70 "; break;
-                case 'KH_LE': baseStyle += "border-l-emerald-400 hover:bg-emerald-50/70 "; break;
+                case 'BV': baseStyle += "border-l-blue-400 hover:bg-blue-50/60 "; break;
+                case 'TM': baseStyle += "border-l-pink-400 hover:bg-pink-50/60 "; break;
+                case 'PK': baseStyle += "border-l-emerald-400 hover:bg-emerald-50/60 "; break;
+                case 'NG': baseStyle += "border-l-violet-400 hover:bg-violet-50/60 "; break;
+                case 'SP': baseStyle += "border-l-amber-400 hover:bg-amber-50/60 "; break;
                 default: baseStyle += "border-l-transparent hover:bg-blue-50/60 ";
             }
         }
@@ -870,10 +881,13 @@ const Orders = () => {
                     </div>
 
                     {/* Secondary Filters */}
-                    <div className="flex flex-wrap items-center gap-2" ref={dropdownRef}>
+                    <div className="flex flex-wrap items-center gap-2" ref={listDropdownRef}>
                         <div className="relative">
                             <button
-                                onClick={() => setActiveDropdown(activeDropdown === 'status' ? null : 'status')}
+                                onClick={() => {
+                                    if (activeDropdown !== 'status') setFilterSearch('');
+                                    setActiveDropdown(activeDropdown === 'status' ? null : 'status');
+                                }}
                                 className={clsx(
                                     "flex items-center gap-2.5 px-4 py-2 rounded-xl border text-[13px] font-bold transition-all",
                                     getFilterButtonClass('status', activeDropdown === 'status' || selectedStatuses.length > 0)
@@ -901,7 +915,10 @@ const Orders = () => {
 
                         <div className="relative">
                             <button
-                                onClick={() => setActiveDropdown(activeDropdown === 'categories' ? null : 'categories')}
+                                onClick={() => {
+                                    if (activeDropdown !== 'categories') setFilterSearch('');
+                                    setActiveDropdown(activeDropdown === 'categories' ? null : 'categories');
+                                }}
                                 className={clsx(
                                     "flex items-center gap-2.5 px-4 py-2 rounded-xl border text-[13px] font-bold transition-all",
                                     getFilterButtonClass('categories', activeDropdown === 'categories' || selectedCustomerCategories.length > 0)
@@ -929,7 +946,10 @@ const Orders = () => {
 
                         <div className="relative">
                             <button
-                                onClick={() => setActiveDropdown(activeDropdown === 'orderTypes' ? null : 'orderTypes')}
+                                onClick={() => {
+                                    if (activeDropdown !== 'orderTypes') setFilterSearch('');
+                                    setActiveDropdown(activeDropdown === 'orderTypes' ? null : 'orderTypes');
+                                }}
                                 className={clsx(
                                     "flex items-center gap-2.5 px-4 py-2 rounded-xl border text-[13px] font-bold transition-all",
                                     getFilterButtonClass('orderTypes', activeDropdown === 'orderTypes' || selectedOrderTypes.length > 0)
@@ -957,7 +977,10 @@ const Orders = () => {
 
                         <div className="relative">
                             <button
-                                onClick={() => setActiveDropdown(activeDropdown === 'productTypes' ? null : 'productTypes')}
+                                onClick={() => {
+                                    if (activeDropdown !== 'productTypes') setFilterSearch('');
+                                    setActiveDropdown(activeDropdown === 'productTypes' ? null : 'productTypes');
+                                }}
                                 className={clsx(
                                     "flex items-center gap-2.5 px-4 py-2 rounded-xl border text-[13px] font-bold transition-all",
                                     getFilterButtonClass('productTypes', activeDropdown === 'productTypes' || selectedProductTypes.length > 0)
@@ -985,7 +1008,10 @@ const Orders = () => {
 
                         <div className="relative">
                             <button
-                                onClick={() => setActiveDropdown(activeDropdown === 'customers' ? null : 'customers')}
+                                onClick={() => {
+                                    if (activeDropdown !== 'customers') setFilterSearch('');
+                                    setActiveDropdown(activeDropdown === 'customers' ? null : 'customers');
+                                }}
                                 className={clsx(
                                     "flex items-center gap-2.5 px-4 py-2 rounded-xl border text-[13px] font-bold transition-all",
                                     getFilterButtonClass('customers', activeDropdown === 'customers' || selectedCustomers.length > 0)
@@ -1030,7 +1056,7 @@ const Orders = () => {
                 </div>
 
                 {/* Table Content Area */}
-                <div className="hidden md:block flex-1 overflow-x-auto bg-white isolate">
+                <div className="hidden md:block flex-1 overflow-x-auto bg-white">
                     <table className="w-full border-collapse">
                         <thead className="bg-[#F1F5FF]">
                             <tr>
@@ -1091,7 +1117,7 @@ const Orders = () => {
                                             </span>
                                         </td>}
                                         {isColumnVisible('category') && <td className="px-4 py-4 text-[13px] text-muted-foreground font-normal">
-                                            <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-semibold">
+                                            <span className={getCategoryBadgeClass(order.customer_category)}>
                                                 {getLabel(CUSTOMER_CATEGORIES, order.customer_category)}
                                             </span>
                                         </td>}
@@ -1253,7 +1279,7 @@ const Orders = () => {
                         </div>
 
                         {/* Desktop Header */}
-                        <div className="hidden md:block p-4 border-b border-border" ref={dropdownRef}>
+                        <div className="hidden md:block p-4 border-b border-border" ref={statsDropdownRef}>
                             <div className="flex flex-wrap items-center gap-2">
                                 <button
                                     onClick={() => navigate(-1)}
@@ -1265,7 +1291,10 @@ const Orders = () => {
 
                                 <div className="relative">
                                     <button
-                                        onClick={() => setActiveDropdown(activeDropdown === 'status' ? null : 'status')}
+                                        onClick={() => {
+                                            if (activeDropdown !== 'status') setFilterSearch('');
+                                            setActiveDropdown(activeDropdown === 'status' ? null : 'status');
+                                        }}
                                         className={clsx(
                                             "flex items-center gap-2.5 px-4 py-2 rounded-xl border text-[13px] font-bold transition-all",
                                             getFilterButtonClass('status', activeDropdown === 'status' || selectedStatuses.length > 0)
@@ -1293,7 +1322,10 @@ const Orders = () => {
 
                                 <div className="relative">
                                     <button
-                                        onClick={() => setActiveDropdown(activeDropdown === 'categories' ? null : 'categories')}
+                                        onClick={() => {
+                                            if (activeDropdown !== 'categories') setFilterSearch('');
+                                            setActiveDropdown(activeDropdown === 'categories' ? null : 'categories');
+                                        }}
                                         className={clsx(
                                             "flex items-center gap-2.5 px-4 py-2 rounded-xl border text-[13px] font-bold transition-all",
                                             getFilterButtonClass('categories', activeDropdown === 'categories' || selectedCustomerCategories.length > 0)
@@ -1321,7 +1353,10 @@ const Orders = () => {
 
                                 <div className="relative">
                                     <button
-                                        onClick={() => setActiveDropdown(activeDropdown === 'orderTypes' ? null : 'orderTypes')}
+                                        onClick={() => {
+                                            if (activeDropdown !== 'orderTypes') setFilterSearch('');
+                                            setActiveDropdown(activeDropdown === 'orderTypes' ? null : 'orderTypes');
+                                        }}
                                         className={clsx(
                                             "flex items-center gap-2.5 px-4 py-2 rounded-xl border text-[13px] font-bold transition-all",
                                             getFilterButtonClass('orderTypes', activeDropdown === 'orderTypes' || selectedOrderTypes.length > 0)
@@ -1349,7 +1384,10 @@ const Orders = () => {
 
                                 <div className="relative">
                                     <button
-                                        onClick={() => setActiveDropdown(activeDropdown === 'productTypes' ? null : 'productTypes')}
+                                        onClick={() => {
+                                            if (activeDropdown !== 'productTypes') setFilterSearch('');
+                                            setActiveDropdown(activeDropdown === 'productTypes' ? null : 'productTypes');
+                                        }}
                                         className={clsx(
                                             "flex items-center gap-2.5 px-4 py-2 rounded-xl border text-[13px] font-bold transition-all",
                                             getFilterButtonClass('productTypes', activeDropdown === 'productTypes' || selectedProductTypes.length > 0)
@@ -1377,7 +1415,10 @@ const Orders = () => {
 
                                 <div className="relative">
                                     <button
-                                        onClick={() => setActiveDropdown(activeDropdown === 'customers' ? null : 'customers')}
+                                        onClick={() => {
+                                            if (activeDropdown !== 'customers') setFilterSearch('');
+                                            setActiveDropdown(activeDropdown === 'customers' ? null : 'customers');
+                                        }}
                                         className={clsx(
                                             "flex items-center gap-2.5 px-4 py-2 rounded-xl border text-[13px] font-bold transition-all",
                                             getFilterButtonClass('customers', activeDropdown === 'customers' || selectedCustomers.length > 0)
