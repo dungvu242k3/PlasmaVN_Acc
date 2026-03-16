@@ -378,6 +378,7 @@ const CreateCylinderRecovery = () => {
                 onScanSuccess={handleScanSuccess}
                 title={`Quét liên tục (${items.length} đã quét)`}
                 currentCount={items.length}
+                allowDuplicateScans={true}
             />
 
             <form onSubmit={handleSubmit} className="space-y-6 md:space-y-8 relative z-10">

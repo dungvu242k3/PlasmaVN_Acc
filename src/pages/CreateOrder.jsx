@@ -17,6 +17,7 @@ import usePermissions from '../hooks/usePermissions';
 import { supabase } from '../supabase/config';
 import { patchIOSVideoPlaysinline } from '../utils/scannerHelper';
 import BarcodeScanner from '../components/Common/BarcodeScanner';
+import { toast } from 'react-toastify';
 
 const CreateOrder = () => {
     const navigate = useNavigate();
@@ -52,8 +53,11 @@ const CreateOrder = () => {
     const scanTargetIndexRef = useRef(-1);
     useEffect(() => { scanTargetIndexRef.current = scanTargetIndex; }, [scanTargetIndex]);
     const [scanCount, setScanCount] = useState(0);
+    const [isBatchScanning, setIsBatchScanning] = useState(false);
     const assignedCylindersRef = useRef(assignedCylinders);
     useEffect(() => { assignedCylindersRef.current = assignedCylinders; }, [assignedCylinders]);
+    const isBatchScanningRef = useRef(isBatchScanning);
+    useEffect(() => { isBatchScanningRef.current = isBatchScanning; }, [isBatchScanning]);
 
     const getNewOrderCode = () => Math.floor(1000 + Math.random() * 9000).toString();
 
@@ -255,7 +259,10 @@ const CreateOrder = () => {
         if (currentIdx === -1) return;
         
         // Skip if already in the list
-        if (currentArr.includes(decodedText)) return;
+        if (currentArr.includes(decodedText)) {
+            toast.info(`Mã ${decodedText} đã được gán vào đơn hàng này rồi!`);
+            return;
+        }
 
         // Fill the current target index
         setAssignedCylinders(prev => {
@@ -272,20 +279,23 @@ const CreateOrder = () => {
         const fallbackEmpty = updatedArr.findIndex((s) => !s);
         const nextIdx = nextEmpty !== -1 ? nextEmpty : fallbackEmpty;
 
-        if (nextIdx !== -1 && nextIdx !== currentIdx) {
+        if (nextIdx !== -1 && nextIdx !== currentIdx && isBatchScanningRef.current) {
             // Found a next empty slot, keep scanner open and move target index
             setScanTargetIndex(nextIdx);
         } else {
-            // All slots filled
+            // All slots filled OR not in batch mode
             stopCylinderScanner();
-            alert('Đã gán đủ mã bình!');
+            if (isBatchScanningRef.current && nextIdx === -1) {
+                alert('Đã gán đủ mã bình!');
+            }
         }
-    }, [scanTargetIndex]);
+    }, [scanTargetIndex, stopCylinderScanner]);
 
-    const startCylinderScanner = useCallback((targetIndex) => {
+    const startCylinderScanner = useCallback((targetIndex, isBatch = false) => {
         setScanTargetIndex(targetIndex);
         setScanCount(0);
         setIsScannerOpen(true);
+        setIsBatchScanning(isBatch);
     }, []);
 
     // Find first empty slot and start scanning
@@ -295,7 +305,7 @@ const CreateOrder = () => {
             alert('\u0110\u00e3 g\u00e1n \u0111\u1ee7 m\u00e3 b\u00ecnh!');
             return;
         }
-        startCylinderScanner(firstEmpty);
+        startCylinderScanner(firstEmpty, true);
     }, [assignedCylinders, startCylinderScanner]);
 
     const stopCylinderScanner = useCallback(() => {
@@ -903,6 +913,7 @@ const CreateOrder = () => {
                 title={`Quét mã bình (${assignedCylinders.filter(Boolean).length}/${formData.quantity})`}
                 currentCount={assignedCylinders.filter(Boolean).length}
                 totalCount={formData.quantity}
+                allowDuplicateScans={true}
             />
         </>
     );
