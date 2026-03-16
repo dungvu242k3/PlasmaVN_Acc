@@ -45,6 +45,9 @@ const CreateCylinderRecovery = () => {
     const itemsRef = useRef(items);
     useEffect(() => { itemsRef.current = items; }, [items]);
 
+    const customersRef = useRef(customers);
+    useEffect(() => { customersRef.current = customers; }, [customers]);
+
     const formDataRef = useRef(formData);
     useEffect(() => { formDataRef.current = formData; }, [formData]);
 
@@ -143,57 +146,63 @@ const CreateCylinderRecovery = () => {
             return;
         }
         
-        // Add to items list
-        setItems(prev => [...prev, { _id: Date.now(), serial_number: decodedText, condition: 'tot', note: '' }]);
+        // Add to items list immediately for smooth UI
+        setItems(prev => [...prev, { _id: crypto.randomUUID(), serial_number: decodedText, condition: 'tot', note: '' }]);
 
-        const currentFormData = formDataRef.current;
-        // AUTO-FETCH: Try to find owner regardless if selected, to warn or auto-select
-        try {
-            // 1. Get cylinder status/owner
-            const { data: cylData } = await supabase
-                .from('cylinders')
-                .select('customer_name')
-                .eq('serial_number', decodedText)
-                .maybeSingle();
+        // Background auto-fetch logic
+        const fetchInfo = async () => {
+            const currentFormData = formDataRef.current;
+            const currentCustomers = customersRef.current;
+            
+            try {
+                // 1. Get cylinder status/owner
+                const { data: cylData } = await supabase
+                    .from('cylinders')
+                    .select('customer_name')
+                    .eq('serial_number', decodedText)
+                    .maybeSingle();
 
-            if (cylData?.customer_name) {
-                // 2. Map name to customer ID (using local customers list loaded at start)
-                const matchedCustomer = customers.find(c => c.name === cylData.customer_name);
-                
-                if (matchedCustomer) {
-                    if (!currentFormData.customer_id) {
-                        setFormData(prev => ({ ...prev, customer_id: matchedCustomer.id }));
-                        toast.success(`Đã tự động chọn KH: ${matchedCustomer.name}`);
-                    } else if (currentFormData.customer_id !== matchedCustomer.id) {
-                        toast.warning(`Lưu ý: Bình ${decodedText} thuộc về KH ${matchedCustomer.name}, khác với KH đang chọn!`);
-                    }
+                if (cylData?.customer_name) {
+                    // 2. Map name to customer ID
+                    const matchedCustomer = currentCustomers.find(c => c.name === cylData.customer_name);
                     
-                    // 3. Find most recent relative order if no order selected
-                    if (!currentFormData.order_id || currentFormData.customer_id !== matchedCustomer.id) {
-                        const { data: orderData } = await supabase
-                            .from('orders')
-                            .select('id, order_code')
-                            .eq('customer_name', cylData.customer_name)
-                            .contains('assigned_cylinders', [decodedText])
-                            .order('created_at', { ascending: false })
-                            .limit(1)
-                            .maybeSingle();
-                        
-                        if (orderData) {
-                            setFormData(prev => ({ ...prev, order_id: orderData.id, customer_id: matchedCustomer.id }));
-                            toast.success(`Đã tự động liên kết đơn hàng: ĐH ${orderData.order_code}`);
+                    if (matchedCustomer) {
+                        if (!currentFormData.customer_id) {
+                            setFormData(prev => ({ ...prev, customer_id: matchedCustomer.id }));
+                            toast.success(`Đã tự động chọn KH: ${matchedCustomer.name}`);
+                        } else if (currentFormData.customer_id !== matchedCustomer.id) {
+                            toast.warning(`Lưu ý: Bình ${decodedText} thuộc về KH ${matchedCustomer.name}, khác với KH đang chọn!`);
                         }
+                        
+                        // 3. Find most recent relative order if no order selected
+                        if (!currentFormData.order_id || currentFormData.customer_id !== matchedCustomer.id) {
+                            const { data: orderData } = await supabase
+                                .from('orders')
+                                .select('id, order_code')
+                                .eq('customer_name', cylData.customer_name)
+                                .contains('assigned_cylinders', [decodedText])
+                                .order('created_at', { ascending: false })
+                                .limit(1)
+                                .maybeSingle();
+                            
+                            if (orderData) {
+                                setFormData(prev => ({ ...prev, order_id: orderData.id, customer_id: matchedCustomer.id }));
+                                toast.success(`Đã tự động liên kết đơn hàng: ĐH ${orderData.order_code}`);
+                            }
+                        }
+                    } else {
+                        if (!currentFormData.customer_id) toast.info(`Tìm thấy KH gốc (${cylData.customer_name}) nhưng không có trong hệ thống.`);
                     }
                 } else {
-                    if (!currentFormData.customer_id) toast.info(`Tìm thấy KH gốc (${cylData.customer_name}) nhưng không có trong hệ thống.`);
+                    if (!currentFormData.customer_id) toast.info(`Bình ${decodedText} hiện không gắn với KH nào.`);
                 }
-            } else {
-                if (!currentFormData.customer_id) toast.info(`Bình ${decodedText} hiện không gắn với KH nào.`);
+            } catch (err) {
+                console.error('Auto-fetch failed:', err);
             }
-        } catch (err) {
-            console.error('Auto-fetch failed:', err);
-        }
-    }, [customers]);
+        };
+
+        fetchInfo();
+    }, []);
 
     const startScanner = useCallback(() => {
         setIsScannerOpen(true);
