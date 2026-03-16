@@ -14,6 +14,7 @@ const BarcodeScanner = ({
     totalCount = null
 }) => {
     const [pendingScan, setPendingScan] = React.useState(null);
+    const [scanTime, setScanTime] = React.useState(null);
 
     const { isScanning, scanError, hasPermission, start, stop, resetLastScanned } = useBarcodeScanner({
         elementId,
@@ -25,6 +26,7 @@ const BarcodeScanner = ({
         if (pendingScan) {
             onScanSuccess(pendingScan);
             setPendingScan(null);
+            setScanTime(null);
             // Resume scanning after a short delay to prevent immediate re-scan
             setTimeout(() => {
                 resetLastScanned();
@@ -34,6 +36,7 @@ const BarcodeScanner = ({
 
     const handleCancel = () => {
         setPendingScan(null);
+        setScanTime(null);
         setTimeout(() => {
             resetLastScanned();
         }, 500);
@@ -43,6 +46,7 @@ const BarcodeScanner = ({
         const wrapScanSuccess = (decodedText) => {
             // Pause further scans while confirming
             setPendingScan(decodedText);
+            setScanTime(new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }));
         };
 
         if (isOpen) {
@@ -127,9 +131,10 @@ const BarcodeScanner = ({
                         </div>
                         
                         <h4 className="text-2xl font-black mb-2 tracking-tight">ĐÃ QUÉT MÃ</h4>
-                        <div className="bg-white/10 px-6 py-3 rounded-2xl mb-8 border border-white/10 w-full">
+                        <div className="bg-white/10 px-6 py-3 rounded-2xl mb-2 border border-white/10 w-full">
                             <span className="text-2xl font-mono font-bold tracking-widest text-blue-400 break-all">{pendingScan}</span>
                         </div>
+                        <p className="text-gray-400 text-sm font-medium mb-8">Thời gian quét: <span className="text-white">{scanTime}</span></p>
 
                         <div className="w-full space-y-4">
                             <button
