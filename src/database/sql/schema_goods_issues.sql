@@ -33,7 +33,7 @@ ALTER TABLE goods_issues ADD CONSTRAINT check_issue_status CHECK (
 );
 
 ALTER TABLE goods_issues ADD CONSTRAINT check_issue_type CHECK (
-    issue_type IN ('TRA_NCC', 'HUY_XUAT', 'KHAC')
+    issue_type IN ('TRA_NCC', 'HUY_XUAT', 'KHAC', 'TRA_VO', 'TRA_BINH_LOI', 'TRA_MAY')
 );
 
 ALTER TABLE goods_issue_items ADD CONSTRAINT check_issue_item_type CHECK (

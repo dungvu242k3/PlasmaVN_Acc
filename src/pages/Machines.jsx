@@ -272,6 +272,7 @@ const Machines = () => {
             'Loại đầu phát',
             'Bộ phận phụ trách',
             'Kho quản lý',
+            'Khách hàng đang sử dụng máy',
         ];
 
         const exampleData = [
@@ -287,6 +288,7 @@ const Machines = () => {
                 'Loại đầu phát': 'Tia thường',
                 'Bộ phận phụ trách': 'Kỹ thuật',
                 'Kho quản lý': warehousesList[0]?.name || 'Kho tổng',
+                'Khách hàng đang sử dụng máy': 'Bệnh viện Đa khoa Tỉnh',
             },
         ];
 
@@ -334,7 +336,8 @@ const Machines = () => {
                     emission_head_type: row['Loại đầu phát']?.toString(),
                     department_in_charge: row['Bộ phận phụ trách']?.toString(),
                     warehouse: warehouseMap[row['Kho quản lý']?.toString()?.toLowerCase()] || null,
-                    status: 'sẵn sàng'
+                    customer_name: row['Khách hàng đang sử dụng máy']?.toString() || null,
+                    status: row['Khách hàng đang sử dụng máy'] ? 'thuộc khách hàng' : 'sẵn sàng'
                 })).filter(m => m.serial_number);
 
                 if (machinesToInsert.length === 0) {
