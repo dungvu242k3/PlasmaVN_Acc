@@ -18,9 +18,16 @@ CREATE TABLE customers (
     machines_in_use TEXT, -- Mã các máy đang sử dụng (Có thể lưu dạng JSON hoặc text phẩy)
     tax_code VARCHAR(50), -- Mã số thuế
     invoice_address TEXT, -- Địa chỉ xuất hoá đơn GTGT
+    customer_type VARCHAR(50), -- Loại khách hàng: công (BV công), tư (BV tư, TM, PK, NG, SP)
+    last_order_date DATE, -- Ngày đặt hàng gần nhất (dùng tính KH quá hạn)
     
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Constraint for customer_type
+ALTER TABLE customers ADD CONSTRAINT check_customer_type CHECK (
+    customer_type IN ('công', 'tư')
 );
 
 -- RLS (Row Level Security) cho bảng customers

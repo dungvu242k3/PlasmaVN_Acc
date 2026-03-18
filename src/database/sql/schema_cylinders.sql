@@ -22,6 +22,10 @@ CREATE TABLE cylinders (
     -- Additional tracking fields
     customer_name VARCHAR(255), -- Tên khách hàng (Nếu bình đang giao cho KH hoặc status='thuộc khách hàng')
     cylinder_code VARCHAR(100) UNIQUE, -- Mã bình khắc trên vỏ (mã vật lý)
+    expiry_date DATE, -- Ngày hết hạn bình (dùng cho báo cáo bình quá hạn)
+    error_reason TEXT, -- Lý do lỗi (dùng khi status = 'hỏng')
+    error_fixed_date DATE, -- Ngày sửa xong (dùng tính thời gian xử lý lỗi)
+    error_reported_by VARCHAR(255), -- Người báo lỗi
     
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP

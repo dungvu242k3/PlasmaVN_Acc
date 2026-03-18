@@ -11,7 +11,9 @@ export const MODULE_PERMISSIONS = [
     { id: 'materials', label: 'Danh sách nguồn vật tư' },
     { id: 'promotions', label: 'Danh sách khuyến mãi' },
     { id: 'users', label: 'Quản lý người dùng' },
-    { id: 'permissions', label: 'Phân quyền chi tiết' }
+    { id: 'permissions', label: 'Phân quyền chi tiết' },
+    { id: 'reports', label: 'Báo cáo thống kê' },
+    { id: 'dashboard', label: 'Thống kê tổng quan' }
 ];
 
 export const ACTION_TYPES = [

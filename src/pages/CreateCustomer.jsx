@@ -311,8 +311,8 @@ const CreateCustomer = () => {
                 </div>
 
                 {/* Footer */}
-                <div className="p-6 md:p-10 bg-gray-50 border-t border-gray-100 flex flex-col items-center justify-between gap-6 md:flex-row">
-                    <p className="text-sm text-gray-400 font-medium italic w-full text-center md:text-left">* Vui lòng kiểm tra kỹ thông tin liên hệ của đối tác.</p>
+                <div className="p-6 pb-20 md:p-10 bg-gray-50 border-t border-gray-100 flex flex-col items-center justify-between gap-6 md:flex-row">
+                    <p className="hidden md:block text-sm text-gray-400 font-medium italic w-full text-center md:text-left">* Vui lòng kiểm tra kỹ thông tin liên hệ của đối tác.</p>
                     <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
                         <button
                             onClick={resetForm}

@@ -407,8 +407,8 @@ const CreatePermission = () => {
                 </div>
 
                 {/* Footer Buttons */}
-                <div className="p-6 md:p-10 bg-white border-t border-gray-100 flex flex-col md:flex-row items-center justify-between gap-6">
-                    <p className="text-gray-400 text-sm font-medium italic">* Phân quyền có hiệu lực tự động cho tất cả người dùng thuộc nhóm này.</p>
+                <div className="p-6 pb-20 md:p-10 bg-white border-t border-gray-100 flex flex-col md:flex-row items-center justify-between gap-6">
+                    <p className="hidden md:block text-gray-400 text-sm font-medium italic">* Phân quyền có hiệu lực tự động cho tất cả người dùng thuộc nhóm này.</p>
                     <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
                         <button
                             onClick={resetForm}

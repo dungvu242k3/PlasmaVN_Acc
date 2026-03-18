@@ -190,7 +190,7 @@ export default function MachineFormModal({ machine, onClose, onSuccess }) {
                     </div>
 
                     {/* Form Body */}
-                    <div className="p-5 sm:p-6 overflow-y-auto bg-slate-50 custom-scrollbar flex-1 min-h-0">
+                    <div className="p-5 sm:p-6 overflow-y-auto bg-slate-50 custom-scrollbar flex-1 min-h-0 pb-20 sm:pb-6">
                         {errorMsg && (
                             <div className="mb-4 p-3 bg-rose-50 border border-rose-200 rounded-xl text-[13px] font-semibold text-rose-600 flex items-center gap-2">
                                 <X className="w-5 h-5 shrink-0" />

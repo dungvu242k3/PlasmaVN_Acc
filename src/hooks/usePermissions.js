@@ -9,8 +9,6 @@ export const usePermissions = () => {
     useEffect(() => {
         const fetchPermissions = async () => {
             try {
-                // Giả định chúng ta lấy Role từ user hiện tại. 
-                // Ở đây demo mặc định là 'Admin'
                 const userRole = 'Admin';
 
                 const { data, error } = await supabase
@@ -37,8 +35,31 @@ export const usePermissions = () => {
     const canCreate = (module) => role === 'Admin' || permissions[module]?.create || false;
     const canEdit = (module) => role === 'Admin' || permissions[module]?.edit || false;
     const canDelete = (module) => role === 'Admin' || permissions[module]?.delete || false;
+    
+    const canViewAllReports = () => role === 'Admin' || permissions['reports']?.view_all || false;
+    const canViewOwnReports = () => role === 'Admin' || permissions['reports']?.view_own || false;
+    const canViewWarehouseReports = () => role === 'Admin' || permissions['reports']?.view_warehouse || false;
+    const canViewErrorReports = () => role === 'Admin' || permissions['reports']?.view_errors || false;
+    const canExportReports = () => role === 'Admin' || permissions['reports']?.export || false;
+    const canScheduleReports = () => role === 'Admin' || permissions['reports']?.schedule || false;
+    const canUpdateReports = () => role === 'Admin' || permissions['reports']?.update || false;
 
-    return { permissions, role, loading, canView, canCreate, canEdit, canDelete };
+    return { 
+        permissions, 
+        role, 
+        loading, 
+        canView, 
+        canCreate, 
+        canEdit, 
+        canDelete,
+        canViewAllReports,
+        canViewOwnReports,
+        canViewWarehouseReports,
+        canViewErrorReports,
+        canExportReports,
+        canScheduleReports,
+        canUpdateReports
+    };
 };
 
 export default usePermissions;

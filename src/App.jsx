@@ -38,7 +38,18 @@ import Suppliers from './pages/Suppliers';
 import Users from './pages/Users';
 import Warehouses from './pages/Warehouses';
 
-const moduleRoutes = ['/don-hang-kinh-doanh', '/quan-ly-thiet-bi', '/van-chuyen', '/thu-hoi', '/mua-hang-nha-cung-cap', '/kho', '/he-thong', '/vat-tu'];
+import StatisticsDashboard from './pages/StatisticsDashboard';
+import CustomerReport from './pages/CustomerReport';
+import SalespersonReport from './pages/SalespersonReport';
+import CylinderExpiryReport from './pages/CylinderExpiryReport';
+import CustomerExpiryReport from './pages/CustomerExpiryReport';
+import CylinderErrorReport from './pages/CylinderErrorReport';
+import MachineStatsReport from './pages/MachineStatsReport';
+import OrdersMonthlyReport from './pages/OrdersMonthlyReport';
+import MachineRevenueReport from './pages/MachineRevenueReport';
+import QuarterlyReport from './pages/QuarterlyReport';
+
+const moduleRoutes = ['/don-hang-kinh-doanh', '/quan-ly-thiet-bi', '/van-chuyen', '/thu-hoi', '/mua-hang-nha-cung-cap', '/kho', '/he-thong', '/vat-tu', '/thong-ke'];
 
 const legacyRedirects = [
   ['/hanh-chinh', '/don-hang-kinh-doanh'],
@@ -90,6 +101,16 @@ function App() {
               }
             >
               <Route path="/trang-chu" element={<Dashboard />} />
+              <Route path="/thong-ke" element={<StatisticsDashboard />} />
+              <Route path="/bao-cao/khach-hang" element={<CustomerReport />} />
+              <Route path="/bao-cao/nhan-vien" element={<SalespersonReport />} />
+              <Route path="/bao-cao/binh-qua-han" element={<CylinderExpiryReport />} />
+              <Route path="/bao-cao/khach-qua-han" element={<CustomerExpiryReport />} />
+              <Route path="/bao-cao/binh-loi" element={<CylinderErrorReport />} />
+              <Route path="/bao-cao/may-banh" element={<MachineStatsReport />} />
+              <Route path="/bao-cao/don-xuat" element={<OrdersMonthlyReport />} />
+              <Route path="/bao-cao/doanh-so-may" element={<MachineRevenueReport />} />
+              <Route path="/bao-cao/bao-cao-quy" element={<QuarterlyReport />} />
               {moduleRoutes.map((path) => (
                 <Route key={path} path={path} element={<ModulePage />} />
               ))}

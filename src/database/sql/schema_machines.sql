@@ -26,6 +26,13 @@ CREATE TABLE machines (
     customer_name VARCHAR(255), -- Used when status is 'thuộc khách hàng'
     department_in_charge VARCHAR(255), 
     
+    -- Maintenance fields (for quarterly reports)
+    maintenance_date DATE, -- Ngày bảo trì gần nhất
+    maintenance_type VARCHAR(100), -- Loại bảo trì: bảo dưỡng, sửa chữa, kiểm tra
+    maintenance_note TEXT, -- Ghi chú bảo trì
+    next_maintenance_date DATE, -- Ngày bảo trì tiếp theo (dự kiến)
+    maintenance_by VARCHAR(255), -- Người thực hiện bảo trì
+    
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );

@@ -421,7 +421,7 @@ const CreatePromotion = () => {
                     </div>
 
                     {/* Submit */}
-                    <div className="bg-gray-50 border-t border-gray-100 px-6 md:px-10 py-6 flex flex-col md:flex-row justify-end gap-3">
+                    <div className="bg-gray-50 border-t border-gray-100 px-6 md:px-10 pb-20 py-6 flex flex-col md:flex-row justify-end gap-3">
                         <button
                             type="button"
                             onClick={handleReset}

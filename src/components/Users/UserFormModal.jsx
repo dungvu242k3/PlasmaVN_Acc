@@ -126,7 +126,7 @@ export default function UserFormModal({ user, onClose, onSuccess }) {
                 </div>
 
                 {/* Form Body */}
-                <div className="p-8 overflow-y-auto">
+                <div className="p-4 sm:p-8 overflow-y-auto pb-20 sm:pb-8">
                     {errorMsg && (
                         <div className="mb-6 p-4 bg-rose-50 border border-rose-200 rounded-xl text-sm font-bold text-rose-600 flex items-center gap-2">
                             <X className="w-5 h-5 shrink-0" />

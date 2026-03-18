@@ -14,10 +14,12 @@ import {
   PackageCheck,
   Gift,
   ShieldCheck,
+  BarChart3,
 } from 'lucide-react';
 
 export const sidebarMenu = [
   { path: '/trang-chu', label: 'Bảng điều khiển', icon: Layout },
+  { path: '/thong-ke', label: 'Thống kê', icon: BarChart3 },
   { path: '/don-hang-kinh-doanh', label: 'Đơn hàng & Kinh doanh', icon: Package },
   { path: '/quan-ly-thiet-bi', label: 'Quản lý thiết bị', icon: Monitor },
   { path: '/kho', label: 'Kho', icon: Warehouse },
@@ -29,6 +31,17 @@ export const sidebarMenu = [
 ];
 
 export const extraMenuItems = [
+  { path: '/trang-chu', label: 'Bảng điều khiển', icon: Layout },
+  { path: '/thong-ke', label: 'Thống kê tổng quan', icon: BarChart3 },
+  { path: '/bao-cao/khach-hang', label: 'Báo cáo khách hàng', icon: BarChart3 },
+  { path: '/bao-cao/nhan-vien', label: 'Báo cáo NVKD', icon: BarChart3 },
+  { path: '/bao-cao/binh-qua-han', label: 'Báo cáo bình quá hạn', icon: BarChart3 },
+  { path: '/bao-cao/khach-qua-han', label: 'Báo cáo KH quá hạn', icon: BarChart3 },
+  { path: '/bao-cao/binh-loi', label: 'Báo cáo bình lỗi', icon: BarChart3 },
+  { path: '/bao-cao/may-banh', label: 'Báo cáo máy', icon: BarChart3 },
+  { path: '/bao-cao/don-xuat', label: 'Báo cáo đơn xuất', icon: BarChart3 },
+  { path: '/bao-cao/doanh-so-may', label: 'Báo cáo doanh số', icon: BarChart3 },
+  { path: '/bao-cao/bao-cao-quy', label: 'Báo cáo quý', icon: BarChart3 },
   { path: '/don-hang', label: 'Danh sách đơn hàng', icon: Package },
   { path: '/khach-hang', label: 'Danh sách khách hàng', icon: Building2 },
   { path: '/khach-hang/tao', label: 'Thêm khách hàng', icon: Building2 },
