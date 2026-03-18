@@ -61,8 +61,8 @@ export const useReports = () => {
         .from('view_salesperson_stats')
         .select('*');
 
-      if (filters.warehouse) {
-        query = query.eq('warehouse', filters.warehouse);
+      if (filters.warehouse_id) {
+        query = query.eq('warehouse_id', filters.warehouse_id);
       }
 
       const { data, error } = await query;
@@ -84,8 +84,8 @@ export const useReports = () => {
         .from('view_cylinder_expiry')
         .select('*');
 
-      if (filters.kho) {
-        query = query.eq('kho', filters.kho);
+      if (filters.warehouse_id) {
+        query = query.eq('kho', filters.warehouse_id);
       }
       if (filters.min_days) {
         query = query.gte('so_ngay_ton', filters.min_days);
@@ -110,8 +110,8 @@ export const useReports = () => {
         .from('view_customer_expiry')
         .select('*');
 
-      if (filters.kho) {
-        query = query.eq('kho', filters.kho);
+      if (filters.warehouse_id) {
+        query = query.eq('kho', filters.warehouse_id);
       }
       if (filters.min_days) {
         query = query.gte('so_ngay_chua_phat_sinh', filters.min_days);
@@ -136,8 +136,8 @@ export const useReports = () => {
         .from('view_cylinder_errors')
         .select('*');
 
-      if (filters.kho) {
-        query = query.eq('kho', filters.kho);
+      if (filters.warehouse_id) {
+        query = query.eq('kho', filters.warehouse_id);
       }
       if (filters.start_date && filters.end_date) {
         query = query.gte('ngay_phat_hien_loi', filters.start_date)
@@ -163,8 +163,8 @@ export const useReports = () => {
         .from('view_machine_stats')
         .select('*');
 
-      if (filters.kho) {
-        query = query.eq('kho', filters.kho);
+      if (filters.warehouse) {
+        query = query.eq('kho', filters.warehouse);
       }
       if (filters.machine_type) {
         query = query.eq('loai_may', filters.machine_type);
@@ -272,10 +272,11 @@ export const useReports = () => {
     setLoading(true);
     setError(null);
     try {
-      const [warehousesRes, customerTypesRes, salespersonsRes, yearsRes] = await Promise.all([
-        supabase.from('warehouses').select('id, name').order('name'),
+      const [warehousesRes, customerTypesRes, salespersonsRes, machineTypesRes, yearsRes] = await Promise.all([
+        supabase.from('warehouses').select('id, name').eq('status', 'Đang hoạt động').order('name'),
         supabase.from('customers').select('customer_type').order('customer_type'),
-        supabase.from('profiles').select('full_name').order('full_name'),
+        supabase.from('app_users').select('name').order('name'),
+        supabase.from('machines').select('machine_type').order('machine_type'),
         supabase.rpc('get_distinct_years').catch(() => {
           const currentYear = new Date().getFullYear();
           return { data: [currentYear, currentYear - 1], error: null };
@@ -284,13 +285,15 @@ export const useReports = () => {
 
       const warehouses = warehousesRes.data || [];
       const customerTypes = [...new Set((customerTypesRes.data || []).map(r => r.customer_type).filter(Boolean))];
-      const salespersons = [...new Set((salespersonsRes.data || []).map(r => r.full_name).filter(Boolean))];
+      const salespersons = [...new Set((salespersonsRes.data || []).map(r => r.name).filter(Boolean))];
+      const machineTypes = [...new Set((machineTypesRes.data || []).map(r => r.machine_type).filter(Boolean))];
       const years = yearsRes.data || [new Date().getFullYear(), new Date().getFullYear() - 1];
 
       return {
         warehouses,
         customerTypes,
         salespersons,
+        machineTypes,
         years: [...new Set(years)].sort((a, b) => b - a)
       };
     } catch (err) {
@@ -299,6 +302,7 @@ export const useReports = () => {
         warehouses: [],
         customerTypes: [],
         salespersons: [],
+        machineTypes: [],
         years: [new Date().getFullYear()]
       };
     } finally {

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Download, Filter, Package } from 'lucide-react';
+import { Download, Filter, Package, Hash, Building } from 'lucide-react';
 import { useReports } from '../hooks/useReports';
 import { exportOrdersMonthlyReport } from '../utils/exportExcel';
 
@@ -86,41 +86,83 @@ const OrdersMonthlyReport = () => {
         <input type="text" placeholder="Tìm mã đơn, KH..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full px-3 py-2 border rounded-lg text-xs sm:text-sm" />
       </div>
 
-      <div className="bg-card rounded-xl border border-border overflow-hidden">
-        {loading ? (<div className="flex items-center justify-center h-32 sm:h-48 md:h-64"><div className="animate-spin rounded-full h-6 sm:h-8 w-6 sm:w-8 border-b-2 border-primary"></div></div>) : (
-          <div className="relative px-1">
-            <div className="overflow-x-auto -webkit-overflow-scrolling-touch pb-3 sm:pb-4">
-              <table className="w-full min-w-[900px] sm:min-w-[700px]">
-              <thead className="bg-muted/50 sticky top-0">
+      {/* Mobile: Cards Layout */}
+      <div className="block sm:hidden space-y-2">
+        {loading ? (
+          <div className="flex items-center justify-center h-48"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div></div>
+        ) : filteredData.length > 0 ? (
+          filteredData.map((item, index) => (
+            <div key={index} className="bg-card rounded-xl border border-border p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Hash className="w-4 h-4 text-primary shrink-0" />
+                  <span className="font-semibold text-sm">{item.ma_don}</span>
+                </div>
+                <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${item.trang_thai === 'HOAN_THANH' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>
+                  {item.trang_thai === 'HOAN_THANH' ? 'Hoàn thành' : 'Đã duyệt'}
+                </span>
+              </div>
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Building className="w-3 h-3 shrink-0" />
+                <span className="truncate">{item.ten_khach_hang}</span>
+              </div>
+              <div className="flex items-center justify-between pt-2 border-t border-border">
+                <div className="flex gap-4 text-xs">
+                  <span className="text-muted-foreground">SL: <span className="font-semibold text-foreground">{item.so_luong}</span></span>
+                  <span className="text-muted-foreground">Loại: <span className="font-semibold text-foreground">{item.loai_khach_hang}</span></span>
+                </div>
+                <span className="text-xs font-semibold text-green-600">{formatCurrency(item.thanh_tien)}</span>
+              </div>
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span>{item.kho}</span>
+                <span>{item.nhan_vien_kinh_doanh || '-'}</span>
+              </div>
+            </div>
+          ))
+        ) : (
+          <div className="bg-card rounded-xl border border-border p-8 text-center text-muted-foreground">
+            <Package className="w-10 h-10 mx-auto mb-2 opacity-50" />
+            <p className="text-sm">Không có đơn hàng</p>
+          </div>
+        )}
+      </div>
+
+      {/* Desktop: Table Layout */}
+      <div className="hidden sm:block bg-card rounded-xl border borderBorder overflow-hidden">
+        {loading ? (
+          <div className="flex items-center justify-center h-48 md:h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div></div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-muted/50">
                 <tr>
-                  <th className="px-2 sm:px-3 py-2 text-left text-xs font-medium whitespace-nowrap">Mã đơn</th>
-                  <th className="px-2 sm:px-3 py-2 text-left text-xs font-medium whitespace-nowrap hidden sm:table-cell">Loại</th>
-                  <th className="px-2 sm:px-3 py-2 text-left text-xs font-medium whitespace-nowrap hidden md:table-cell">Kho</th>
-                  <th className="px-2 sm:px-3 py-2 text-left text-xs font-medium whitespace-nowrap">Tên KH</th>
-                  <th className="px-2 sm:px-3 py-2 text-right text-xs font-medium whitespace-nowrap">SL</th>
-                  <th className="px-2 sm:px-3 py-2 text-right text-xs font-medium whitespace-nowrap hidden lg:table-cell">Thành tiền</th>
-                  <th className="px-2 sm:px-3 py-2 text-left text-xs font-medium whitespace-nowrap hidden sm:table-cell">Trạng thái</th>
-                  <th className="px-2 sm:px-3 py-2 text-left text-xs font-medium whitespace-nowrap hidden xl:table-cell">NVKD</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium">Mã đơn</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium">Loại</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium">Kho</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium">Tên KH</th>
+                  <th className="px-3 py-2 text-right text-xs font-medium">SL</th>
+                  <th className="px-3 py-2 text-right text-xs font-medium">Thành tiền</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium">Trạng thái</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium">NVKD</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredData.length > 0 ? filteredData.map((item, index) => (
-                  <tr key={index} className="border-t hover:bg-muted/30 text-xs sm:text-sm">
-                    <td className="px-2 sm:px-3 py-2 font-medium whitespace-nowrap">{item.ma_don}</td>
-                    <td className="px-2 sm:px-3 py-2 whitespace-nowrap hidden sm:table-cell">{item.loai_khach_hang}</td>
-                    <td className="px-2 sm:px-3 py-2 whitespace-nowrap hidden md:table-cell">{item.kho}</td>
-                    <td className="px-2 sm:px-3 py-2 max-w-[100px] sm:max-w-[150px] truncate">{item.ten_khach_hang}</td>
-                    <td className="px-2 sm:px-3 py-2 text-right whitespace-nowrap">{item.so_luong}</td>
-                    <td className="px-2 sm:px-3 py-2 text-right font-medium whitespace-nowrap hidden lg:table-cell">{formatCurrency(item.thanh_tien)}</td>
-                    <td className="px-2 sm:px-3 py-2 whitespace-nowrap hidden sm:table-cell"><span className={`px-1.5 py-0.5 rounded text-xs ${item.trang_thai === 'HOAN_THANH' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>{item.trang_thai === 'HOAN_THANH' ? 'Hoàn thành' : 'Đã duyệt'}</span></td>
-                    <td className="px-2 sm:px-3 py-2 whitespace-nowrap hidden xl:table-cell max-w-[80px] truncate">{item.nhan_vien_kinh_doanh || '-'}</td>
+                  <tr key={index} className="border-t hover:bg-muted/30 text-sm">
+                    <td className="px-3 py-2 font-medium">{item.ma_don}</td>
+                    <td className="px-3 py-2">{item.loai_khach_hang}</td>
+                    <td className="px-3 py-2">{item.kho}</td>
+                    <td className="px-3 py-2 max-w-[150px] truncate">{item.ten_khach_hang}</td>
+                    <td className="px-3 py-2 text-right">{item.so_luong}</td>
+                    <td className="px-3 py-2 text-right font-medium">{formatCurrency(item.thanh_tien)}</td>
+                    <td className="px-3 py-2"><span className={`px-1.5 py-0.5 rounded text-xs ${item.trang_thai === 'HOAN_THANH' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>{item.trang_thai === 'HOAN_THANH' ? 'Hoàn thành' : 'Đã duyệt'}</span></td>
+                    <td className="px-3 py-2 max-w-[80px] truncate">{item.nhan_vien_kinh_doanh || '-'}</td>
                   </tr>
-                )) : (<tr><td colSpan={8} className="px-2 sm:px-3 py-8 text-center text-muted-foreground"><Package className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-2 opacity-50" /><p className="text-sm">Không có đơn hàng</p></td></tr>)}
+                )) : (
+                  <tr><td colSpan={8} className="px-3 py-8 text-center text-muted-foreground"><Package className="w-12 h-12 mx-auto mb-2 opacity-50" /><p className="text-sm">Không có đơn hàng</p></td></tr>
+                )}
               </tbody>
             </table>
-            </div>
-            <div className="absolute right-0 top-0 bottom-3 sm:bottom-4 w-6 sm:w-8 bg-gradient-to-l from-card to-transparent pointer-events-none md:hidden"></div>
-            <div className="absolute left-0 top-0 bottom-3 sm:bottom-4 w-4 sm:w-6 bg-gradient-to-r from-card to-transparent pointer-events-none md:hidden"></div>
           </div>
         )}
       </div>
