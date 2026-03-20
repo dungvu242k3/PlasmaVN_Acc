@@ -489,7 +489,7 @@ export default function RepairTicketForm({ ticket, initialCustomer, onClose, onS
                                                     ))}
                                                 </div>
                                                 <div className="p-3 border-t border-slate-100 bg-emerald-50/30 flex items-center gap-2">
-                                                    <input type="text" value={newErrorTypeName} onChange={(e) => setNewErrorTypeName(e.target.value)} placeholder="Nhập tên lỗi mới..." onClick={(e) => e.stopPropagation()} className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm font-bold outline-none focus:border-emerald-300 transition-all font-semibold" />
+                                                    <input type="text" value={newErrorTypeName} onChange={(e) => setNewErrorTypeName(e.target.value)} placeholder="Nhập tên lỗi mới..." onClick={(e) => e.stopPropagation()} className="w-full px-4 py-2 rounded-xl border border-slate-200 text-sm font-bold outline-none focus:border-emerald-300 transition-all" />
                                                     <button type="button" onClick={(e) => { e.stopPropagation(); handleAddErrorType(); }} className="h-10 w-10 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 shadow-lg shadow-emerald-200 flex items-center justify-center shrink-0 transition-all"><Plus size={20} /></button>
                                                 </div>
                                             </div>
@@ -656,7 +656,7 @@ export default function RepairTicketForm({ ticket, initialCustomer, onClose, onS
     if (fullPage) return content;
 
     return (
-        <div className="fixed inset-0 bg-slate-900/55 backdrop-blur-sm flex items-stretch sm:items-center justify-center z-[200000] p-0 sm:p-2 animate-in fade-in duration-200 [&_input]:!font-[600] [&_select]:!font-[600] [&_textarea]:!font-[600] [&_input]:!text-slate-800 [&_select]:!text-slate-800 [&_textarea]:!text-slate-800 [&_input::placeholder]:!text-slate-400 [&_textarea::placeholder]:!text-slate-400">
+        <div className="fixed inset-0 bg-slate-900/55 backdrop-blur-sm flex items-stretch sm:items-center justify-center z-[200000] p-0 sm:p-2 animate-in fade-in duration-200 [&_input]:text-slate-800 [&_select]:text-slate-800 [&_textarea]:text-slate-800 [&_input::placeholder]:text-slate-400 [&_textarea::placeholder]:text-slate-400">
             {content}
         </div>
     );
