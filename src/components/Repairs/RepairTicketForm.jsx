@@ -91,6 +91,13 @@ export default function RepairTicketForm({ ticket, onClose, onSuccess }) {
         }
     }, [ticket, isEdit, user, role]);
 
+    useEffect(() => {
+        if (isEdit && ticket && customers.length > 0) {
+            const customer = customers.find(c => c.id === ticket.customer_id);
+            if (customer) fetchCustomerDevices(customer.name);
+        }
+    }, [isEdit, ticket, customers]);
+
     const fetchMasterData = async () => {
         setIsFetchingData(true);
         try {
@@ -118,24 +125,13 @@ export default function RepairTicketForm({ ticket, onClose, onSuccess }) {
         }
     };
 
-    const handleChange = (e) => {
-        const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: value }));
-    };
-
-    // Customer Dropdown logic
-    const handleCustomerSelect = async (customer) => {
-        setFormData(prev => ({ ...prev, customerId: customer.id, machineSerial: '', machineName: '' }));
-        setIsCustomerDropdownOpen(false);
-        setCustomerSearchTerm('');
-        setAvailableDevices([]); // Reset
-
-        // Fetch devices from Order History for this specific customer
+    const fetchCustomerDevices = async (customerName) => {
+        if (!customerName) return;
         try {
             const { data: orderData } = await supabase
                 .from('orders')
                 .select('department, assigned_cylinders, product_type')
-                .eq('customer_name', customer.name);
+                .eq('customer_name', customerName);
 
             if (orderData) {
                 const formatProdName = (name) => {
@@ -149,11 +145,9 @@ export default function RepairTicketForm({ ticket, onClose, onSuccess }) {
                 const serialMap = new Map(); // serial -> product_type
                 orderData.forEach(o => {
                     const readableName = formatProdName(o.product_type);
-                    // machineSerial is stored in 'department'
                     if (o.department?.trim()) {
                         serialMap.set(o.department.trim(), readableName || 'Máy');
                     }
-                    // assigned_cylinders is an array of serials
                     if (o.assigned_cylinders) {
                         o.assigned_cylinders.forEach(s => {
                             if (s?.trim()) {
@@ -171,6 +165,20 @@ export default function RepairTicketForm({ ticket, onClose, onSuccess }) {
         } catch (err) {
             console.error('Lỗi fetch đơn hàng:', err);
         }
+    };
+
+    const handleChange = (e) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({ ...prev, [name]: value }));
+    };
+
+    // Customer Dropdown logic
+    const handleCustomerSelect = async (customer) => {
+        setFormData(prev => ({ ...prev, customerId: customer.id, machineSerial: '', machineName: '' }));
+        setIsCustomerDropdownOpen(false);
+        setCustomerSearchTerm('');
+        setAvailableDevices([]); // Reset
+        fetchCustomerDevices(customer.name);
     };
 
     const cFilteredCustomers = customers.filter(c =>
