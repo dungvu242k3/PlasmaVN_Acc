@@ -4,7 +4,7 @@ import { ORDER_STATE_TRANSITIONS, PRODUCT_TYPES } from '../../constants/orderCon
 import { supabase } from '../../supabase/config';
 import OrderHistoryTimeline from './OrderHistoryTimeline';
 
-export default function OrderStatusUpdater({ order, userRole, onClose, onUpdateSuccess }) {
+export default function OrderStatusUpdater({ order, warehouseName, userRole, onClose, onUpdateSuccess }) {
     const [isLoading, setIsLoading] = useState(false);
     const [deliveryUnit, setDeliveryUnit] = useState(order?.delivery_unit || '');
     const [selectedFile, setSelectedFile] = useState(null);
@@ -25,6 +25,49 @@ export default function OrderStatusUpdater({ order, userRole, onClose, onUpdateS
         };
         fetchShippers();
     }, []);
+
+    useEffect(() => {
+        const validateSerials = async () => {
+            const allSerials = scannedSerials.split(/[\n, ]+/).map(s => s.trim()).filter(Boolean);
+            if (allSerials.length === 0) return;
+
+            const uniqueSerials = [...new Set(allSerials)];
+            if (uniqueSerials.length < allSerials.length) {
+                setErrorMsg('Phát hiện mã trùng bị quét lại! Hệ thống đã tự động lọc.');
+                setScannedSerials(uniqueSerials.join('\n') + '\n');
+                return;
+            }
+
+            const { data, error } = await supabase.from('cylinders').select('serial_number, status').in('serial_number', uniqueSerials);
+            if (error) return; // skip if db error fails silently, or show error
+
+            const validCylinders = data || [];
+            const invalid = [];
+            const validSerialsList = [];
+
+            for (const serial of uniqueSerials) {
+                const match = validCylinders.find(c => c.serial_number === serial);
+                if (!match) {
+                    invalid.push(`${serial} (Không tồn tại hệ thống)`);
+                } else if (match.status !== 'sẵn sàng') {
+                    invalid.push(`${serial} (T/thái: ${match.status})`);
+                } else {
+                    validSerialsList.push(serial);
+                }
+            }
+
+            if (invalid.length > 0) {
+                setErrorMsg(`Loại bỏ mã lỗi:\n` + invalid.join('\n'));
+                setScannedSerials(validSerialsList.join('\n') + (validSerialsList.length > 0 ? '\n' : ''));
+            }
+        };
+
+        const timer = setTimeout(() => {
+            if (scannedSerials) validateSerials();
+        }, 800);
+        
+        return () => clearTimeout(timer);
+    }, [scannedSerials]);
 
     if (!order) return null;
 
@@ -265,7 +308,7 @@ export default function OrderStatusUpdater({ order, userRole, onClose, onUpdateS
                             <div className="flex justify-between"><span className="text-gray-500 font-medium">Mã máy:</span><span className="font-bold text-blue-700">{order.department}</span></div>
                         )}
                         {order.warehouse && (
-                            <div className="flex justify-between"><span className="text-gray-500 font-medium">Kho xuất:</span><span className="font-bold text-gray-900">{order.warehouse}</span></div>
+                            <div className="flex justify-between"><span className="text-gray-500 font-medium">Kho xuất:</span><span className="font-bold text-gray-900">{warehouseName || order.warehouse}</span></div>
                         )}
                     </div>
 

@@ -1762,6 +1762,7 @@ const Orders = () => {
             {isActionModalOpen && (
                 <OrderStatusUpdater
                     order={selectedOrder}
+                    warehouseName={getLabel(warehousesList, selectedOrder?.warehouse)}
                     userRole={role}
                     onClose={() => setIsActionModalOpen(false)}
                     onUpdateSuccess={() => {
