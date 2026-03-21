@@ -44,6 +44,7 @@ CREATE TABLE IF NOT EXISTS public.repair_tickets (
     technical_feedback TEXT,
     technical_images TEXT[],
     status VARCHAR(50) DEFAULT 'Mới',
+    loai_loi VARCHAR(50), -- Tên lỗi (Máy/Bình)
     created_by UUID REFERENCES public.app_users(id) ON DELETE SET NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()

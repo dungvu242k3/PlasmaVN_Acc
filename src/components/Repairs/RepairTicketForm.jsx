@@ -1,3 +1,4 @@
+import { clsx } from 'clsx';
 import { Activity, Camera, ChevronDown, Edit3, HeartPulse, Image as ImageIcon, MapPin, Save, Search, Ticket, Trash2, User, Wrench, X, Plus } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { toast } from 'react-toastify';
@@ -56,7 +57,8 @@ export default function RepairTicketForm({ ticket, initialCustomer, onClose, onS
         technicianId: '',
         technicalFeedback: '',
         technicalImages: [],
-        status: 'Mới'
+        status: 'Mới',
+        errorCategory: '' // Tên lỗi: Máy/Bình
     };
 
     const [formData, setFormData] = useState(defaultState);
@@ -82,7 +84,8 @@ export default function RepairTicketForm({ ticket, initialCustomer, onClose, onS
                 technicianId: ticket.technician_id || '',
                 technicalFeedback: ticket.technical_feedback || '',
                 technicalImages: ticket.technical_images || [],
-                status: ticket.status || 'Mới'
+                status: ticket.status || 'Mới',
+                errorCategory: ticket.loai_loi || ''
             });
         } else {
             // New Ticket: Handle initial customer if provided
@@ -170,7 +173,8 @@ export default function RepairTicketForm({ ticket, initialCustomer, onClose, onS
                 
                 setAvailableDevices(Array.from(serialMap.entries()).map(([s, name]) => ({
                     serial_number: s,
-                    name: name
+                    name: name,
+                    category: name.includes('Máy') ? 'Máy' : (name.includes('Bình') ? 'Bình' : '')
                 })));
             }
         } catch (err) {
@@ -199,7 +203,12 @@ export default function RepairTicketForm({ ticket, initialCustomer, onClose, onS
 
     // Device Dropdown logic
     const handleMachineSelect = (m) => {
-        setFormData(prev => ({ ...prev, machineSerial: m.serial_number, machineName: m.name }));
+        setFormData(prev => ({ 
+            ...prev, 
+            machineSerial: m.serial_number, 
+            machineName: m.name,
+            errorCategory: m.category || prev.errorCategory 
+        }));
         setIsMachineDropdownOpen(false);
         setMachineSearchTerm('');
     };
@@ -290,7 +299,8 @@ export default function RepairTicketForm({ ticket, initialCustomer, onClose, onS
                 technician_id: formData.technicianId || null,
                 technical_feedback: formData.technicalFeedback,
                 technical_images: newTechImgUrls,
-                status: formData.status
+                status: formData.status,
+                loai_loi: formData.errorCategory
             };
 
             if (isEdit) {
@@ -451,7 +461,36 @@ export default function RepairTicketForm({ ticket, initialCustomer, onClose, onS
                                         placeholder="Tự động điền..." disabled
                                         className="w-full h-12 px-5 bg-slate-100 border border-slate-200 rounded-2xl text-[15px] font-bold text-slate-400 cursor-not-allowed"
                                     />
-                                </div>
+                            </div>
+                        </div>
+                    </div>
+                        
+                        {/* Section 1.5: Phân loại lỗi (Tên lỗi) */}
+                        <div id="section-category" className="scroll-mt-6 rounded-3xl border border-emerald-100 bg-white p-5 sm:p-6 space-y-5 shadow-sm hover:shadow-md transition-shadow">
+                             <h4 className="flex items-center gap-2.5 text-[16px] !font-bold !text-emerald-700 pb-2">
+                                <Activity className="w-5 h-5 text-emerald-600" /> Tên lỗi (Máy/Bình)
+                            </h4>
+                            <div className="flex flex-wrap gap-4">
+                                {['Máy', 'Bình'].map(cat => (
+                                    <button
+                                        key={cat}
+                                        type="button"
+                                        onClick={() => setFormData(prev => ({ ...prev, errorCategory: cat }))}
+                                        className={clsx(
+                                            "px-6 py-2.5 rounded-2xl text-[14px] font-bold transition-all border-2",
+                                            formData.errorCategory === cat 
+                                                ? "bg-emerald-600 border-emerald-600 text-white shadow-lg shadow-emerald-200" 
+                                                : "bg-white border-slate-200 text-slate-500 hover:border-emerald-300 hover:text-emerald-600"
+                                        )}
+                                    >
+                                        {cat}
+                                    </button>
+                                ))}
+                                {!['Máy', 'Bình'].includes(formData.errorCategory) && formData.errorCategory && (
+                                     <div className="px-6 py-2.5 rounded-2xl text-[14px] font-bold bg-emerald-600 border-2 border-emerald-600 text-white shadow-lg shadow-emerald-200">
+                                        {formData.errorCategory}
+                                    </div>
+                                )}
                             </div>
                         </div>
 

@@ -35,6 +35,7 @@ const TICKET_COLUMNS = [
     { key: 'customer', label: 'Khách hàng' },
     { key: 'machine_serial', label: 'Mã thiết bị' },
     { key: 'machine_name', label: 'Tên thiết bị' },
+    { key: 'loai_loi', label: 'Tên lỗi' },
     { key: 'error_type', label: 'Loại lỗi' },
     { key: 'error_details', label: 'Lỗi chi tiết' },
     { key: 'error_images', label: 'Hình ảnh chi tiết' },
@@ -371,6 +372,11 @@ export default function RepairTickets() {
                                                         content = <span className="font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md">{ticket.machine_serial}</span>; break;
                                                     case 'machine_name':
                                                         content = <span className="text-slate-600 max-w-[200px] truncate block" title={ticket.machine_name}>{ticket.machine_name}</span>; break;
+                                                    case 'loai_loi':
+                                                        content = <span className={clsx(
+                                                            "px-2 py-0.5 rounded-lg text-[11px] font-bold border",
+                                                            ticket.loai_loi === 'Máy' ? "bg-blue-50 text-blue-600 border-blue-100" : "bg-purple-50 text-purple-600 border-purple-100"
+                                                        )}>{ticket.loai_loi || '---'}</span>; break;
                                                     case 'error_type':
                                                         content = <span className="font-bold text-rose-600">{getErrorTypeName(ticket.error_type_id)}</span>; break;
                                                     case 'error_details':
