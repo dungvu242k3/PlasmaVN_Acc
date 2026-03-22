@@ -661,6 +661,16 @@ const Orders = () => {
                     >
                         <Plus size={18} />
                     </button>
+                    <button
+                        onClick={() => {
+                            setOrderToEdit(null);
+                            navigate('/de-nghi-xuat-may/tao');
+                        }}
+                        className="p-2 px-3 flex items-center gap-2 rounded-xl bg-emerald-600 text-white shrink-0 shadow-md shadow-emerald-600/20 text-[13px] font-bold"
+                    >
+                        <Plus size={18} />
+                        <span className="hidden sm:inline">Đề nghị xuất máy</span>
+                    </button>
                 </div>
 
                 {/* ── MOBILE CARD LIST ── */}
@@ -876,6 +886,16 @@ const Orders = () => {
                             >
                                 <Plus size={18} />
                                 Thêm
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setOrderToEdit(null);
+                                    navigate('/de-nghi-xuat-may/tao');
+                                }}
+                                className="flex items-center gap-2 px-6 py-1.5 rounded-xl bg-emerald-600 text-white text-[13px] font-bold hover:bg-emerald-700 shadow-md shadow-emerald-600/20 transition-all"
+                            >
+                                <Plus size={18} />
+                                Đề nghị xuất máy
                             </button>
                         </div>
                     </div>

@@ -39,6 +39,7 @@ import Users from './pages/Users';
 import Warehouses from './pages/Warehouses';
 import RepairTickets from './pages/RepairTickets';
 import CreateRepairTicket from './pages/CreateRepairTicket';
+import CreateMachineIssueRequest from './pages/CreateMachineIssueRequest';
 
 import StatisticsDashboard from './pages/StatisticsDashboard';
 import CustomerReport from './pages/CustomerReport';
@@ -146,6 +147,7 @@ function App() {
               <Route path="/khuyen-mai/tao" element={<CreatePromotion />} />
               <Route path="/phieu-sua-chua" element={<RepairTickets />} />
           <Route path="/phieu-sua-chua/tao" element={<CreateRepairTicket />} />
+              <Route path="/de-nghi-xuat-may/tao" element={<CreateMachineIssueRequest />} />
               {legacyRedirects.map(([from, to]) => (
                 <Route key={from} path={from} element={<Navigate to={to} replace />} />
               ))}
