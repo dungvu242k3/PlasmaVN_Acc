@@ -18,16 +18,16 @@ import {
 } from 'lucide-react';
 
 export const sidebarMenu = [
-  { path: '/trang-chu', label: 'Bảng điều khiển', icon: Layout },
-  { path: '/thong-ke', label: 'Thống kê', icon: BarChart3 },
-  { path: '/don-hang-kinh-doanh', label: 'Đơn hàng & Kinh doanh', icon: Package },
-  { path: '/quan-ly-thiet-bi', label: 'Quản lý thiết bị', icon: Monitor },
-  { path: '/kho', label: 'Kho', icon: Warehouse },
-  { path: '/mua-hang-nha-cung-cap', label: 'Mua hàng & Nhà cung cấp', icon: ShoppingCart },
-  { path: '/van-chuyen', label: 'Vận chuyển', icon: Truck },
-  { path: '/thu-hoi', label: 'Thu hồi', icon: RefreshCw },
-  { path: '/vat-tu', label: 'Vật tư', icon: Layers },
-  { path: '/he-thong', label: 'Hệ thống', icon: Settings2 },
+  { path: '/trang-chu', label: 'Bảng điều khiển', icon: Layout, color: 'text-indigo-500' },
+  { path: '/thong-ke', label: 'Thống kê', icon: BarChart3, color: 'text-purple-500' },
+  { path: '/don-hang-kinh-doanh', label: 'Đơn hàng & Kinh doanh', icon: Package, color: 'text-orange-500' },
+  { path: '/quan-ly-thiet-bi', label: 'Quản lý thiết bị', icon: Monitor, color: 'text-blue-500' },
+  { path: '/kho', label: 'Kho', icon: Warehouse, color: 'text-emerald-500' },
+  { path: '/mua-hang-nha-cung-cap', label: 'Mua hàng & Nhà cung cấp', icon: ShoppingCart, color: 'text-rose-500' },
+  { path: '/van-chuyen', label: 'Vận chuyển', icon: Truck, color: 'text-cyan-600' },
+  { path: '/thu-hoi', label: 'Thu hồi', icon: RefreshCw, color: 'text-teal-500' },
+  { path: '/vat-tu', label: 'Vật tư', icon: Layers, color: 'text-yellow-600' },
+  { path: '/he-thong', label: 'Hệ thống', icon: Settings2, color: 'text-slate-500' },
 ];
 
 export const extraMenuItems = [

@@ -85,10 +85,21 @@ function NavItem({ item, onClick, isOpen }) {
       }
       title={!isOpen ? item.label : undefined}
     >
-      <div className={clsx('flex items-center justify-center shrink-0', isOpen && 'w-5 mr-3')}>
-        <item.icon size={22} className={clsx(!isOpen && 'mt-0.5')} strokeWidth={1.75} />
-      </div>
-      <span className={clsx('transition-all duration-300', !isOpen && 'opacity-0 w-0 hidden')}>{item.label}</span>
+      {({ isActive }) => {
+        const active = isActive || isParentModuleActive;
+        return (
+          <>
+            <div className={clsx('flex items-center justify-center shrink-0', isOpen && 'w-5 mr-3')}>
+              <item.icon 
+                size={22} 
+                className={clsx(!isOpen && 'mt-0.5', !active && item.color)} 
+                strokeWidth={1.75} 
+              />
+            </div>
+            <span className={clsx('transition-all duration-300', !isOpen && 'opacity-0 w-0 hidden', !active && 'font-semibold text-slate-700')}>{item.label}</span>
+          </>
+        );
+      }}
     </NavLink>
   );
 }
