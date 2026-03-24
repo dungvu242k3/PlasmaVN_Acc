@@ -63,7 +63,7 @@ const TABLE_COLUMNS = [
     { key: 'warehouse', label: 'Kho Quản Lý' },
     { key: 'customer_name', label: 'Khách hàng đang sử dụng máy' },
     { key: 'status', label: 'Trạng Thái' },
-    { key: 'department_in_charge', label: 'Bộ Phận Phụ Trách' },
+    { key: 'department_in_charge', label: 'Đại lý' },
 ];
 
 const Machines = () => {
@@ -120,7 +120,10 @@ const Machines = () => {
         try {
             const saved = JSON.parse(localStorage.getItem('columns_machines') || 'null');
             if (Array.isArray(saved) && saved.length > 0) {
-                return saved.filter(key => defaultColOrder.includes(key));
+                const valid = saved.filter(key => defaultColOrder.includes(key));
+                // Add any missing default columns that were added since last save
+                const newDefaults = defaultColOrder.filter(key => !valid.includes(key));
+                return [...valid, ...newDefaults];
             }
         } catch { }
         return defaultColOrder;
@@ -312,9 +315,15 @@ const Machines = () => {
             'Loại khí',
             'Loại van',
             'Loại đầu phát',
-            'Bộ phận phụ trách',
+            'Đại lý',
             'Kho quản lý',
             'Khách hàng đang sử dụng máy',
+            'Trạng thái',
+            'Ngày bảo trì gần nhất (YYYY-MM-DD)',
+            'Loại bảo trì',
+            'Ghi chú bảo trì',
+            'Ngày bảo trì tiếp theo (YYYY-MM-DD)',
+            'Người thực hiện bảo trì',
         ];
 
         const exampleData = [
@@ -328,9 +337,15 @@ const Machines = () => {
                 'Loại khí': 'ArgonMed',
                 'Loại van': 'Van Messer',
                 'Loại đầu phát': 'Tia thường',
-                'Bộ phận phụ trách': 'Kỹ thuật',
+                'Đại lý': 'Đại lý A',
                 'Kho quản lý': warehousesList[0]?.name || 'Kho tổng',
                 'Khách hàng đang sử dụng máy': 'Bệnh viện Đa khoa Tỉnh',
+                'Trạng thái': 'thuộc khách hàng',
+                'Ngày bảo trì gần nhất (YYYY-MM-DD)': '2023-10-01',
+                'Loại bảo trì': 'Bảo dưỡng',
+                'Ghi chú bảo trì': 'Thay dây dẫn khí',
+                'Ngày bảo trì tiếp theo (YYYY-MM-DD)': '2024-01-01',
+                'Người thực hiện bảo trì': 'Nguyễn Văn A',
             },
         ];
 
@@ -366,21 +381,49 @@ const Machines = () => {
                     return acc;
                 }, {});
 
-                const machinesToInsert = data.map(row => ({
-                    serial_number: row['Mã máy (Serial)']?.toString(),
-                    machine_type: row['Loại máy (BV/TM/FM/IOT)']?.toString() || 'TM',
-                    machine_account: row['Tài khoản máy']?.toString(),
-                    bluetooth_mac: row['Bluetooth MAC']?.toString(),
-                    version: row['Phiên bản']?.toString(),
-                    cylinder_volume: row['Thể tích bình']?.toString(),
-                    gas_type: row['Loại khí']?.toString(),
-                    valve_type: row['Loại van']?.toString(),
-                    emission_head_type: row['Loại đầu phát']?.toString(),
-                    department_in_charge: row['Bộ phận phụ trách']?.toString(),
-                    warehouse: warehouseMap[row['Kho quản lý']?.toString()?.toLowerCase()] || null,
-                    customer_name: row['Khách hàng đang sử dụng máy']?.toString() || null,
-                    status: row['Khách hàng đang sử dụng máy'] ? 'thuộc khách hàng' : 'sẵn sàng'
-                })).filter(m => m.serial_number);
+                const machinesToInsert = data.map(row => {
+                    // Try to find status value regardless of header case
+                    const statusKey = Object.keys(row).find(k => k.toLowerCase() === 'trạng thái');
+                    const statusVal = statusKey ? row[statusKey]?.toString().trim() : null;
+                    
+                    let machineStatus = 'sẵn sàng';
+                    
+                    if (statusVal) {
+                        // Map label or ID to machine status ID
+                        const foundStatus = MACHINE_STATUSES.find(s => 
+                            s.label.toLowerCase() === statusVal.toLowerCase() || 
+                            s.id.toLowerCase() === statusVal.toLowerCase()
+                        );
+                        if (foundStatus) {
+                            machineStatus = foundStatus.id;
+                        } else {
+                            machineStatus = statusVal.toLowerCase();
+                        }
+                    } else if (row['Khách hàng đang sử dụng máy']) {
+                        machineStatus = 'thuộc khách hàng';
+                    }
+
+                    return {
+                        serial_number: row['Mã máy (Serial)']?.toString(),
+                        machine_type: row['Loại máy (BV/TM/FM/IOT)']?.toString() || 'TM',
+                        machine_account: row['Tài khoản máy']?.toString() || row['Mã máy (Serial)']?.toString(),
+                        bluetooth_mac: row['Bluetooth MAC']?.toString(),
+                        version: row['Phiên bản']?.toString(),
+                        cylinder_volume: row['Thể tích bình']?.toString(),
+                        gas_type: row['Loại khí']?.toString(),
+                        valve_type: row['Loại van']?.toString(),
+                        emission_head_type: row['Loại đầu phát']?.toString(),
+                        department_in_charge: row['Đại lý']?.toString(),
+                        warehouse: warehouseMap[row['Kho quản lý']?.toString()?.toLowerCase()] || null,
+                        customer_name: row['Khách hàng đang sử dụng máy']?.toString() || null,
+                        status: machineStatus,
+                        maintenance_date: row['Ngày bảo trì gần nhất (YYYY-MM-DD)'] || null,
+                        maintenance_type: row['Loại bảo trì']?.toString() || null,
+                        maintenance_note: row['Ghi chú bảo trì']?.toString() || null,
+                        next_maintenance_date: row['Ngày bảo trì tiếp theo (YYYY-MM-DD)'] || null,
+                        maintenance_by: row['Người thực hiện bảo trì']?.toString() || null
+                    };
+                }).filter(m => m.serial_number);
 
                 if (machinesToInsert.length === 0) {
                     alert('Không tìm thấy dữ liệu hợp lệ (thiếu mã máy)!');
@@ -405,7 +448,7 @@ const Machines = () => {
                 alert('Có lỗi xảy ra khi xử lý file: ' + err.message);
             } finally {
                 setIsLoading(false);
-                e.target.value = null; // Reset input
+                if (e.target) e.target.value = null; // Reset input
             }
         };
         reader.readAsBinaryString(file);
@@ -815,7 +858,7 @@ const Machines = () => {
                                             </p>
                                         </div>
                                         <div>
-                                            <p className="text-[9px] uppercase tracking-wider text-muted-foreground">Bộ phận</p>
+                                            <p className="text-[9px] uppercase tracking-wider text-muted-foreground">Đại lý</p>
                                             <p className="text-[12px] text-foreground font-medium">{machine.department_in_charge || '—'}</p>
                                         </div>
                                         <div className="col-span-2">
@@ -1038,7 +1081,7 @@ const Machines = () => {
                                     )}
                                 >
                                     <Activity size={14} className={getFilterIconClass('departments', activeDropdown === 'departments' || selectedDepartments.length > 0)} />
-                                    Bộ phận
+                                    Đại lý
                                     {selectedDepartments.length > 0 && (
                                         <span className={clsx('px-1.5 py-0.5 rounded-full text-[10px] font-bold', getFilterCountBadgeClass('departments'))}>
                                             {selectedDepartments.length}
@@ -1343,7 +1386,7 @@ const Machines = () => {
                                         )}
                                     >
                                         <Activity size={14} className={getFilterIconClass('departments', activeDropdown === 'departments' || selectedDepartments.length > 0)} />
-                                        Bộ phận
+                                        Đại lý
                                         {selectedDepartments.length > 0 && (
                                             <span className={clsx('px-1.5 py-0.5 rounded-full text-[10px] font-bold', getFilterCountBadgeClass('departments'))}>
                                                 {selectedDepartments.length}
@@ -1524,7 +1567,7 @@ const Machines = () => {
                                 </div>
 
                                 <div className="bg-card border border-border rounded-xl p-6 shadow-sm">
-                                    <h3 className="text-lg font-bold text-foreground mb-4">Top 10 Bộ phận phụ trách</h3>
+                                    <h3 className="text-lg font-bold text-foreground mb-4">Top 10 Đại lý</h3>
                                     <div style={{ height: '300px' }}>
                                         <BarChartJS
                                             data={{
@@ -1586,7 +1629,7 @@ const Machines = () => {
                         },
                         {
                             id: 'departments',
-                            label: 'Bộ phận',
+                            label: 'Đại lý',
                             icon: <Activity size={16} className="text-amber-600" />,
                             options: departmentOptions,
                             selectedValues: pendingDepartments,

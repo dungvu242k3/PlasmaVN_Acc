@@ -387,11 +387,11 @@ const CreateMachine = () => {
                                 </div>
                             </div>
                             <div className="space-y-2">
-                                <label className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Bộ phận phụ trách</label>
+                                <label className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Đại lý</label>
                                 <input
                                     value={formData.department_in_charge}
                                     onChange={(e) => setFormData({ ...formData, department_in_charge: e.target.value })}
-                                    placeholder="Khoa/Phòng phụ trách..."
+                                    placeholder="Tên đại lý/Đơn vị phụ trách..."
                                     className="w-full px-5 py-4 bg-white border border-gray-200 rounded-2xl outline-none focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 font-bold shadow-sm"
                                 />
                             </div>

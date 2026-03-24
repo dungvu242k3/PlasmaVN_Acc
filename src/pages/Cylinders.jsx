@@ -307,6 +307,7 @@ const Cylinders = () => {
             'Phân loại (BV/TM)',
             'Khối lượng tịnh (kg)',
             'Kho quản lý',
+            'Trạng thái',
         ];
 
         const exampleData = [
@@ -319,6 +320,7 @@ const Cylinders = () => {
                 'Phân loại (BV/TM)': 'BV',
                 'Khối lượng tịnh (kg)': '8',
                 'Kho quản lý': uniqueWarehouses[0] || 'Kho tổng',
+                'Trạng thái': 'sẵn sàng',
             },
         ];
 
@@ -355,17 +357,33 @@ const Cylinders = () => {
                     return acc;
                 }, {});
 
-                const cylindersToInsert = data.map(row => ({
-                    serial_number: row['Mã RFID (Serial)']?.toString(),
-                    volume: row['Thể tích']?.toString(),
-                    gas_type: row['Loại khí']?.toString() || 'AirMAC',
-                    valve_type: row['Loại van']?.toString() || 'Van Messer/Phi 6/ CB Trắng',
-                    handle_type: row['Loại quai']?.toString() || 'Có quai',
-                    category: row['Phân loại (BV/TM)']?.toString() || 'BV',
-                    net_weight: row['Khối lượng tịnh (kg)']?.toString() || '8',
-                    status: 'sẵn sàng',
-                    warehouse_id: warehouseMap[row['Kho quản lý']?.toString()?.toLowerCase()] || null
-                })).filter(c => c.serial_number);
+                const cylindersToInsert = data.map(row => {
+                    // Try to find status value regardless of header case
+                    const statusKey = Object.keys(row).find(k => k.toLowerCase() === 'trạng thái');
+                    const statusVal = statusKey ? row[statusKey]?.toString().trim() : null;
+                    
+                    let cylinderStatus = 'sẵn sàng';
+                    
+                    if (statusVal) {
+                        const foundStatus = CYLINDER_STATUSES.find(s => 
+                            s.label.toLowerCase() === statusVal.toLowerCase() || 
+                            s.id.toLowerCase() === statusVal.toLowerCase()
+                        );
+                        cylinderStatus = foundStatus ? foundStatus.id : statusVal.toLowerCase();
+                    }
+
+                    return {
+                        serial_number: row['Mã RFID (Serial)']?.toString(),
+                        volume: row['Thể tích']?.toString(),
+                        gas_type: row['Loại khí']?.toString() || 'AirMAC',
+                        valve_type: row['Loại van']?.toString() || 'Van Messer/Phi 6/ CB Trắng',
+                        handle_type: row['Loại quai']?.toString() || 'Có quai',
+                        category: row['Phân loại (BV/TM)']?.toString() || 'BV',
+                        net_weight: row['Khối lượng tịnh (kg)']?.toString() || '8',
+                        status: cylinderStatus,
+                        warehouse_id: warehouseMap[row['Kho quản lý']?.toString()?.toLowerCase()] || null
+                    };
+                }).filter(c => c.serial_number);
 
                 if (cylindersToInsert.length === 0) {
                     alert('Không tìm thấy dữ liệu hợp lệ (thiếu mã RFID)!');

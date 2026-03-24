@@ -425,13 +425,13 @@ export default function MachineFormModal({ machine, onClose, onSuccess }) {
                                         )}
                                     </div>
                                     <div>
-                                        <label className="block text-xs font-bold text-slate-700 mb-1 uppercase tracking-wider">Bộ phận phụ trách</label>
+                                        <label className="block text-xs font-bold text-slate-700 mb-1 uppercase tracking-wider">Đại lý</label>
                                         <input
                                             type="text"
                                             name="department_in_charge"
                                             value={formData.department_in_charge}
                                             onChange={handleChange}
-                                            placeholder="Khoa/Phòng phụ trách..."
+                                            placeholder="Tên đại lý/Đơn vị phụ trách..."
                                             className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 outline-none transition-all font-bold text-slate-900"
                                         />
                                     </div>

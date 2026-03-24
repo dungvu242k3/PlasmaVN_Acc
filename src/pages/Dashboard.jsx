@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ActionCard } from '../components/ui/ActionCard';
-import { Search, BarChart3, Users, Package, DollarSign, Warehouse, AlertTriangle, TrendingUp, Monitor, Calendar, FileText } from 'lucide-react';
+import { Search, BarChart3, Users, Package, DollarSign, Warehouse, AlertTriangle, TrendingUp, Monitor, Calendar, FileText, Box } from 'lucide-react';
 import { clsx } from 'clsx';
 import { actionModuleGroups, allActionSections } from '../constants/actionModuleData';
 import { ModuleCard } from '../components/ui/ModuleCard';
@@ -12,8 +12,10 @@ const Dashboard = () => {
   const [activeTab, setActiveTab] = useState('chuc-nang');
   const [searchQuery, setSearchQuery] = useState('');
   const { bookmarkedPaths, isBookmarked, toggleBookmark } = useBookmarkedPaths();
-  const { fetchDashboardSummary, loading } = useReports();
+  const { fetchDashboardSummary, fetchCylinderAgingStats, fetchCylinderAgingDetails, loading } = useReports();
   const [summary, setSummary] = useState(null);
+  const [agingStats, setAgingStats] = useState(null);
+  const [agingDetails, setAgingDetails] = useState([]);
 
   useEffect(() => {
     if (activeTab === 'thong-ke') {
@@ -22,8 +24,26 @@ const Dashboard = () => {
   }, [activeTab]);
 
   const loadStats = async () => {
-    const data = await fetchDashboardSummary();
-    setSummary(data);
+    const [summaryData, agingData, detailsData] = await Promise.all([
+      fetchDashboardSummary(),
+      fetchCylinderAgingStats(),
+      fetchCylinderAgingDetails({ limit: 10 })
+    ]);
+    
+    setSummary(summaryData);
+    setAgingDetails(detailsData || []);
+
+    
+    if (agingData && agingData.length > 0) {
+      const totalAging = agingData.reduce((acc, curr) => ({
+        qua_han_30_60: acc.qua_han_30_60 + (Number(curr.qua_han_30_60) || 0),
+        qua_han_60_90: acc.qua_han_60_90 + (Number(curr.qua_han_60_90) || 0),
+        qua_han_tren_90: acc.qua_han_tren_90 + (Number(curr.qua_han_tren_90) || 0),
+      }), { qua_han_30_60: 0, qua_han_60_90: 0, qua_han_tren_90: 0 });
+      setAgingStats(totalAging);
+    } else {
+      setAgingStats({ qua_han_30_60: 0, qua_han_60_90: 0, qua_han_tren_90: 0 });
+    }
   };
 
   const allSections = allActionSections;
@@ -215,6 +235,74 @@ const Dashboard = () => {
               </div>
             </div>
 
+            <div className="bg-card rounded-xl p-4 border border-border">
+              <h3 className="font-semibold mb-3 flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-blue-500" />
+                Thống kê ngày tồn bình (Khách giữ)
+              </h3>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg">
+                  <span className="text-sm font-medium">{'> 30 ngày'} (Tới 60 ngày)</span>
+                  <span className="font-bold text-yellow-600">{agingStats?.qua_han_30_60 || 0}</span>
+                </div>
+                <div className="flex items-center justify-between p-3 bg-orange-50 rounded-lg">
+                  <span className="text-sm font-medium">{'> 60 ngày'} (Tới 90 ngày)</span>
+                  <span className="font-bold text-orange-600">{agingStats?.qua_han_60_90 || 0}</span>
+                </div>
+                <div className="flex items-center justify-between p-3 bg-red-50 rounded-lg">
+                  <span className="text-sm font-medium">{'> 90 ngày'} (Đặc biệt chú ý)</span>
+                  <span className="font-bold text-red-600">{agingStats?.qua_han_tren_90 || 0}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-card rounded-xl border border-border overflow-hidden">
+            <div className="p-4 border-b border-border flex items-center justify-between bg-muted/10">
+              <h3 className="font-semibold flex items-center gap-2">
+                <Box className="w-4 h-4 text-primary" />
+                Danh sách bình bị khách giữ lâu nhất (Top 10)
+              </h3>
+            </div>
+            <div className="overflow-x-auto">
+              {agingDetails && agingDetails.length > 0 ? (
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-muted/30 text-xs text-muted-foreground">
+                      <th className="py-3 px-4 font-medium border-b border-border">Mã bình</th>
+                      <th className="py-3 px-4 font-medium border-b border-border">Khách hàng</th>
+                      <th className="py-3 px-4 font-medium border-b border-border">Ngày giao</th>
+                      <th className="py-3 px-4 font-medium border-b border-border text-right">Số ngày giữ</th>
+                    </tr>
+                  </thead>
+                  <tbody className="text-sm">
+                    {agingDetails.map((item, idx) => (
+                      <tr key={item.id || idx} className="border-b border-border/50 hover:bg-muted/10 transition-colors">
+                        <td className="py-2.5 px-4 font-medium text-foreground">{item.ma_binh}</td>
+                        <td className="py-2.5 px-4 text-muted-foreground">{item.khach_hang}</td>
+                        <td className="py-2.5 px-4 text-muted-foreground">
+                          {new Date(item.ngay_giao).toLocaleDateString('vi-VN')}
+                        </td>
+                        <td className="py-2.5 px-4 text-right">
+                          <span className={clsx(
+                            "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold",
+                            item.so_ngay_ton > 90 ? "bg-red-100 text-red-700" :
+                            item.so_ngay_ton > 60 ? "bg-orange-100 text-orange-700" :
+                            "bg-yellow-100 text-yellow-700"
+                          )}>
+                            {item.so_ngay_ton} ngày
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : (
+                <div className="p-8 text-center text-muted-foreground text-sm">
+                  Chưa có bình nào bị giữ quá hạn {'>'} 30 ngày. 
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
