@@ -284,6 +284,18 @@ const CreateOrder = () => {
         setAssignedCylinders(prev => {
             const newArr = [...prev];
             newArr[index] = value;
+            
+            // Optional: Immediate warning for duplicate (case-insensitive and trimmed)
+            if (value && value.trim()) {
+                const trimmedVal = value.trim().toUpperCase();
+                const isDuplicate = newArr.some((s, idx) => idx !== index && s && s.trim().toUpperCase() === trimmedVal);
+                if (isDuplicate) {
+                    toast.warn(`Mã ${trimmedVal} đang bị trùng trong đơn hàng này!`, {
+                        toastId: `dup-${trimmedVal}` // Prevent toast spam
+                    });
+                }
+            }
+            
             return newArr;
         });
     };
@@ -309,9 +321,11 @@ const CreateOrder = () => {
 
         if (currentIdx === -1) return;
 
-        // Skip if already in the list
-        if (currentArr.includes(decodedText)) {
-            toast.info(`Mã ${decodedText} đã được gán vào đơn hàng này rồi!`);
+        const normalizedText = decodedText.trim().toUpperCase();
+
+        // Skip if already in the list (case-insensitive check)
+        if (currentArr.some(s => s && s.trim().toUpperCase() === normalizedText)) {
+            toast.info(`Mã ${normalizedText} đã được gán vào đơn hàng này rồi!`);
             return;
         }
 
@@ -320,7 +334,7 @@ const CreateOrder = () => {
         // Fill the current target index
         setAssignedCylinders(prev => {
             const newArr = [...prev];
-            newArr[currentIdx] = decodedText;
+            newArr[currentIdx] = normalizedText;
             return newArr;
         });
         setAssignedCylinderTimes(prev => {
@@ -332,7 +346,7 @@ const CreateOrder = () => {
 
         // Find next empty slot
         const updatedArr = [...currentArr];
-        updatedArr[currentIdx] = decodedText;
+        updatedArr[currentIdx] = normalizedText;
         const nextEmpty = updatedArr.findIndex((s, i) => i > currentIdx && !s);
         const fallbackEmpty = updatedArr.findIndex((s) => !s);
         const nextIdx = nextEmpty !== -1 ? nextEmpty : fallbackEmpty;
@@ -372,20 +386,31 @@ const CreateOrder = () => {
                 initialStatus = 'DA_DUYET';
             }
 
-            const assignedSerials = formData.productType.startsWith('BINH') ? assignedCylinders.filter(Boolean) : [];
+            const assignedSerials = formData.productType.startsWith('BINH') 
+                ? assignedCylinders.map(s => s?.trim().toUpperCase()).filter(Boolean) 
+                : [];
 
             // 1. VALIDATION: Check if cylinders exist and are in the correct warehouse
             if (assignedSerials.length > 0) {
+                // Check local duplicates first
+                const uniqueSerials = [...new Set(assignedSerials)];
+                if (uniqueSerials.length !== assignedSerials.length) {
+                    const counts = {};
+                    assignedSerials.forEach(s => counts[s] = (counts[s] || 0) + 1);
+                    const duplicates = Object.entries(counts).filter(([_, count]) => count > 1).map(([s]) => s);
+                    throw new Error(`Bạn đã nhập trùng mã bình: ${duplicates.join(', ')}. Mỗi mã bình chỉ được xuất hiện một lần trong một đơn hàng.`);
+                }
+
                 const { data: validCylinders, error: checkError } = await supabase
                     .from('cylinders')
                     .select('serial_number, warehouse_id, status')
-                    .in('serial_number', assignedSerials);
+                    .in('serial_number', uniqueSerials);
 
                 if (checkError) throw new Error('Lỗi kiểm tra mã bình: ' + checkError.message);
 
-                if (!validCylinders || validCylinders.length !== assignedSerials.length) {
-                    const foundSerials = validCylinders?.map(c => c.serial_number) || [];
-                    const missing = assignedSerials.filter(s => !foundSerials.includes(s));
+                if (!validCylinders || validCylinders.length !== uniqueSerials.length) {
+                    const foundSerials = validCylinders?.map(c => c.serial_number.toUpperCase()) || [];
+                    const missing = uniqueSerials.filter(s => !foundSerials.includes(s));
                     throw new Error(`Mã bình không tồn tại trong hệ thống: ${missing.join(', ')}`);
                 }
 
@@ -790,20 +815,30 @@ const CreateOrder = () => {
                                                 <div key={idx} className="space-y-1">
                                                     <div className="flex items-center gap-2">
                                                         <span className="text-xs font-bold text-gray-400 w-6 text-right">{idx + 1}.</span>
-                                                        <input
-                                                            type="text"
-                                                            value={serial}
-                                                            onChange={(e) => handleCylinderSerialChange(idx, e.target.value)}
-                                                            placeholder={`Mã serial bình ${idx + 1}...`}
-                                                            className="flex-1 px-3 py-2.5 bg-white border border-[#D1D5DB] outline-none focus:ring-2 focus:ring-[#2563EB] focus:border-[#2563EB] font-medium text-sm transition-all"
-                                                            style={{ fontFamily: '"Roboto", sans-serif' }}
-                                                            onKeyDown={(e) => {
-                                                                if (e.key === 'Enter') {
-                                                                    e.preventDefault();
-                                                                    handleManualConfirm(idx);
-                                                                }
-                                                            }}
-                                                        />
+                                                        <div className="flex-1 relative">
+                                                            <input
+                                                                type="text"
+                                                                value={serial}
+                                                                onChange={(e) => handleCylinderSerialChange(idx, e.target.value)}
+                                                                placeholder={`Mã serial bình ${idx + 1}...`}
+                                                                className={`w-full px-3 py-2.5 bg-white border outline-none focus:ring-2 font-medium text-sm transition-all ${
+                                                                    serial && assignedCylinders.filter((s, i) => i !== idx && s && s.trim().toUpperCase() === serial.trim().toUpperCase()).length > 0
+                                                                        ? 'border-red-500 ring-red-100 focus:ring-red-500 focus:border-red-500 bg-red-50' 
+                                                                        : 'border-[#D1D5DB] focus:ring-[#2563EB] focus:border-[#2563EB]'
+                                                                }`}
+                                                                style={{ fontFamily: '"Roboto", sans-serif' }}
+                                                                onKeyDown={(e) => {
+                                                                    if (e.key === 'Enter') {
+                                                                        e.preventDefault();
+                                                                        handleManualConfirm(idx);
+                                                                    }
+                                                                }}
+                                                            />
+                                                            {serial && assignedCylinders.filter((s, i) => i !== idx && s && s.trim().toUpperCase() === serial.trim().toUpperCase()).length > 0 && (
+                                                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-red-600 font-bold uppercase">Bị trùng</span>
+                                                            )}
+                                                        </div>
+                                                        <div className="flex items-center gap-1.5 min-w-[100px] justify-end">
                                                         <button
                                                             type="button"
                                                             onClick={() => startCylinderScanner(idx)}
@@ -829,6 +864,7 @@ const CreateOrder = () => {
                                                                 <X className="w-4 h-4" />
                                                             </button>
                                                         )}
+                                                        </div>
                                                     </div>
                                                     {assignedCylinderTimes[idx] && (
                                                         <div className="flex pl-8 mt-1">
