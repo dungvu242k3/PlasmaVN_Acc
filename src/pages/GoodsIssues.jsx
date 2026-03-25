@@ -32,8 +32,11 @@ import {
     Clock,
     LayoutGrid,
     Settings2,
-    SlidersHorizontal
+    SlidersHorizontal,
+    Download,
+    Upload
 } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import { useEffect, useState, useRef, useMemo } from 'react';
 import { Bar as BarChartJS, Pie as PieChartJS } from 'react-chartjs-2';
 import { useNavigate } from 'react-router-dom';
@@ -235,6 +238,7 @@ const GoodsIssues = () => {
 
             if (error) throw error;
             setIssues(data || []);
+            setSelectedIds([]);
         } catch (error) {
             console.error('Error loading issues:', error);
         } finally {
@@ -259,6 +263,7 @@ const GoodsIssues = () => {
         try {
             const { error } = await supabase.from('goods_issues').delete().eq('id', id);
             if (error) throw error;
+            setSelectedIds(prev => prev.filter(i => i !== id));
             fetchIssues();
         } catch (error) {
             console.error('Error deleting issue:', error);
@@ -270,6 +275,207 @@ const GoodsIssues = () => {
         setSelectedIssue(issue);
         setInitialForcedType(forcedType);
         setIsFormModalOpen(true);
+    };
+
+    const handleBulkDelete = async () => {
+        if (selectedIds.length === 0) return;
+        if (!window.confirm(`Bạn có chắc muốn xóa ${selectedIds.length} phiếu xuất đã chọn không? Hành động này sẽ không thể hoàn tác.`)) {
+            return;
+        }
+
+        try {
+            const { error } = await supabase
+                .from('goods_issues')
+                .delete()
+                .in('id', selectedIds);
+
+            if (error) throw error;
+            
+            setSelectedIds([]);
+            fetchIssues();
+            alert(`✅ Đã xóa ${selectedIds.length} phiếu xuất thành công!`);
+        } catch (error) {
+            console.error('Error deleting issues:', error);
+            alert('❌ Lỗi khi xóa: ' + error.message);
+        }
+    };
+
+    const handleDownloadTemplate = () => {
+        const headers = [
+            'Mã phiếu xuất (Để trống sẽ tự tạo)',
+            'Loại xuất (TRA_NCC/HUY_XUAT/TRA_VO/TRA_MAY/KHAC)',
+            'Kho xuất (HN/TP.HCM/TH/DN)',
+            'Nhà cung cấp nhận',
+            'Ngày xuất (YYYY-MM-DD)',
+            'Ghi chú phiếu',
+            'Loại hàng (MAY/BINH/VAT_TU)',
+            'Mã serial (hoặc mã RFID)',
+            'Số lượng xuất',
+        ];
+
+        const exampleData = [
+            {
+                'Mã phiếu xuất (Để trống sẽ tự tạo)': 'PX00001',
+                'Loại xuất (TRA_NCC/HUY_XUAT/TRA_VO/TRA_MAY/KHAC)': 'TRA_NCC',
+                'Kho xuất (HN/TP.HCM/TH/DN)': 'HN',
+                'Nhà cung cấp nhận': 'Công ty Oxy y tế A',
+                'Ngày xuất (YYYY-MM-DD)': '2023-10-25',
+                'Ghi chú phiếu': 'Xuất trả vỏ',
+                'Loại hàng (MAY/BINH/VAT_TU)': 'BINH',
+                'Mã serial (hoặc mã RFID)': 'OXY40-001',
+                'Số lượng xuất': 1,
+            },
+            {
+                'Mã phiếu xuất (Để trống sẽ tự tạo)': 'PX00001',
+                'Loại xuất (TRA_NCC/HUY_XUAT/TRA_VO/TRA_MAY/KHAC)': 'TRA_NCC',
+                'Kho xuất (HN/TP.HCM/TH/DN)': 'HN',
+                'Nhà cung cấp nhận': 'Công ty Oxy y tế A',
+                'Ngày xuất (YYYY-MM-DD)': '2023-10-25',
+                'Ghi chú phiếu': 'Xuất trả máy',
+                'Loại hàng (MAY/BINH/VAT_TU)': 'MAY',
+                'Mã serial (hoặc mã RFID)': 'ROSY-001',
+                'Số lượng xuất': 1,
+            }
+        ];
+
+        const ws = XLSX.utils.json_to_sheet(exampleData, { header: headers });
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Template Xuat Kho');
+        XLSX.writeFile(wb, 'mau_import_phieu_xuat_kho.xlsx');
+    };
+
+    const handleImportExcel = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = async (evt) => {
+            try {
+                const bstr = evt.target.result;
+                const wb = XLSX.read(bstr, { type: 'binary' });
+                const wsname = wb.SheetNames[0];
+                const ws = wb.Sheets[wsname];
+                const data = XLSX.utils.sheet_to_json(ws);
+
+                if (data.length === 0) {
+                    alert('File Excel không có dữ liệu!');
+                    return;
+                }
+
+                setLoading(true);
+
+                const supplierMap = suppliers.reduce((acc, s) => {
+                    acc[s.name.toLowerCase()] = s.id;
+                    return acc;
+                }, {});
+
+                const mappedData = data.map((row, index) => {
+                    const rowCode = row['Mã phiếu xuất (Để trống sẽ tự tạo)']?.toString().trim();
+                    const supplierName = row['Nhà cung cấp nhận']?.toString().toLowerCase().trim();
+                    return {
+                        groupId: rowCode || `AUTO_GROUP_${index}`,
+                        issue_code: rowCode || '',
+                        issue_type: row['Loại xuất (TRA_NCC/HUY_XUAT/TRA_VO/TRA_MAY/KHAC)']?.toString().toUpperCase() || 'KHAC',
+                        warehouse_id: row['Kho xuất (HN/TP.HCM/TH/DN)']?.toString().toUpperCase() || 'HN',
+                        supplier_id: supplierName ? supplierMap[supplierName] || null : null,
+                        issue_date: row['Ngày xuất (YYYY-MM-DD)']?.toString() || new Date().toISOString().split('T')[0],
+                        notes: row['Ghi chú phiếu']?.toString() || '',
+                        
+                        item_type: row['Loại hàng (MAY/BINH/VAT_TU)']?.toString().toUpperCase() || 'VAT_TU',
+                        item_code: row['Mã serial (hoặc mã RFID)']?.toString() || '',
+                        quantity: parseInt(row['Số lượng xuất'], 10) || 1,
+                    };
+                }).filter(i => i.item_code || i.item_type === 'VAT_TU');
+
+                if (mappedData.length === 0) {
+                    alert('Không tìm thấy dữ liệu hợp lệ!');
+                    setLoading(false);
+                    return;
+                }
+
+                const groups = {};
+                mappedData.forEach(item => {
+                    if (!groups[item.groupId]) {
+                        groups[item.groupId] = {
+                            issue_code: item.issue_code,
+                            issue_type: ["TRA_NCC", "HUY_XUAT", "KHAC", "TRA_VO", "TRA_BINH_LOI", "TRA_MAY"].includes(item.issue_type) ? item.issue_type : "KHAC",
+                            warehouse_id: ["HN", "TP.HCM", "TH", "DN"].includes(item.warehouse_id) ? item.warehouse_id : "HN",
+                            supplier_id: item.supplier_id,
+                            issue_date: item.issue_date,
+                            status: 'CHO_DUYET',
+                            notes: item.notes,
+                            total_items: 0,
+                            items: []
+                        };
+                    }
+                    groups[item.groupId].items.push({
+                        item_type: ["MAY", "BINH", "VAT_TU", "BINH_4L", "BINH_8L", "MAY_ROSY", "MAY_MED"].includes(item.item_type) ? item.item_type : "VAT_TU",
+                        item_code: item.item_code,
+                        quantity: item.quantity,
+                    });
+                    groups[item.groupId].total_items += item.quantity;
+                });
+
+                let nextCodeNum = Date.now() % 100000; 
+                let importedIssues = 0;
+                let importedItems = 0;
+
+                for (const groupId in groups) {
+                    const group = groups[groupId];
+                    let code = group.issue_code;
+                    if (!code) {
+                        code = `PX${String(nextCodeNum++).padStart(5, '0')}`;
+                    }
+
+                    const { data: insertedIssue, error: issueError } = await supabase
+                        .from('goods_issues')
+                        .insert([{
+                            issue_code: code,
+                            issue_type: group.issue_type,
+                            supplier_id: group.supplier_id,
+                            warehouse_id: group.warehouse_id,
+                            issue_date: group.issue_date,
+                            status: group.status,
+                            notes: group.notes,
+                            total_items: group.total_items
+                        }])
+                        .select('id')
+                        .single();
+
+                    if (issueError) {
+                        console.error('Error inserting issue:', issueError);
+                        continue;
+                    }
+
+                    importedIssues++;
+
+                    const itemsToInsert = group.items.map(item => ({
+                        ...item,
+                        issue_id: insertedIssue.id
+                    }));
+
+                    const { error: itemsError } = await supabase
+                        .from('goods_issue_items')
+                        .insert(itemsToInsert);
+
+                    if (itemsError) {
+                        console.error('Error inserting items:', itemsError);
+                    } else {
+                        importedItems += itemsToInsert.length;
+                    }
+                }
+
+                alert(`🎉 Đã import thành công ${importedIssues} phiếu xuất với tổng cộng ${importedItems} mục!`);
+                fetchIssues();
+            } catch (err) {
+                console.error('Error importing excel:', err);
+                alert('Có lỗi xảy ra khi xử lý file: ' + err.message);
+            } finally {
+                setLoading(false);
+                if (e.target) e.target.value = null;
+            }
+        };
+        reader.readAsBinaryString(file);
     };
 
     const handleFormSuccess = () => {
@@ -605,6 +811,29 @@ const GoodsIssues = () => {
                             </div>
 
                             <div className="flex items-center gap-2.5 shrink-0">
+                                {selectedIds.length > 0 && (
+                                    <button
+                                        onClick={handleBulkDelete}
+                                        className="flex items-center gap-2 px-4 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 rounded-2xl font-bold text-[13px] transition-all"
+                                    >
+                                        <Trash2 size={16} />
+                                        Xóa ({selectedIds.length})
+                                    </button>
+                                )}
+                                <button
+                                    onClick={handleDownloadTemplate}
+                                    className="flex items-center gap-2 px-4 py-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-2xl font-bold text-[13px] transition-all"
+                                    title="Tải mẫu Excel"
+                                >
+                                    <Download size={16} />
+                                    Mẫu Import
+                                </button>
+                                <label className="flex items-center gap-2 px-4 py-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-2xl font-bold text-[13px] transition-all cursor-pointer" title="Nhập Excel">
+                                    <Upload size={16} />
+                                    Import Excel
+                                    <input type="file" accept=".xlsx, .xls" onChange={handleImportExcel} className="hidden" />
+                                </label>
+
                                 <div className="relative" ref={columnPickerRef}>
                                     <button
                                         onClick={() => setShowColumnPicker(!showColumnPicker)}
@@ -783,7 +1012,7 @@ const GoodsIssues = () => {
                                             </button>
                                         </div>
                                     </div>
-                                );
+                                )
                             })
                         )}
                     </div>

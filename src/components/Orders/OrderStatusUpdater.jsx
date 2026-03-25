@@ -1,10 +1,11 @@
-import { AlertCircle, AlertTriangle, CheckCircle, Clock, Plus, ScanBarcode, Truck, UploadCloud } from 'lucide-react';
+import { AlertCircle, AlertTriangle, ArrowRightCircle, Camera, CheckCircle, CheckCircle2, Clock, CloudUpload, Plus, ScanBarcode, Truck, X, XCircle } from 'lucide-react';
+import clsx from 'clsx';
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ORDER_STATE_TRANSITIONS, PRODUCT_TYPES } from '../../constants/orderConstants';
 import { supabase } from '../../supabase/config';
-import OrderHistoryTimeline from './OrderHistoryTimeline';
 import BarcodeScanner from '../Common/BarcodeScanner';
+import OrderHistoryTimeline from './OrderHistoryTimeline';
 
 export default function OrderStatusUpdater({ order, warehouseName, userRole, onClose, onUpdateSuccess }) {
     const [isLoading, setIsLoading] = useState(false);
@@ -17,6 +18,18 @@ export default function OrderStatusUpdater({ order, warehouseName, userRole, onC
     const [adjustedQuantity, setAdjustedQuantity] = useState(order?.quantity || 0);
     const [isScannerOpen, setIsScannerOpen] = useState(false);
     const [isClosing, setIsClosing] = useState(false);
+
+    const STATUS_TRANSITIONS_METADATA = [
+        { nextStatus: 'DIEU_CHINH', icon: AlertTriangle },
+        { nextStatus: 'KHO_XU_LY', icon: Truck },
+        { nextStatus: 'CHO_GIAO_HANG', icon: Truck },
+        { nextStatus: 'DA_DUYET', icon: CheckCircle2 },
+        { nextStatus: 'DANG_GIAO_HANG', icon: Truck },
+        { nextStatus: 'CHO_DOI_SOAT', icon: Clock },
+        { nextStatus: 'HOAN_THANH', icon: CheckCircle },
+        { nextStatus: 'HUY_DON', icon: XCircle },
+        { nextStatus: 'DOI_SOAT_THAT_BAI', icon: AlertCircle },
+    ];
 
     const handleClose = () => {
         setIsClosing(true);
@@ -528,8 +541,8 @@ export default function OrderStatusUpdater({ order, warehouseName, userRole, onC
                                 ) : (
                                     <div className="grid grid-cols-1 gap-3">
                                         {availableActions.map(action => {
-                                            const transition = STATUS_TRANSITIONS.find(t => t.nextStatus === action.nextStatus);
-                                            const ActionIcon = transition?.icon || ArrowRightCircle;
+                                            const metadata = STATUS_TRANSITIONS_METADATA.find(t => t.nextStatus === action.nextStatus);
+                                            const ActionIcon = metadata?.icon || ArrowRightCircle;
                                             
                                             let actionStyle = "bg-white text-slate-700 hover:bg-slate-50 border-slate-200 hover:border-primary/30";
                                             if (action.nextStatus === 'HUY_DON' || action.nextStatus === 'DOI_SOAT_THAT_BAI') {
@@ -572,9 +585,9 @@ export default function OrderStatusUpdater({ order, warehouseName, userRole, onC
                 </div>
             </div>
 
-            <BarcodeScanner 
-                isOpen={isScannerOpen} 
-                onClose={() => setIsScannerOpen(false)} 
+            <BarcodeScanner
+                isOpen={isScannerOpen}
+                onClose={() => setIsScannerOpen(false)}
                 onScanSuccess={handleScanSuccess}
                 title={`Quét RFID (${order.status === 'KHO_XU_LY' ? 'Xuất kho' : 'Giao hàng'})`}
                 allowDuplicateScans={false}

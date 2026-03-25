@@ -276,6 +276,56 @@ export const useReports = () => {
     }
   };
 
+  const fetchCylinderAgingStats = async (filters = {}) => {
+    setLoading(true);
+    setError(null);
+    try {
+      let query = supabase
+        .from('view_cylinder_aging_stats')
+        .select('*');
+
+      if (filters.warehouse_id) {
+        query = query.eq('kho', filters.warehouse_id);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return data;
+    } catch (err) {
+      setError(err.message);
+      return [];
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchCylinderAgingDetails = async (filters = {}) => {
+    setLoading(true);
+    setError(null);
+    try {
+      let query = supabase
+        .from('view_cylinder_aging_details')
+        .select('*');
+
+      if (filters.warehouse_id) {
+        query = query.eq('kho', filters.warehouse_id);
+      }
+      
+      if (filters.limit) {
+         query = query.limit(filters.limit);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return data;
+    } catch (err) {
+      setError(err.message);
+      return [];
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const fetchFilterOptions = async () => {
     setLoading(true);
     setError(null);
@@ -333,6 +383,8 @@ export const useReports = () => {
     fetchMachineSummary,
     fetchOrdersMonthly,
     fetchMachineRevenue,
+    fetchCylinderAgingStats,
+    fetchCylinderAgingDetails,
     fetchFilterOptions
   };
 };

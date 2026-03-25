@@ -46,7 +46,6 @@ export const extraMenuItems = [
   { path: '/khach-hang', label: 'Danh sách khách hàng', icon: Building2 },
   { path: '/khach-hang/tao', label: 'Thêm khách hàng', icon: Building2 },
   { path: '/may', label: 'Danh sách máy', icon: Monitor },
-  { path: '/may/tao', label: 'Thêm máy mới', icon: Monitor },
   { path: '/binh', label: 'Danh sách bình', icon: Package },
   { path: '/binh/tao', label: 'Thêm bình mới', icon: Package },
   { path: '/kho/danh-sach', label: 'Danh sách kho', icon: Warehouse },

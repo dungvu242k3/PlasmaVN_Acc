@@ -53,7 +53,7 @@ const legacyRedirects = [
   ['/danh-sach-binh', '/binh'],
   ['/tao-binh-moi', '/binh/tao'],
   ['/danh-sach-may', '/may'],
-  ['/tao-may-moi', '/may/tao'],
+  ['/tao-may-moi', '/may'],
   ['/danh-sach-kho', '/kho/danh-sach'],
   ['/tao-kho-moi', '/kho/tao'],
   ['/tao-khach-hang', '/khach-hang/tao'],

@@ -27,8 +27,11 @@ import {
     SlidersHorizontal,
     Trash2,
     User,
-    X
+    X,
+    Download,
+    Upload
 } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import { useEffect, useState, useRef } from 'react';
 import { Bar as BarChartJS, Pie as PieChartJS } from 'react-chartjs-2';
 import { createPortal } from 'react-dom';
@@ -67,7 +70,6 @@ const GoodsReceipts = () => {
     const [selectedIds, setSelectedIds] = useState([]);
     const [printData, setPrintData] = useState(null);
     const [warehousesList, setWarehousesList] = useState([]);
-
     // Modal states
     const [showFormModal, setShowFormModal] = useState(false);
     const [selectedReceipt, setSelectedReceipt] = useState(null);
@@ -166,6 +168,7 @@ const GoodsReceipts = () => {
 
             if (error) throw error;
             setReceipts(data || []);
+            setSelectedIds([]);
         } catch (error) {
             console.error('Error loading receipts:', error);
         } finally {
@@ -196,11 +199,245 @@ const GoodsReceipts = () => {
                 .eq('id', id);
 
             if (error) throw error;
+            setSelectedIds(prev => prev.filter(i => i !== id));
             fetchReceipts();
         } catch (error) {
             console.error('Error deleting receipt:', error);
             alert('❌ Lỗi khi xóa phiếu nhập: ' + error.message);
         }
+    };
+
+    const handleBulkDelete = async () => {
+        if (selectedIds.length === 0) return;
+        if (!window.confirm(`Bạn có chắc muốn xóa ${selectedIds.length} phiếu nhập đã chọn không? Hành động này sẽ không thể hoàn tác.`)) {
+            return;
+        }
+
+        try {
+            const { error } = await supabase
+                .from('goods_receipts')
+                .delete()
+                .in('id', selectedIds);
+
+            if (error) throw error;
+            
+            setSelectedIds([]);
+            fetchReceipts();
+            alert(`✅ Đã xóa ${selectedIds.length} phiếu nhập thành công!`);
+        } catch (error) {
+            console.error('Error deleting receipts:', error);
+            alert('❌ Lỗi khi xóa: ' + error.message);
+        }
+    };
+
+    const toggleSelectAll = () => {
+        if (selectedIds.length === filteredReceipts.length && filteredReceipts.length > 0) {
+            setSelectedIds([]);
+        } else {
+            setSelectedIds(filteredReceipts.map(r => r.id));
+        }
+    };
+
+    const toggleSelect = (id) => {
+        setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+    };
+
+    const handleDownloadTemplate = () => {
+        const headers = [
+            'Mã phiếu (Để trống sẽ tự tạo)',
+            'Nhà cung cấp',
+            'Kho nhận (HN/TP.HCM/TH/DN)',
+            'Ngày nhập (YYYY-MM-DD)',
+            'Ghi chú phiếu',
+            'Người nhận hàng',
+            'Loại hàng (MAY/BINH/VAT_TU)',
+            'Tên hàng hóa',
+            'Mã serial (nếu có)',
+            'Trạng thái hàng (Sẵn sàng/Lỗi...)',
+            'Số lượng',
+            'Đơn vị',
+            'Đơn giá nhập',
+        ];
+
+        const exampleData = [
+            {
+                'Mã phiếu (Để trống sẽ tự tạo)': 'PN00001',
+                'Nhà cung cấp': 'Công ty Oxy y tế A',
+                'Kho nhận (HN/TP.HCM/TH/DN)': 'HN',
+                'Ngày nhập (YYYY-MM-DD)': '2023-10-25',
+                'Ghi chú phiếu': 'Nhập hàng đợt 1',
+                'Người nhận hàng': 'Nguyễn Văn A',
+                'Loại hàng (MAY/BINH/VAT_TU)': 'BINH',
+                'Tên hàng hóa': 'Bình Oxy 40L',
+                'Mã serial (nếu có)': 'OXY40-001',
+                'Trạng thái hàng (Sẵn sàng/Lỗi...)': 'Sẵn sàng',
+                'Số lượng': 1,
+                'Đơn vị': 'bình',
+                'Đơn giá nhập': 1500000,
+            },
+            {
+                'Mã phiếu (Để trống sẽ tự tạo)': 'PN00001',
+                'Nhà cung cấp': 'Công ty Oxy y tế A',
+                'Kho nhận (HN/TP.HCM/TH/DN)': 'HN',
+                'Ngày nhập (YYYY-MM-DD)': '2023-10-25',
+                'Ghi chú phiếu': 'Nhập hàng đợt 1',
+                'Người nhận hàng': 'Nguyễn Văn A',
+                'Loại hàng (MAY/BINH/VAT_TU)': 'BINH',
+                'Tên hàng hóa': 'Bình Oxy 40L',
+                'Mã serial (nếu có)': 'OXY40-002',
+                'Trạng thái hàng (Sẵn sàng/Lỗi...)': 'Sẵn sàng',
+                'Số lượng': 1,
+                'Đơn vị': 'bình',
+                'Đơn giá nhập': 1500000,
+            }
+        ];
+
+        const ws = XLSX.utils.json_to_sheet(exampleData, { header: headers });
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Template Nhap Kho');
+        XLSX.writeFile(wb, 'mau_import_phieu_nhap_kho.xlsx');
+    };
+
+    const handleImportExcel = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = async (evt) => {
+            try {
+                const bstr = evt.target.result;
+                const wb = XLSX.read(bstr, { type: 'binary' });
+                const wsname = wb.SheetNames[0];
+                const ws = wb.Sheets[wsname];
+                const data = XLSX.utils.sheet_to_json(ws);
+
+                if (data.length === 0) {
+                    alert('File Excel không có dữ liệu!');
+                    return;
+                }
+
+                setLoading(true);
+
+                // Group by Receipt Code
+                const mappedData = data.map((row, index) => {
+                    const rowCode = row['Mã phiếu (Để trống sẽ tự tạo)']?.toString().trim();
+                    return {
+                        groupId: rowCode || `AUTO_GROUP_${index}`,
+                        receipt_code: rowCode || '',
+                        supplier_name: row['Nhà cung cấp']?.toString() || 'Chưa xác định',
+                        warehouse_id: row['Kho nhận (HN/TP.HCM/TH/DN)']?.toString().toUpperCase() || 'HN',
+                        receipt_date: row['Ngày nhập (YYYY-MM-DD)']?.toString() || new Date().toISOString().split('T')[0],
+                        note: row['Ghi chú phiếu']?.toString() || '',
+                        received_by: row['Người nhận hàng']?.toString() || '',
+                        
+                        item_type: row['Loại hàng (MAY/BINH/VAT_TU)']?.toString().toUpperCase() || 'VAT_TU',
+                        item_name: row['Tên hàng hóa']?.toString() || '',
+                        serial_number: row['Mã serial (nếu có)']?.toString() || null,
+                        item_status: row['Trạng thái hàng (Sẵn sàng/Lỗi...)']?.toString() || 'Sẵn sàng',
+                        quantity: parseInt(row['Số lượng'], 10) || 1,
+                        unit: row['Đơn vị']?.toString() || 'cái',
+                        unit_price: parseFloat(row['Đơn giá nhập']) || 0,
+                    };
+                }).filter(i => i.item_name);
+
+                if (mappedData.length === 0) {
+                    alert('Không tìm thấy dữ liệu hợp lệ (thiếu Tên hàng hóa)!');
+                    setLoading(false);
+                    return;
+                }
+
+                const groups = {};
+                mappedData.forEach(item => {
+                    if (!groups[item.groupId]) {
+                        groups[item.groupId] = {
+                            receipt_code: item.receipt_code,
+                            supplier_name: item.supplier_name,
+                            warehouse_id: ["HN", "TP.HCM", "TH", "DN"].includes(item.warehouse_id) ? item.warehouse_id : "HN",
+                            receipt_date: item.receipt_date,
+                            status: 'CHO_DUYET',
+                            note: item.note,
+                            received_by: item.received_by,
+                            total_items: 0,
+                            total_amount: 0,
+                            items: []
+                        };
+                    }
+                    groups[item.groupId].items.push({
+                        item_type: ["MAY", "BINH", "VAT_TU", "BINH_4L", "BINH_8L", "MAY_ROSY", "MAY_MED"].includes(item.item_type) ? item.item_type : "VAT_TU",
+                        item_name: item.item_name,
+                        serial_number: item.serial_number,
+                        item_status: item.item_status,
+                        quantity: item.quantity,
+                        unit: item.unit,
+                        unit_price: item.unit_price,
+                        total_price: item.quantity * item.unit_price,
+                        note: '',
+                    });
+                    groups[item.groupId].total_items += item.quantity;
+                    groups[item.groupId].total_amount += (item.quantity * item.unit_price);
+                });
+
+                let nextCodeNum = Date.now() % 100000; 
+                let importedReceipts = 0;
+                let importedItems = 0;
+
+                for (const groupId in groups) {
+                    const group = groups[groupId];
+                    let code = group.receipt_code;
+                    if (!code) {
+                        code = `PN${String(nextCodeNum++).padStart(5, '0')}`;
+                    }
+
+                    const { data: insertedReceipt, error: receiptError } = await supabase
+                        .from('goods_receipts')
+                        .insert([{
+                            receipt_code: code,
+                            supplier_name: group.supplier_name,
+                            warehouse_id: group.warehouse_id,
+                            receipt_date: group.receipt_date,
+                            status: group.status,
+                            note: group.note,
+                            received_by: group.received_by,
+                            total_items: group.total_items,
+                            total_amount: group.total_amount
+                        }])
+                        .select('id')
+                        .single();
+
+                    if (receiptError) {
+                        console.error('Error inserting receipt:', receiptError);
+                        continue;
+                    }
+
+                    importedReceipts++;
+
+                    const itemsToInsert = group.items.map(item => ({
+                        ...item,
+                        receipt_id: insertedReceipt.id
+                    }));
+
+                    const { error: itemsError } = await supabase
+                        .from('goods_receipt_items')
+                        .insert(itemsToInsert);
+
+                    if (itemsError) {
+                        console.error('Error inserting items:', itemsError);
+                    } else {
+                        importedItems += itemsToInsert.length;
+                    }
+                }
+
+                alert(`🎉 Đã import thành công ${importedReceipts} phiếu nhập với tổng cộng ${importedItems} hàng hóa!`);
+                fetchReceipts();
+            } catch (err) {
+                console.error('Error importing excel:', err);
+                alert('Có lỗi xảy ra khi xử lý file: ' + err.message);
+            } finally {
+                setLoading(false);
+                if (e.target) e.target.value = null;
+            }
+        };
+        reader.readAsBinaryString(file);
     };
 
     const handlePrintReceipt = async (receipt) => {
@@ -361,19 +598,7 @@ const GoodsReceipts = () => {
         return warehousesList.find(w => w.id === id)?.name || id;
     };
 
-    const toggleSelectAll = () => {
-        if (selectedIds.length === filteredReceipts.length && filteredReceipts.length > 0) {
-            setSelectedIds([]);
-        } else {
-            setSelectedIds(filteredReceipts.map(r => r.id));
-        }
-    };
 
-    const toggleSelect = (id) => {
-        setSelectedIds(prev =>
-            prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
-        );
-    };
 
     const filteredReceipts = receipts.filter(r => {
         const search = searchTerm.toLowerCase();
@@ -609,6 +834,24 @@ const GoodsReceipts = () => {
                                     )}
                                 </div>
                                 <button
+                                    onClick={handleDownloadTemplate}
+                                    className="flex items-center gap-2 px-4 py-1.5 rounded-xl border border-indigo-200 bg-indigo-50 text-indigo-700 text-[13px] font-bold hover:bg-indigo-100 transition-all shadow-sm"
+                                    title="Tải mẫu Excel"
+                                >
+                                    <Download size={16} />
+                                    Tải mẫu
+                                </button>
+                                <label className="flex items-center gap-2 px-4 py-1.5 rounded-xl border border-blue-200 bg-blue-50 text-blue-700 text-[13px] font-bold hover:bg-blue-100 transition-all shadow-sm cursor-pointer" title="Nhập Excel">
+                                    <Upload size={16} />
+                                    Nhập file
+                                    <input
+                                        type="file"
+                                        accept=".xlsx, .xls"
+                                        onChange={handleImportExcel}
+                                        className="hidden"
+                                    />
+                                </label>
+                                <button
                                     onClick={() => {
                                         setSelectedReceipt(null);
                                         setShowFormModal(true);
@@ -773,6 +1016,7 @@ const GoodsReceipts = () => {
                                         </div>
                                     ))}
                                 </div>
+
 
                                 {/* Desktop View Table */}
                                 <div className="hidden md:block">
@@ -1035,7 +1279,6 @@ const GoodsReceipts = () => {
                                 </div>
                             </div>
                         </div>
-
                         {/* Charts Area */}
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                             <div className="bg-card border border-border rounded-xl p-6 shadow-sm">

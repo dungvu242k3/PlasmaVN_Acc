@@ -200,18 +200,19 @@ export default function OrderFormModal({ order, onClose, onSuccess, initialMode 
         setFormData(prev => ({
             ...prev,
             customerId: customer.id,
-            recipientName: customer.recipient,
-            recipientAddress: customer.address,
-            recipientPhone: customer.phone,
-            customerCategory: customer.category
+            recipientName: customer.recipient || '',
+            recipientAddress: customer.address || '',
+            recipientPhone: customer.phone || '',
+            customerCategory: customer.category || 'TM'
         }));
         setIsCustomerDropdownOpen(false);
         setCustomerSearchTerm('');
     };
 
     const filteredCustomers = customers.filter(c => {
-        const categoryMatch = c.category === formData.customerCategory || (!c.category && formData.customerCategory === 'BV'); // fallback if c.category is missing
-        const searchMatch = c.name.toLowerCase().includes(customerSearchTerm.toLowerCase()) ||
+        const categoryMatch = !formData.customerCategory || formData.customerCategory === 'ALL' || c.category === formData.customerCategory;
+        const searchMatch = !customerSearchTerm ||
+            c.name?.toLowerCase().includes(customerSearchTerm.toLowerCase()) ||
             (c.phone && c.phone.includes(customerSearchTerm)) ||
             (c.recipient && c.recipient.toLowerCase().includes(customerSearchTerm.toLowerCase()));
         return categoryMatch && searchMatch;
@@ -237,14 +238,30 @@ export default function OrderFormModal({ order, onClose, onSuccess, initialMode 
     };
 
     const handleCylinderSerialChange = (index, value) => {
+        const normalizedVal = value ? value.trim().toUpperCase() : '';
         setAssignedCylinders(prev => {
             const newArr = [...prev];
             const now = new Date();
             const timeStr = now.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', hour12: false });
 
+            // Warning for duplicates during typing
+            if (normalizedVal) {
+                const isDuplicate = newArr.some((s, idx) => {
+                    const existingSerial = (typeof s === 'string' ? s : s?.serial)?.trim().toUpperCase();
+                    return idx !== index && existingSerial === normalizedVal;
+                });
+                if (isDuplicate) {
+                    toast.warn(`Mã ${normalizedVal} đang bị trùng trong đơn hàng này!`, {
+                        toastId: `dup-${normalizedVal}`,
+                        position: 'top-center',
+                        autoClose: 2000
+                    });
+                }
+            }
+
             newArr[index] = {
-                serial: value,
-                scan_time: value ? (prev[index]?.scan_time || timeStr) : null
+                serial: normalizedVal,
+                scan_time: normalizedVal ? (prev[index]?.scan_time || timeStr) : null
             };
             return newArr;
         });
@@ -256,19 +273,27 @@ export default function OrderFormModal({ order, onClose, onSuccess, initialMode 
 
         if (currentIdx === -1) return;
 
+        const normalizedText = decodedText.trim().toUpperCase();
+
+        // Skip if already in the list
+        if (currentArr.some(s => (typeof s === 'string' ? s : s?.serial)?.trim().toUpperCase() === normalizedText)) {
+            toast.info(`Mã ${normalizedText} đã được gán vào đơn hàng này rồi!`);
+            return;
+        }
+
         const now = new Date();
         const timeStr = now.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', hour12: false });
 
         setAssignedCylinders(prev => {
             const newArr = [...prev];
-            newArr[currentIdx] = { serial: decodedText, scan_time: timeStr };
+            newArr[currentIdx] = { serial: normalizedText, scan_time: timeStr };
             return newArr;
         });
 
         const updatedArr = [...currentArr];
-        updatedArr[currentIdx] = { serial: decodedText, scan_time: timeStr };
-        const nextEmpty = updatedArr.findIndex((s, i) => i > currentIdx && !s?.serial);
-        const fallbackEmpty = updatedArr.findIndex((s) => !s?.serial);
+        updatedArr[currentIdx] = { serial: normalizedText, scan_time: timeStr };
+        const nextEmpty = updatedArr.findIndex((s, i) => i > currentIdx && !(typeof s === 'string' ? s : s?.serial));
+        const fallbackEmpty = updatedArr.findIndex((s) => !(typeof s === 'string' ? s : s?.serial));
         const nextIdx = nextEmpty !== -1 ? nextEmpty : fallbackEmpty;
 
         if (nextIdx !== -1 && nextIdx !== currentIdx) {
@@ -276,6 +301,7 @@ export default function OrderFormModal({ order, onClose, onSuccess, initialMode 
         } else {
             setIsScannerOpen(false);
             setScanTargetIndex(-1);
+            toast.success('Đã gán đủ mã bình!', { position: 'top-center' });
         }
     }, [scanTargetIndex]);
 
@@ -340,24 +366,34 @@ export default function OrderFormModal({ order, onClose, onSuccess, initialMode 
             }
 
             const assignedSerials = formData.productType.startsWith('BINH')
-                ? assignedCylinders.map(c => typeof c === 'string' ? c : c.serial).filter(Boolean)
+                ? assignedCylinders.map(c => (typeof c === 'string' ? c : c?.serial)?.trim().toUpperCase()).filter(Boolean)
                 : [];
 
             // 1. VALIDATION: Check if cylinders exist and are in the correct warehouse
             if (assignedSerials.length > 0) {
+                // Check local duplicates first
+                const uniqueSerials = [...new Set(assignedSerials)];
+                if (uniqueSerials.length !== assignedSerials.length) {
+                    const counts = {};
+                    assignedSerials.forEach(s => counts[s] = (counts[s] || 0) + 1);
+                    const duplicates = Object.entries(counts).filter(([_, count]) => count > 1).map(([s]) => s);
+                    throw new Error(`Bạn đã nhập trùng mã bình: ${duplicates.join(', ')}. Mỗi mã bình chỉ được xuất hiện một lần trong một đơn hàng.`);
+                }
+
                 const { data: validCylinders, error: checkError } = await supabase
                     .from('cylinders')
                     .select('serial_number, warehouse_id, status')
-                    .in('serial_number', assignedSerials);
+                    .in('serial_number', uniqueSerials);
 
                 if (checkError) throw new Error('Lỗi kiểm tra mã bình: ' + checkError.message);
 
-                if (!validCylinders || validCylinders.length !== assignedSerials.length) {
-                    const foundSerials = validCylinders?.map(c => c.serial_number) || [];
-                    const missing = assignedSerials.filter(s => !foundSerials.includes(s));
+                if (!validCylinders || validCylinders.length !== uniqueSerials.length) {
+                    const foundSerials = validCylinders?.map(c => c.serial_number.toUpperCase()) || [];
+                    const missing = uniqueSerials.filter(s => !foundSerials.includes(s));
                     throw new Error(`Mã bình không tồn tại trong hệ thống: ${missing.join(', ')}`);
                 }
 
+                // Check warehouse consistency
                 const wrongWarehouse = validCylinders.filter(c => c.warehouse_id !== formData.warehouse);
                 if (wrongWarehouse.length > 0) {
                     throw new Error(`Mã bình sau không thuộc kho đã chọn: ${wrongWarehouse.map(c => c.serial_number).join(', ')}`);
@@ -365,6 +401,8 @@ export default function OrderFormModal({ order, onClose, onSuccess, initialMode 
             }
 
             // 2. INVENTORY DEDUCTION (If direct DA_DUYET)
+            const customerNameWithDept = `${customerName}${formData.department ? ` / ${formData.department}` : ''}`;
+
             if (!isEdit && initialStatus === 'DA_DUYET') {
                 const productConfig = PRODUCT_TYPES.find(p => p.id === formData.productType);
                 const productLabel = productConfig ? productConfig.label : formData.productType;
@@ -384,7 +422,10 @@ export default function OrderFormModal({ order, onClose, onSuccess, initialMode 
                 if (assignedSerials.length > 0) {
                     const { error: cylUpdErr } = await supabase
                         .from('cylinders')
-                        .update({ status: 'đang vận chuyển', customer_name: customerName })
+                        .update({ 
+                            status: 'đang vận chuyển', 
+                            customer_name: customerNameWithDept 
+                        })
                         .in('serial_number', assignedSerials);
                     if (cylUpdErr) throw new Error('Lỗi cập nhật trạng thái bình: ' + cylUpdErr.message);
                 }
@@ -474,11 +515,20 @@ export default function OrderFormModal({ order, onClose, onSuccess, initialMode 
                 if (error) throw error;
 
                 if (inserted && inserted[0]) {
+                    const orderId = inserted[0].id;
                     await supabase.from('order_history').insert([{
-                        order_id: inserted[0].id,
+                        order_id: orderId,
                         action: 'CREATED',
                         new_status: initialStatus,
                         created_by: currentUser
+                    }]);
+
+                    // Create System Notification
+                    await supabase.from('notifications').insert([{
+                        title: `Đơn hàng mới: ${formData.orderCode}`,
+                        description: `Khách hàng ${customerName} đã được tạo bởi ${currentUser}.`,
+                        type: 'info',
+                        link: `/danh-sach-don-hang`
                     }]);
                 }
             }

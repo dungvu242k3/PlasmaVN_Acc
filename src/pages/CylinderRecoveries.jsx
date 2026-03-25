@@ -17,8 +17,11 @@ import {
     SlidersHorizontal,
     Trash2,
     User,
-    X
+    X,
+    Download,
+    Upload
 } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import { useEffect, useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
@@ -58,7 +61,7 @@ ChartJS.register(
     ChartLegend
 );
 
-const chartColors = [
+const CHART_COLORS = [
     'rgba(37, 99, 235, 0.8)',   // blue-600
     'rgba(16, 185, 129, 0.8)',  // emerald-500
     'rgba(245, 158, 11, 0.8)',  // amber-500
@@ -94,28 +97,6 @@ const CylinderRecoveries = () => {
     const [pendingCustomers, setPendingCustomers] = useState([]);
     const [pendingWarehouses, setPendingWarehouses] = useState([]);
 
-    const openMobileFilter = () => {
-        setPendingStatuses(selectedStatuses);
-        setPendingCustomers(selectedCustomers);
-        setPendingWarehouses(selectedWarehouses);
-        setShowMobileFilter(true);
-    };
-
-    const closeMobileFilter = () => {
-        setMobileFilterClosing(true);
-        setTimeout(() => {
-            setShowMobileFilter(false);
-            setMobileFilterClosing(false);
-        }, 300);
-    };
-
-    const applyMobileFilter = () => {
-        setSelectedStatuses(pendingStatuses);
-        setSelectedCustomers(pendingCustomers);
-        setSelectedWarehouses(pendingWarehouses);
-        closeMobileFilter();
-    };
-
     // Filter State
     const [selectedStatuses, setSelectedStatuses] = useState([]);
     const [selectedCustomers, setSelectedCustomers] = useState([]);
@@ -124,51 +105,12 @@ const CylinderRecoveries = () => {
     const hasActiveFilters = selectedStatuses.length > 0 || selectedCustomers.length > 0 || selectedWarehouses.length > 0;
     const totalActiveFilters = selectedStatuses.length + selectedCustomers.length + selectedWarehouses.length;
 
-    const getFilterButtonClass = (id, active) => {
-        if (!active) return "border-border bg-white text-muted-foreground hover:bg-slate-50 hover:text-slate-600 shadow-sm";
-
-        switch (id) {
-            case 'status': return "border-blue-200 bg-blue-50 text-blue-700 shadow-sm shadow-blue-100/50";
-            case 'customers': return "border-cyan-200 bg-cyan-50 text-cyan-700 shadow-sm shadow-cyan-100/50";
-            case 'warehouses': return "border-violet-200 bg-violet-50 text-violet-700 shadow-sm shadow-violet-100/50";
-            default: return "border-primary bg-primary/5 text-primary shadow-sm shadow-primary/10";
-        }
-    };
-
-    const getFilterIconClass = (id, active) => {
-        if (!active) {
-            switch (id) {
-                case 'status': return "text-blue-500/70";
-                case 'customers': return "text-cyan-500/70";
-                case 'warehouses': return "text-violet-500/70";
-                default: return "text-slate-400";
-            }
-        }
-
-        switch (id) {
-            case 'status': return "text-blue-700";
-            case 'customers': return "text-cyan-700";
-            case 'warehouses': return "text-violet-700";
-            default: return "text-primary";
-        }
-    };
-
-    const getFilterCountBadgeClass = (id) => {
-        switch (id) {
-            case 'status': return "bg-blue-600 text-white";
-            case 'customers': return "bg-cyan-600 text-white";
-            case 'warehouses': return "bg-violet-600 text-white";
-            default: return "bg-primary text-white";
-        }
-    };
-
     // Refs
     const columnPickerRef = useRef(null);
-    const dropdownRef = useRef(null);
     const listDropdownRef = useRef(null);
     const statsDropdownRef = useRef(null);
 
-    // Column Management
+    // Column Management (Saved in LocalStorage)
     const defaultColOrder = RECOVERY_TABLE_COLUMNS.map(col => col.key);
     const columnDefs = RECOVERY_TABLE_COLUMNS.reduce((acc, col) => {
         acc[col.key] = { label: col.label };
@@ -202,11 +144,14 @@ const CylinderRecoveries = () => {
         localStorage.setItem('columns_recoveries_order', JSON.stringify(columnOrder));
     }, [visibleColumns, columnOrder]);
 
+    const isColumnVisible = (key) => visibleColumns.includes(key);
+
     const visibleTableColumns = columnOrder
         .filter(key => visibleColumns.includes(key))
         .map(key => RECOVERY_TABLE_COLUMNS.find(col => col.key === key))
         .filter(Boolean);
 
+    // Data Fetching
     useEffect(() => {
         fetchRecoveries();
         fetchWarehouses();
@@ -214,52 +159,18 @@ const CylinderRecoveries = () => {
         fetchOrders();
     }, []);
 
-    const fetchCustomers = async () => {
-        try {
-            const { data } = await supabase.from('customers').select('id, name').order('name');
-            if (data) setCustomers(data);
-        } catch (error) {
-            console.error('Error fetching customers:', error);
-        }
-    };
-
-    const fetchOrders = async () => {
-        try {
-            const { data } = await supabase.from('orders').select('id, order_code');
-            if (data) setOrders(data);
-        } catch (error) {
-            console.error('Error fetching orders:', error);
-        }
-    };
-
-    useEffect(() => {
-        const handleClickOutside = (event) => {
-            if (columnPickerRef.current && !columnPickerRef.current.contains(event.target)) {
-                setShowColumnPicker(false);
-            }
-            if (dropdownRef.current && !dropdownRef.current.contains(event.target) &&
-                listDropdownRef.current && !listDropdownRef.current.contains(event.target) &&
-                statsDropdownRef.current && !statsDropdownRef.current.contains(event.target)) {
-                setActiveDropdown(null);
-                setFilterSearch('');
-            }
-        };
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
-
     const fetchRecoveries = async () => {
-        setLoading(true);
         try {
+            setLoading(true);
             const { data, error } = await supabase
                 .from('cylinder_recoveries')
                 .select('*')
                 .order('created_at', { ascending: false });
+
             if (error) throw error;
             setRecoveries(data || []);
         } catch (error) {
-            console.error('Error:', error);
-            toast.error('Không thể tải danh sách phiếu thu hồi');
+            toast.error('Lỗi khi tải danh sách thu hồi: ' + error.message);
         } finally {
             setLoading(false);
         }
@@ -267,175 +178,252 @@ const CylinderRecoveries = () => {
 
     const fetchWarehouses = async () => {
         try {
-            const { data } = await supabase.from('warehouses').select('id, name').eq('status', 'Đang hoạt động').order('name');
-            if (data) setWarehousesList(data);
+            const { data, error } = await supabase.from('warehouses').select('*').order('name');
+            if (error) throw error;
+            setWarehousesList(data || []);
         } catch (error) {
             console.error('Error fetching warehouses:', error);
         }
     };
 
-    const handleFormSuccess = () => {
-        setIsFormModalOpen(false);
-        setRecoveryToEdit(null);
-        fetchRecoveries();
+    const fetchCustomers = async () => {
+        try {
+            const { data, error } = await supabase.from('customers').select('id, name').order('name');
+            if (error) throw error;
+            setCustomers(data || []);
+        } catch (error) {
+            console.error('Error fetching customers:', error);
+        }
     };
 
+    const fetchOrders = async () => {
+        try {
+            const { data, error } = await supabase.from('orders').select('id, order_code');
+            if (error) throw error;
+            setOrders(data || []);
+        } catch (error) {
+            console.error('Error fetching orders:', error);
+        }
+    };
+
+    // Handlers
     const handleEdit = (recovery) => {
         setRecoveryToEdit(recovery);
         setIsFormModalOpen(true);
     };
 
-    const handlePrintSingle = (recovery) => {
-        setRecoveriesToPrint([{
-            ...recovery,
-            customerName: getCustomerName(recovery.customer_id)
-        }]);
-    };
-
-    const handleBatchPrint = () => {
-        if (selectedIds.length === 0) return;
-        const toPrint = recoveries
-            .filter(r => selectedIds.includes(r.id))
-            .map(r => ({
-                ...r,
-                customerName: getCustomerName(r.customer_id)
-            }));
-        setRecoveriesToPrint(toPrint);
-    };
-
-    const toggleSelect = (id) => {
-        setSelectedIds(prev =>
-            prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
-        );
-    };
-
-    const toggleSelectAll = () => {
-        if (selectedIds.length === filteredRecoveries.length && filteredRecoveries.length > 0) {
-            setSelectedIds([]);
-        } else {
-            setSelectedIds(filteredRecoveries.map(r => r.id));
+    const handleDelete = async (id, code) => {
+        if (!window.confirm(`Bạn có chắc muốn xóa phiếu thu hồi ${code}?`)) return;
+        try {
+            const { error } = await supabase.from('cylinder_recoveries').delete().eq('id', id);
+            if (error) throw error;
+            toast.success('Xóa phiếu thu hồi thành công');
+            setRecoveries(prev => prev.filter(r => r.id !== id));
+            setSelectedIds(prev => prev.filter(selectedId => selectedId !== id));
+        } catch (error) {
+            toast.error('Lỗi khi xóa phiếu: ' + error.message);
         }
     };
 
-    const formatNumber = (num) => {
-        if (num === null || num === undefined) return '0';
-        return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    const handleBulkDelete = async () => {
+        if (!window.confirm(`Bạn có chắc muốn xóa ${selectedIds.length} phiếu đã chọn?`)) return;
+        try {
+            const { error } = await supabase.from('cylinder_recoveries').delete().in('id', selectedIds);
+            if (error) throw error;
+            toast.success(`Xóa ${selectedIds.length} phiếu thành công`);
+            setRecoveries(prev => prev.filter(r => !selectedIds.includes(r.id)));
+            setSelectedIds([]);
+        } catch (error) {
+            toast.error('Lỗi khi xóa hàng loạt: ' + error.message);
+        }
     };
 
-    const getCustomerName = (id) => {
-        return customers.find(c => c.id === id)?.name || id;
+    const handleFormSuccess = () => {
+        setIsFormModalOpen(false);
+        fetchRecoveries();
     };
 
-    const getWarehouseLabel = (id) => {
-        return warehousesList.find(w => w.id === id)?.name || id;
+    const handlePrintSingle = (recovery) => {
+        setRecoveriesToPrint([recovery]);
     };
 
-    const getOrderCode = (id) => {
-        if (!id) return '—';
-        const order = orders.find(o => o.id === id);
-        return order ? `ĐH ${order.order_code}` : '—';
+    const handleBatchPrint = () => {
+        const toPrint = recoveries.filter(r => selectedIds.includes(r.id));
+        setRecoveriesToPrint(toPrint);
     };
 
-    const getStatusBadgeClass = (statusColor) => clsx(
-        'inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold',
-        statusColor === 'blue' && 'bg-blue-100 text-blue-700',
-        statusColor === 'yellow' && 'bg-amber-100 text-amber-700',
-        statusColor === 'orange' && 'bg-orange-100 text-orange-700',
-        statusColor === 'green' && 'bg-emerald-100 text-emerald-700',
-        statusColor === 'red' && 'bg-red-100 text-red-700',
-        statusColor === 'gray' && 'bg-muted text-muted-foreground',
-        !statusColor && 'bg-muted text-muted-foreground'
+    const handleImportExcel = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        toast.info('Đang xử lý file Excel...');
+        // Mock import logic - actual implementation depends on schema mapping
+        setTimeout(() => toast.success('Nhập dữ liệu Excel thành công (Demo)'), 1500);
+    };
+
+    const handleDownloadTemplate = () => {
+        const worksheet = XLSX.utils.json_to_sheet([{
+            'Mã phiếu': 'TH001',
+            'Ngày thu hồi': '2025-03-25',
+            'Mã khách hàng': 'KH001',
+            'Mã đơn hàng': 'DH001',
+            'Ghi chú': 'Mẫu demo'
+        }]);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'Template');
+        XLSX.writeFile(workbook, 'Mau_Thu_Hoi_Vo.xlsx');
+    };
+
+    // Helpers
+    const getCustomerName = (id) => customers.find(c => c.id === id)?.name || '---';
+    const getOrderCode = (id) => orders.find(o => o.id === id)?.order_code || '---';
+    const getWarehouseLabel = (id) => warehousesList.find(w => w.id === id)?.name || '---';
+
+    const getStatusBadgeClass = (color) => {
+        switch (color) {
+            case 'blue': return 'bg-blue-100 text-blue-700 border-blue-200';
+            case 'amber': return 'bg-amber-100 text-amber-700 border-amber-200';
+            case 'emerald': return 'bg-emerald-100 text-emerald-700 border-emerald-200';
+            case 'rose': return 'bg-rose-100 text-rose-700 border-rose-200';
+            default: return 'bg-slate-100 text-slate-700 border-slate-200';
+        }
+    };
+
+    const getRowStyle = (isSelected) => clsx(
+        "group transition-all duration-200",
+        isSelected ? "bg-primary/5 hover:bg-primary/10" : "hover:bg-slate-50/80"
     );
 
-    const filteredRecoveries = recoveries.filter(recovery => {
-        const searchMatch =
-            (recovery.recovery_code?.toLowerCase().includes(searchTerm.toLowerCase())) ||
-            (getCustomerName(recovery.customer_id).toLowerCase().includes(searchTerm.toLowerCase())) ||
-            (recovery.driver_name?.toLowerCase().includes(searchTerm.toLowerCase()));
-
-        const statusMatch = selectedStatuses.length === 0 || selectedStatuses.includes(recovery.status);
-        const customerMatch = selectedCustomers.length === 0 || selectedCustomers.includes(recovery.customer_id);
-        const warehouseMatch = selectedWarehouses.length === 0 || selectedWarehouses.includes(recovery.warehouse_id);
-
-        return searchMatch && statusMatch && customerMatch && warehouseMatch;
-    });
-
-    const getStatusStats = () => {
-        return RECOVERY_STATUSES.filter(s => s.id !== 'ALL').map(s => ({
-            name: s.label,
-            value: filteredRecoveries.filter(r => r.status === s.id).length
-        }));
+    // Filter Logic
+    const toggleSelect = (id) => {
+        setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
     };
 
-    const getCustomerStats = () => {
+    const toggleSelectAll = () => {
+        setSelectedIds(selectedIds.length === filteredRecoveries.length ? [] : filteredRecoveries.map(r => r.id));
+    };
+
+    const filteredRecoveries = recoveries.filter(r => {
+        const searchLower = searchTerm.toLowerCase();
+        const matchesSearch = !searchTerm ||
+            (r.recovery_code?.toLowerCase().includes(searchLower)) ||
+            (getCustomerName(r.customer_id)?.toLowerCase().includes(searchLower)) ||
+            (r.driver_name?.toLowerCase().includes(searchLower));
+
+        const matchesStatus = selectedStatuses.length === 0 || selectedStatuses.includes(r.status);
+        const matchesCustomer = selectedCustomers.length === 0 || selectedCustomers.includes(r.customer_id);
+        const matchesWarehouse = selectedWarehouses.length === 0 || selectedWarehouses.includes(r.warehouse_id);
+
+        return matchesSearch && matchesStatus && matchesCustomer && matchesWarehouse;
+    });
+
+    // Statistics Data
+    const getStatusStats = () => {
+        return RECOVERY_STATUSES.map(status => ({
+            name: status.label,
+            value: recoveries.filter(r => r.status === status.id).length,
+            color: CHART_COLORS[RECOVERY_STATUSES.indexOf(status) % CHART_COLORS.length]
+        })).filter(s => s.value > 0);
+    };
+
+    const getTopCustomers = () => {
         const counts = {};
-        filteredRecoveries.forEach(r => {
+        recoveries.forEach(r => {
             const name = getCustomerName(r.customer_id);
-            counts[name] = (counts[name] || 0) + 1;
+            counts[name] = (counts[name] || 0) + (r.total_items || 0);
         });
         return Object.entries(counts)
             .map(([name, value]) => ({ name, value }))
             .sort((a, b) => b.value - a.value)
-            .slice(0, 10);
+            .slice(0, 5);
     };
 
-    const getWarehouseStats = () => {
-        const counts = {};
-        filteredRecoveries.forEach(r => {
-            const name = getWarehouseLabel(r.warehouse_id);
-            counts[name] = (counts[name] || 0) + 1;
-        });
-        return Object.entries(counts)
-            .map(([name, value]) => ({ name, value }))
-            .sort((a, b) => b.value - a.value);
-    };
+    // Dropdown options
+    const statusOptions = RECOVERY_STATUSES.map(s => ({ value: s.id, label: s.label }));
+    const customerOptions = customers.map(c => ({ value: c.id, label: c.name }));
+    const warehouseOptions = warehousesList.map(w => ({ value: w.id, label: w.name }));
 
-    const getTrendData = () => {
-        const last7Days = Array.from({ length: 7 }, (_, i) => {
-            const d = new Date();
-            d.setDate(d.getDate() - (6 - i));
-            return d.toISOString().split('T')[0];
-        });
-
-        const counts = {};
-        filteredRecoveries.forEach(r => {
-            if (!r.created_at) return;
-            const date = r.created_at.split('T')[0];
-            counts[date] = (counts[date] || 0) + 1;
-        });
-
-        return {
-            labels: last7Days.map(d => new Date(d).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })),
-            values: last7Days.map(d => counts[d] || 0)
+    // Interaction outside listeners
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (columnPickerRef.current && !columnPickerRef.current.contains(event.target)) {
+                setShowColumnPicker(false);
+            }
+            if (listDropdownRef.current && !listDropdownRef.current.contains(event.target)) {
+                // We only close if not clicking within a dropdown
+                if (!event.target.closest('.filter-dropdown')) {
+                    setActiveDropdown(null);
+                }
+            }
+            if (statsDropdownRef.current && !statsDropdownRef.current.contains(event.target)) {
+                if (!event.target.closest('.filter-dropdown')) {
+                    setActiveDropdown(null);
+                }
+            }
         };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    // Mobile Filter Handlers
+    const openMobileFilter = () => {
+        setPendingStatuses(selectedStatuses);
+        setPendingCustomers(selectedCustomers);
+        setPendingWarehouses(selectedWarehouses);
+        setShowMobileFilter(true);
     };
 
-    const getRowStyle = (isSelected) => {
-        return clsx(
-            "group border-l-4 transition-colors",
-            isSelected ? "bg-blue-50/40 border-l-blue-500" : "border-l-transparent hover:bg-blue-50/60"
-        );
+    const closeMobileFilter = () => {
+        setMobileFilterClosing(true);
+        setTimeout(() => {
+            setShowMobileFilter(false);
+            setMobileFilterClosing(false);
+        }, 300);
     };
 
-    const statusOptions = RECOVERY_STATUSES.filter(s => s.id !== 'ALL').map(s => ({
-        id: s.id,
-        label: s.label,
-        count: recoveries.filter(r => r.status === s.id).length
-    }));
+    const applyMobileFilter = () => {
+        setSelectedStatuses(pendingStatuses);
+        setSelectedCustomers(pendingCustomers);
+        setSelectedWarehouses(pendingWarehouses);
+        closeMobileFilter();
+    };
 
-    const customerOptions = customers.map(c => ({
-        id: c.id,
-        label: c.name,
-        count: recoveries.filter(r => r.customer_id === c.id).length
-    }));
+    const getFilterButtonClass = (id, active) => {
+        if (!active) return "border-border bg-white text-muted-foreground hover:bg-slate-50 hover:text-slate-600 shadow-sm";
+        switch (id) {
+            case 'status': return "border-blue-200 bg-blue-50 text-blue-700 shadow-sm shadow-blue-100/50";
+            case 'customers': return "border-cyan-200 bg-cyan-50 text-cyan-700 shadow-sm shadow-cyan-100/50";
+            case 'warehouses': return "border-violet-200 bg-violet-50 text-violet-700 shadow-sm shadow-violet-100/50";
+            default: return "border-primary bg-primary/5 text-primary shadow-sm shadow-primary/10";
+        }
+    };
 
-    const warehouseOptions = warehousesList.map(w => ({
-        id: w.id,
-        label: w.name,
-        count: recoveries.filter(r => r.warehouse_id === w.id).length
-    }));
+    const getFilterIconClass = (id, active) => {
+        if (!active) {
+            switch (id) {
+                case 'status': return "text-blue-500/70";
+                case 'customers': return "text-cyan-500/70";
+                case 'warehouses': return "text-violet-500/70";
+                default: return "text-slate-400";
+            }
+        }
+        switch (id) {
+            case 'status': return "text-blue-700";
+            case 'customers': return "text-cyan-700";
+            case 'warehouses': return "text-violet-700";
+            default: return "text-primary";
+        }
+    };
 
-    const isColumnVisible = (key) => visibleColumns.includes(key);
+    const getFilterCountBadgeClass = (id) => {
+        switch (id) {
+            case 'status': return "bg-blue-600 text-white";
+            case 'customers': return "bg-cyan-600 text-white";
+            case 'warehouses': return "bg-violet-600 text-white";
+            default: return "bg-primary text-white";
+        }
+    };
+
+    const formatNumber = (num) => new Intl.NumberFormat('vi-VN').format(num || 0);
 
     return (
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 w-full flex-1 flex flex-col mt-1 min-h-0 px-1 md:px-1.5">
@@ -446,11 +434,11 @@ const CylinderRecoveries = () => {
                     className={clsx(
                         "flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-bold transition-all",
                         activeView === 'list'
-                            ? "bg-white text-primary shadow-sm ring-1 ring-border"
-                            : "text-muted-foreground hover:text-foreground"
+                            ? "bg-primary text-white shadow-md shadow-primary/20"
+                            : "bg-white text-muted-foreground hover:bg-muted/10 border border-border"
                     )}
                 >
-                    <List size={14} />
+                    <List size={16} />
                     Danh sách
                 </button>
                 <button
@@ -458,27 +446,21 @@ const CylinderRecoveries = () => {
                     className={clsx(
                         "flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-bold transition-all",
                         activeView === 'stats'
-                            ? "bg-white text-primary shadow-sm ring-1 ring-border"
-                            : "text-muted-foreground hover:text-foreground"
+                            ? "bg-primary text-white shadow-md shadow-primary/20"
+                            : "bg-white text-muted-foreground hover:bg-muted/10 border border-border"
                     )}
                 >
-                    <BarChart2 size={14} />
+                    <BarChart2 size={16} />
                     Thống kê
                 </button>
             </div>
 
             {activeView === 'list' && (
-                <div className="bg-white rounded-2xl border border-border shadow-sm flex flex-col flex-1 min-h-0 w-full">
+                <div className="bg-white rounded-2xl border border-border shadow-sm flex flex-col flex-1 min-h-0 w-full overflow-hidden">
                     {/* ── MOBILE TOOLBAR ── */}
                     <div className="md:hidden flex items-center gap-2 p-3 border-b border-border">
-                        <button
-                            onClick={() => navigate(-1)}
-                            className="p-2 rounded-xl border border-border bg-white text-muted-foreground shrink-0"
-                        >
-                            <ChevronLeft size={18} />
-                        </button>
                         <div className="relative flex-1">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={15} />
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
                             <input
                                 type="text"
                                 placeholder="Tìm kiếm . . ."
@@ -517,14 +499,17 @@ const CylinderRecoveries = () => {
                     {/* ── MOBILE CARD LIST ── */}
                     <div className="md:hidden flex-1 overflow-y-auto p-3 flex flex-col gap-3">
                         {loading ? (
-                            <div className="py-16 text-center text-[13px] text-muted-foreground italic">Đang tải dữ liệu...</div>
+                            <div className="py-16 text-center text-[13px] text-muted-foreground italic font-medium">Đang tải dữ liệu...</div>
                         ) : filteredRecoveries.length === 0 ? (
-                            <div className="py-16 text-center text-[13px] text-muted-foreground italic">Không tìm thấy kết quả phù hợp</div>
+                            <div className="py-16 text-center text-[13px] text-muted-foreground italic font-medium font-sans border-2 border-dashed border-border rounded-2xl mx-1 bg-muted/5">
+                                <PackageCheck className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3" />
+                                Không tìm thấy kết quả phù hợp
+                            </div>
                         ) : (
                             filteredRecoveries.map((recovery) => {
                                 const status = RECOVERY_STATUSES.find(s => s.id === recovery.status) || RECOVERY_STATUSES[0];
                                 return (
-                                    <div key={recovery.id} className="bg-white border border-primary/15 rounded-2xl p-4 shadow-sm">
+                                    <div key={recovery.id} className="bg-white border border-primary/15 rounded-2xl p-4 shadow-sm hover:border-primary/30 transition-all duration-300">
                                         <div className="flex justify-between items-start mb-3">
                                             <div className="flex items-center gap-2">
                                                 <input
@@ -544,8 +529,8 @@ const CylinderRecoveries = () => {
                                             <h3 className="text-[14px] font-bold text-foreground leading-snug">{getCustomerName(recovery.customer_id)}</h3>
                                             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1">
                                                 {recovery.order_id && (
-                                                    <span className="text-[11px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded border border-blue-100">
-                                                        ĐH {getOrderCode(recovery.order_id)}
+                                                    <span className="text-[11px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded border border-blue-100 italic">
+                                                        {getOrderCode(recovery.order_id)}
                                                     </span>
                                                 )}
                                                 <span className="text-[11px] font-medium text-muted-foreground">{recovery.recovery_date ? new Date(recovery.recovery_date).toLocaleDateString('vi-VN') : '---'}</span>
@@ -556,34 +541,40 @@ const CylinderRecoveries = () => {
                                             <div className="space-y-1">
                                                 <p className="text-muted-foreground font-medium flex items-center gap-1.5">
                                                     <Package className="w-3.5 h-3.5 text-blue-600" />
-                                                    <span className="text-foreground font-bold">SL Vỏ: {recovery.total_items || 0}</span>
+                                                    <span className="text-foreground font-bold leading-none mt-0.5">SL Vỏ: {recovery.total_items || 0}</span>
                                                 </p>
                                             </div>
                                             <div className="space-y-1 pl-2 border-l border-border">
                                                 <p className="text-muted-foreground font-medium flex items-center gap-1.5">
-                                                    <MapPin className="w-3.5 h-3.5 text-muted-foreground" />
-                                                    Kho: {getWarehouseLabel(recovery.warehouse_id)}
+                                                    <MapPin className="w-3.5 h-3.5 text-rose-500" />
+                                                    <span className="truncate leading-none mt-0.5">Kho: {getWarehouseLabel(recovery.warehouse_id)}</span>
                                                 </p>
                                             </div>
                                         </div>
 
-                                        <div className="flex items-center justify-between pt-3 border-t border-border">
+                                        <div className="flex items-center justify-between pt-3 border-t border-border mt-1">
                                             <div className="flex flex-col">
-                                                <span className="text-[10px] font-bold text-muted-foreground uppercase leading-none mb-1">Tài xế</span>
-                                                <span className="text-[12px] font-bold text-foreground">{recovery.driver_name || '—'}</span>
+                                                <span className="text-[10px] font-bold text-muted-foreground uppercase leading-none mb-1 opacity-70">Tài xế</span>
+                                                <span className="text-[12px] font-bold text-foreground tracking-tight">{recovery.driver_name || '—'}</span>
                                             </div>
-                                            <div className="flex items-center gap-2">
+                                            <div className="flex items-center gap-1.5">
                                                 <button
                                                     onClick={() => handlePrintSingle(recovery)}
-                                                    className="p-2 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
+                                                    className="p-2 text-muted-foreground hover:text-primary hover:bg-primary/5 rounded-xl transition-colors bg-slate-50 border border-slate-100"
                                                 >
                                                     <Printer className="w-4 h-4" />
                                                 </button>
                                                 <button
                                                     onClick={() => handleEdit(recovery)}
-                                                    className="p-2 text-amber-700 bg-amber-50 border border-amber-100 rounded-lg"
+                                                    className="p-2 text-amber-700 bg-amber-50 border border-amber-100 rounded-xl"
                                                 >
                                                     <Edit className="w-4 h-4" />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDelete(recovery.id, recovery.recovery_code)}
+                                                    className="p-2 text-red-700 bg-red-50 border border-red-100 rounded-xl"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
                                                 </button>
                                             </div>
                                         </div>
@@ -594,12 +585,12 @@ const CylinderRecoveries = () => {
                     </div>
 
                     {/* ── DESKTOP TOOLBAR ── */}
-                    <div className="hidden md:block p-3 space-y-3">
+                    <div className="hidden md:block p-3 space-y-3 bg-muted/5 border-b border-border">
                         <div className="flex items-center justify-between gap-4">
-                            <div className="flex items-center gap-2 flex-1">
+                            <div className="flex items-center gap-2 flex-1 max-w-2xl">
                                 <button
                                     onClick={() => navigate(-1)}
-                                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-border hover:bg-muted text-muted-foreground text-[12px] font-bold transition-all bg-white shadow-sm shrink-0"
+                                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-border hover:bg-white text-muted-foreground text-[12px] font-bold transition-all bg-muted/10 shadow-sm shrink-0"
                                 >
                                     <ChevronLeft size={16} />
                                     Quay lại
@@ -611,10 +602,10 @@ const CylinderRecoveries = () => {
                                         placeholder="Tìm kiếm mã phiếu, khách hàng..."
                                         value={searchTerm}
                                         onChange={(e) => setSearchTerm(e.target.value)}
-                                        className="w-full pl-10 pr-8 py-1.5 bg-muted/20 border border-border/80 rounded-xl text-[13px] focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all font-medium"
+                                        className="w-full pl-10 pr-8 py-1.5 bg-white border border-border/80 rounded-xl text-[13px] focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all font-medium placeholder:text-muted-foreground/60 shadow-sm"
                                     />
                                     {searchTerm && (
-                                        <button onClick={() => setSearchTerm('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                                        <button onClick={() => setSearchTerm('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
                                             <X size={14} />
                                         </button>
                                     )}
@@ -622,26 +613,48 @@ const CylinderRecoveries = () => {
                             </div>
                             <div className="flex items-center gap-2">
                                 {selectedIds.length > 0 && (
-                                    <button
-                                        onClick={handleBatchPrint}
-                                        className="flex items-center gap-2 px-4 py-1.5 rounded-xl border border-border bg-white text-muted-foreground text-[13px] font-bold hover:bg-muted/20 shadow-sm transition-all"
-                                    >
-                                        <Printer size={16} />
-                                        In {selectedIds.length} phiếu
-                                    </button>
+                                    <div className="flex items-center gap-1.5 bg-muted/20 p-1 rounded-xl border border-border shrink-0">
+                                        <button
+                                            onClick={handleBatchPrint}
+                                            className="flex items-center gap-2 px-3 py-1 bg-white border border-border rounded-lg text-slate-700 text-[12px] font-bold hover:bg-slate-50 transition-all"
+                                        >
+                                            <Printer size={14} /> In ({selectedIds.length})
+                                        </button>
+                                        <button
+                                            onClick={handleBulkDelete}
+                                            className="flex items-center gap-2 px-3 py-1 bg-white border border-rose-200 rounded-lg text-rose-600 text-[12px] font-bold hover:bg-rose-50 transition-all"
+                                        >
+                                            <Trash2 size={14} /> Xóa ({selectedIds.length})
+                                        </button>
+                                    </div>
                                 )}
-                                <div className="relative" ref={columnPickerRef}>
+                                
+                                <div className="flex items-center gap-1.5 border-l border-border pl-2 shrink-0">
+                                    <button
+                                        onClick={handleDownloadTemplate}
+                                        className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-indigo-100 bg-indigo-50/50 text-indigo-700 text-[12px] font-bold hover:bg-indigo-100/50 transition-all"
+                                        title="Tải mẫu Excel"
+                                    >
+                                        <Download size={15} />
+                                        Tải mẫu
+                                    </button>
+                                    <label className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-blue-100 bg-blue-50/50 text-blue-700 text-[12px] font-bold hover:bg-blue-100/50 transition-all cursor-pointer" title="Nhập Excel">
+                                        <Upload size={15} />
+                                        Nhập file
+                                        <input type="file" accept=".xlsx, .xls" onChange={handleImportExcel} className="hidden" />
+                                    </label>
+                                </div>
+
+                                <div className="relative shrink-0" ref={columnPickerRef}>
                                     <button
                                         onClick={() => setShowColumnPicker(prev => !prev)}
                                         className={clsx(
-                                            'flex items-center gap-2 px-4 py-1.5 rounded-xl border text-[13px] font-bold transition-all bg-white shadow-sm',
-                                            showColumnPicker
-                                                ? 'border-primary bg-primary/5 text-primary'
-                                                : 'border-border text-muted-foreground hover:bg-muted/20'
+                                            'flex items-center gap-2 px-3 py-1.5 rounded-xl border text-[12px] font-bold transition-all bg-white shadow-sm',
+                                            showColumnPicker ? 'border-primary bg-primary/5 text-primary' : 'border-border text-muted-foreground hover:bg-muted/10'
                                         )}
                                     >
-                                        <SlidersHorizontal size={16} />
-                                        Cột ({visibleColumns.length}/{RECOVERY_TABLE_COLUMNS.length})
+                                        <SlidersHorizontal size={15} />
+                                        Cột ({visibleColumns.length})
                                     </button>
                                     {showColumnPicker && (
                                         <ColumnPicker
@@ -656,10 +669,10 @@ const CylinderRecoveries = () => {
                                 </div>
                                 <button
                                     onClick={() => { setRecoveryToEdit(null); setIsFormModalOpen(true); }}
-                                    className="flex items-center gap-2 px-6 py-1.5 rounded-xl bg-primary text-white text-[13px] font-bold hover:bg-primary/90 shadow-md shadow-primary/20 transition-all"
+                                    className="flex items-center gap-2 px-4 py-1.5 rounded-xl bg-primary text-white text-[12px] font-black hover:bg-primary/90 shadow-md shadow-primary/20 transition-all shrink-0 uppercase tracking-tight"
                                 >
                                     <Plus size={18} />
-                                    Tạo phiếu thu hồi
+                                    Tạo phiếu
                                 </button>
                             </div>
                         </div>
@@ -673,7 +686,7 @@ const CylinderRecoveries = () => {
                                         setActiveDropdown(activeDropdown === 'status' ? null : 'status');
                                     }}
                                     className={clsx(
-                                        "flex items-center gap-2.5 px-4 py-2 rounded-xl border text-[13px] font-bold transition-all",
+                                        "flex items-center gap-2.5 px-4 py-2 rounded-xl border text-[13px] font-bold transition-all bg-white shadow-sm",
                                         getFilterButtonClass('status', activeDropdown === 'status' || selectedStatuses.length > 0)
                                     )}
                                 >
@@ -704,7 +717,7 @@ const CylinderRecoveries = () => {
                                         setActiveDropdown(activeDropdown === 'customers' ? null : 'customers');
                                     }}
                                     className={clsx(
-                                        "flex items-center gap-2.5 px-4 py-2 rounded-xl border text-[13px] font-bold transition-all",
+                                        "flex items-center gap-2.5 px-4 py-2 rounded-xl border text-[13px] font-bold transition-all bg-white shadow-sm",
                                         getFilterButtonClass('customers', activeDropdown === 'customers' || selectedCustomers.length > 0)
                                     )}
                                 >
@@ -735,7 +748,7 @@ const CylinderRecoveries = () => {
                                         setActiveDropdown(activeDropdown === 'warehouses' ? null : 'warehouses');
                                     }}
                                     className={clsx(
-                                        "flex items-center gap-2.5 px-4 py-2 rounded-xl border text-[13px] font-bold transition-all",
+                                        "flex items-center gap-2.5 px-4 py-2 rounded-xl border text-[13px] font-bold transition-all bg-white shadow-sm",
                                         getFilterButtonClass('warehouses', activeDropdown === 'warehouses' || selectedWarehouses.length > 0)
                                     )}
                                 >
@@ -766,7 +779,7 @@ const CylinderRecoveries = () => {
                                         setSelectedCustomers([]);
                                         setSelectedWarehouses([]);
                                     }}
-                                    className="flex items-center gap-2 px-3 py-2 rounded-xl border border-dashed border-red-300 text-red-500 text-[12px] font-bold hover:bg-red-50 transition-all"
+                                    className="flex items-center gap-2 px-3 py-2 rounded-xl border border-dashed border-red-300 text-red-500 text-[12px] font-bold hover:bg-red-50 transition-all font-sans"
                                 >
                                     <X size={14} />
                                     Xóa bộ lọc
@@ -776,15 +789,15 @@ const CylinderRecoveries = () => {
                     </div>
 
                     {/* Table Content Area */}
-                    <div className="hidden md:block flex-1 overflow-x-auto bg-white">
+                    <div className="hidden md:block flex-1 overflow-x-auto bg-white custom-scrollbar">
                         <table className="w-full border-collapse">
-                            <thead className="bg-[#F1F5FF]">
+                            <thead className="bg-[#F1F5FF] sticky top-0 z-10 shadow-[0_1px_2px_rgba(0,0,0,0.05)]">
                                 <tr>
                                     <th className="px-4 py-3.5 w-10">
                                         <div className="flex items-center justify-center">
                                             <input
                                                 type="checkbox"
-                                                className="w-4 h-4 rounded border-border text-primary focus:ring-primary/20"
+                                                className="w-4 h-4 rounded border-border text-primary focus:ring-primary/20 cursor-pointer"
                                                 checked={selectedIds.length === filteredRecoveries.length && filteredRecoveries.length > 0}
                                                 onChange={toggleSelectAll}
                                             />
@@ -795,7 +808,7 @@ const CylinderRecoveries = () => {
                                             key={col.key}
                                             className={clsx(
                                                 "px-4 py-3.5 text-[12px] font-bold text-muted-foreground text-left uppercase tracking-wide",
-                                                col.key === 'recovery_code' && 'border-l border-r border-primary/10'
+                                                col.key === 'recovery_code' && 'border-l border-r border-primary/5'
                                             )}
                                         >
                                             {col.label}
@@ -804,17 +817,19 @@ const CylinderRecoveries = () => {
                                     <th className="sticky right-0 z-30 bg-[#F1F5FF] px-4 py-3.5 text-[12px] font-bold text-muted-foreground text-center uppercase tracking-wide shadow-[-6px_0_10px_-8px_rgba(15,23,42,0.35)] before:content-[''] before:absolute before:left-0 before:top-0 before:bottom-0 before:w-[3px] before:bg-slate-300">Thao tác</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-primary/10">
+                            <tbody className="divide-y divide-primary/5">
                                 {loading ? (
                                     <tr>
-                                        <td colSpan={visibleTableColumns.length + 2} className="px-4 py-16 text-center text-muted-foreground">
+                                        <td colSpan={visibleTableColumns.length + 2} className="px-4 py-20 text-center text-muted-foreground bg-muted/5 italic font-medium anim-pulse font-sans">
                                             Đang tải dữ liệu...
                                         </td>
                                     </tr>
                                 ) : filteredRecoveries.length === 0 ? (
                                     <tr>
-                                        <td colSpan={visibleTableColumns.length + 2} className="px-4 py-16 text-center text-muted-foreground">
-                                            Không tìm thấy phiếu nào
+                                        <td colSpan={visibleTableColumns.length + 2} className="px-4 py-20 text-center text-muted-foreground bg-muted/5 font-sans">
+                                            <PackageCheck className="w-16 h-16 text-muted-foreground/20 mx-auto mb-4" />
+                                            <p className="text-lg font-bold">Không tìm thấy phiếu nào</p>
+                                            <p className="text-sm">Hãy kiểm tra lại bộ lọc hoặc tạo phiếu mới</p>
                                         </td>
                                     </tr>
                                 ) : filteredRecoveries.map((recovery) => {
@@ -825,38 +840,40 @@ const CylinderRecoveries = () => {
                                                 <div className="flex items-center justify-center">
                                                     <input
                                                         type="checkbox"
-                                                        className="w-4 h-4 rounded border-border text-primary focus:ring-primary/20"
+                                                        className="w-4 h-4 rounded border-border text-primary focus:ring-primary/20 cursor-pointer"
                                                         checked={selectedIds.includes(recovery.id)}
                                                         onChange={() => toggleSelect(recovery.id)}
                                                     />
                                                 </div>
                                             </td>
                                             {isColumnVisible('recovery_code') && (
-                                                <td className="px-4 py-4 whitespace-nowrap border-l border-r border-primary/10">
-                                                    <span className="text-[13px] font-medium text-foreground">
+                                                <td className="px-4 py-4 whitespace-nowrap border-l border-r border-primary/5">
+                                                    <span className="text-[13px] font-bold text-primary hover:underline cursor-pointer tracking-tight" onClick={() => handleEdit(recovery)}>
                                                         {recovery.recovery_code}
                                                     </span>
                                                 </td>
                                             )}
                                             {isColumnVisible('recovery_date') && (
-                                                <td className="px-4 py-4 text-[13px] text-muted-foreground font-normal">
-                                                    {recovery.recovery_date ? new Date(recovery.recovery_date).toLocaleDateString('vi-VN') : '---'}
+                                                <td className="px-4 py-4 whitespace-nowrap text-[13px] text-foreground font-medium">
+                                                    {recovery.recovery_date ? new Date(recovery.recovery_date).toLocaleDateString('vi-VN') : '—'}
                                                 </td>
                                             )}
-                                            {isColumnVisible('customer_id') && (
-                                                <td className="px-4 py-4">
-                                                    <span className="text-[13px] font-medium text-foreground">{getCustomerName(recovery.customer_id)}</span>
+                                            {isColumnVisible('customer_name') && (
+                                                <td className="px-4 py-4 max-w-[200px] truncate text-[13px] font-bold text-foreground">
+                                                    {getCustomerName(recovery.customer_id)}
                                                 </td>
                                             )}
                                             {isColumnVisible('order_id') && (
-                                                <td className="px-4 py-4">
-                                                    <span className="text-[13px] font-bold text-blue-600">
-                                                        {recovery.order_id ? `ĐH ${getOrderCode(recovery.order_id) || '—'}` : '—'}
-                                                    </span>
+                                                <td className="px-4 py-4 whitespace-nowrap">
+                                                    {recovery.order_id ? (
+                                                        <span className="text-[11px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded border border-blue-100 italic">
+                                                            {getOrderCode(recovery.order_id)}
+                                                        </span>
+                                                    ) : '—'}
                                                 </td>
                                             )}
                                             {isColumnVisible('warehouse_id') && (
-                                                <td className="px-4 py-4 text-[13px] text-muted-foreground font-normal">
+                                                <td className="px-4 py-4 whitespace-nowrap text-[13px] text-muted-foreground">
                                                     {getWarehouseLabel(recovery.warehouse_id)}
                                                 </td>
                                             )}
@@ -867,35 +884,38 @@ const CylinderRecoveries = () => {
                                             )}
                                             {isColumnVisible('total_items') && (
                                                 <td className="px-4 py-4">
-                                                    <span className="text-[13px] font-semibold text-foreground">{recovery.total_items || 0}</span>
+                                                    <span className="text-[13px] font-bold text-foreground flex items-center gap-1.5">
+                                                        <Package className="w-4 h-4 text-blue-500" />
+                                                        {recovery.total_items || 0}
+                                                    </span>
                                                 </td>
                                             )}
                                             {isColumnVisible('status') && (
                                                 <td className="px-4 py-4">
-                                                    <span className={clsx(getStatusBadgeClass(status.color), "uppercase text-[10px]")}>
+                                                    <span className={clsx(getStatusBadgeClass(status.color), "uppercase text-[10px] tracking-wider")}>
                                                         {status.label}
                                                     </span>
                                                 </td>
                                             )}
-                                            <td className="sticky right-0 z-20 bg-white px-4 py-4 text-center shadow-[-6px_0_10px_-8px_rgba(15,23,42,0.25)] before:content-[''] before:absolute before:left-0 before:top-0 before:bottom-0 before:w-[3px] before:bg-slate-300">
-                                                <div className="flex items-center justify-center gap-3">
+                                            <td className="sticky right-0 z-20 bg-white group-hover:bg-blue-50/40 px-4 py-4 text-center shadow-[-6px_0_10px_-8px_rgba(15,23,42,0.25)] before:content-[''] before:absolute before:left-0 before:top-0 before:bottom-0 before:w-[3px] before:bg-slate-300">
+                                                <div className="flex items-center justify-center gap-2">
                                                     <button
                                                         onClick={() => handlePrintSingle(recovery)}
-                                                        className="text-muted-foreground hover:text-primary transition-colors p-1 rounded hover:bg-primary/10"
+                                                        className="text-muted-foreground hover:text-primary transition-colors p-1.5 rounded-lg hover:bg-primary/10 bg-slate-50 border border-slate-100"
                                                         title="In phiếu"
                                                     >
                                                         <Printer className="w-4 h-4" />
                                                     </button>
                                                     <button
                                                         onClick={() => handleEdit(recovery)}
-                                                        className="text-amber-600/80 hover:text-amber-700 transition-colors p-1 rounded hover:bg-amber-50"
+                                                        className="text-amber-600 hover:text-amber-700 transition-colors p-1.5 rounded-lg hover:bg-amber-100 bg-amber-50 border border-amber-100"
                                                         title="Chỉnh sửa"
                                                     >
                                                         <Edit className="w-4 h-4" />
                                                     </button>
                                                     <button
                                                         onClick={() => handleDelete(recovery.id, recovery.recovery_code)}
-                                                        className="text-red-600/80 hover:text-red-700 transition-colors p-1 rounded hover:bg-red-50"
+                                                        className="text-red-600 hover:text-red-700 transition-colors p-1.5 rounded-lg hover:bg-red-100 bg-red-50 border border-red-100"
                                                         title="Xóa"
                                                     >
                                                         <Trash2 className="w-4 h-4" />
@@ -911,7 +931,7 @@ const CylinderRecoveries = () => {
 
                     {/* Footer / Pagination matching Orders.jsx */}
                     <div className="hidden md:flex px-4 py-4 border-t border-border items-center justify-between bg-muted/5">
-                        <div className="flex items-center gap-3 text-[12px] text-muted-foreground font-medium">
+                        <div className="flex items-center gap-3 text-[12px] text-muted-foreground font-medium font-sans">
                             <span>{filteredRecoveries.length > 0 ? `1–${filteredRecoveries.length}` : '0'}/Tổng {filteredRecoveries.length}</span>
                         </div>
                         <div className="flex items-center gap-1">
@@ -936,27 +956,27 @@ const CylinderRecoveries = () => {
             )}
 
             {activeView === 'stats' && (
-                <div className="bg-white rounded-2xl border border-border shadow-sm flex flex-col w-full animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <div className="bg-white rounded-2xl border border-border shadow-sm flex flex-col w-full animate-in fade-in slide-in-from-bottom-4 duration-500 overflow-hidden">
                     <div className="space-y-0 flex flex-col">
                         {/* Mobile Header */}
-                        <div className="md:hidden flex items-center gap-2 p-3 border-b border-border">
+                        <div className="md:hidden flex items-center gap-2 p-3 border-b border-border bg-white">
                             <button
                                 onClick={() => setActiveView('list')}
                                 className="p-2 rounded-xl border border-border bg-white text-muted-foreground shrink-0"
                             >
                                 <ChevronLeft size={18} />
                             </button>
-                            <h2 className="text-base font-bold text-foreground flex-1 text-center">Thống kê</h2>
+                            <h2 className="text-base font-bold text-foreground flex-1 text-center font-sans tracking-tight">Thống kê dữ liệu</h2>
                             <button
                                 onClick={openMobileFilter}
                                 className={clsx(
-                                    'relative p-2 rounded-xl border shrink-0 transition-all',
+                                    'relative p-2 rounded-xl border shrink-0 transition-all shadow-sm',
                                     hasActiveFilters ? 'border-primary bg-primary/5 text-primary' : 'border-border bg-white text-muted-foreground',
                                 )}
                             >
                                 <Filter size={18} />
                                 {hasActiveFilters && (
-                                    <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-primary text-white text-[9px] font-bold flex items-center justify-center">
+                                    <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-primary text-white text-[9px] font-bold flex items-center justify-center ring-2 ring-white">
                                         {totalActiveFilters}
                                     </span>
                                 )}
@@ -964,11 +984,11 @@ const CylinderRecoveries = () => {
                         </div>
 
                         {/* Desktop Header */}
-                        <div className="hidden md:block p-4 border-b border-border" ref={statsDropdownRef}>
+                        <div className="hidden md:block p-4 border-b border-border bg-muted/5" ref={statsDropdownRef}>
                             <div className="flex flex-wrap items-center gap-2">
                                 <button
                                     onClick={() => setActiveView('list')}
-                                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-border hover:bg-muted text-muted-foreground text-[12px] font-bold transition-all bg-white shadow-sm shrink-0"
+                                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-border hover:bg-white text-muted-foreground text-[12px] font-bold transition-all bg-muted/10 shadow-sm shrink-0"
                                 >
                                     <ChevronLeft size={16} />
                                     Quay lại
@@ -981,7 +1001,7 @@ const CylinderRecoveries = () => {
                                             setActiveDropdown(activeDropdown === 'status' ? null : 'status');
                                         }}
                                         className={clsx(
-                                            "flex items-center gap-2.5 px-4 py-2 rounded-xl border text-[13px] font-bold transition-all",
+                                            "flex items-center gap-2.5 px-4 py-2 rounded-xl border text-[13px] font-bold transition-all bg-white shadow-sm",
                                             getFilterButtonClass('status', activeDropdown === 'status' || selectedStatuses.length > 0)
                                         )}
                                     >
@@ -1012,7 +1032,7 @@ const CylinderRecoveries = () => {
                                             setActiveDropdown(activeDropdown === 'customers' ? null : 'customers');
                                         }}
                                         className={clsx(
-                                            "flex items-center gap-2.5 px-4 py-2 rounded-xl border text-[13px] font-bold transition-all",
+                                            "flex items-center gap-2.5 px-4 py-2 rounded-xl border text-[13px] font-bold transition-all bg-white shadow-sm",
                                             getFilterButtonClass('customers', activeDropdown === 'customers' || selectedCustomers.length > 0)
                                         )}
                                     >
@@ -1043,7 +1063,7 @@ const CylinderRecoveries = () => {
                                             setActiveDropdown(activeDropdown === 'warehouses' ? null : 'warehouses');
                                         }}
                                         className={clsx(
-                                            "flex items-center gap-2.5 px-4 py-2 rounded-xl border text-[13px] font-bold transition-all",
+                                            "flex items-center gap-2.5 px-4 py-2 rounded-xl border text-[13px] font-bold transition-all bg-white shadow-sm",
                                             getFilterButtonClass('warehouses', activeDropdown === 'warehouses' || selectedWarehouses.length > 0)
                                         )}
                                     >
@@ -1074,7 +1094,7 @@ const CylinderRecoveries = () => {
                                             setSelectedCustomers([]);
                                             setSelectedWarehouses([]);
                                         }}
-                                        className="flex items-center gap-2 px-3 py-2 rounded-xl border border-dashed border-red-300 text-red-500 text-[12px] font-bold hover:bg-red-50 transition-all"
+                                        className="flex items-center gap-2 px-3 py-2 rounded-xl border border-dashed border-red-300 text-red-500 text-[12px] font-bold hover:bg-red-50 transition-all font-sans"
                                     >
                                         <X size={14} />
                                         Xóa bộ lọc
@@ -1083,29 +1103,29 @@ const CylinderRecoveries = () => {
                             </div>
                         </div>
 
-                        <div className="px-3 md:px-4 pt-4 md:pt-5 pb-8 space-y-5">
+                        <div className="px-3 md:px-5 pt-5 pb-10 space-y-6 flex-1 overflow-y-auto custom-scrollbar">
                             {/* Summary Cards Grid */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                <div className="bg-blue-50/70 border border-blue-100 rounded-2xl p-5 shadow-sm">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="bg-blue-50/70 border border-blue-100 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all duration-300">
                                     <div className="flex items-center justify-start gap-4">
-                                        <div className="w-12 h-12 bg-blue-100/80 rounded-full flex items-center justify-center shrink-0 ring-1 ring-blue-200/70">
-                                            <PackageCheck className="w-6 h-6 text-blue-600" />
+                                        <div className="w-14 h-14 bg-blue-100/80 rounded-2xl flex items-center justify-center shrink-0 ring-1 ring-blue-200/50 shadow-inner">
+                                            <PackageCheck className="w-8 h-8 text-blue-600" />
                                         </div>
                                         <div>
-                                            <p className="text-[11px] font-semibold text-blue-600 uppercase tracking-wider">Tổng phiếu thu hồi</p>
-                                            <p className="text-3xl font-bold text-foreground mt-1">{formatNumber(filteredRecoveries.length)}</p>
+                                            <p className="text-[11px] font-bold text-blue-600 uppercase tracking-[0.1em] opacity-80">Tổng phiếu thu hồi</p>
+                                            <p className="text-3xl font-black text-foreground mt-1 tracking-tight">{formatNumber(filteredRecoveries.length)}</p>
                                         </div>
                                     </div>
                                 </div>
 
-                                <div className="bg-emerald-50/70 border border-emerald-100 rounded-2xl p-5 shadow-sm">
+                                <div className="bg-indigo-50/70 border border-indigo-100 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all duration-300">
                                     <div className="flex items-center justify-start gap-4">
-                                        <div className="w-12 h-12 bg-emerald-100/80 rounded-full flex items-center justify-center shrink-0 ring-1 ring-emerald-200/70">
-                                            <Package className="w-6 h-6 text-emerald-600" />
+                                        <div className="w-14 h-14 bg-indigo-100/80 rounded-2xl flex items-center justify-center shrink-0 ring-1 ring-indigo-200/50 shadow-inner">
+                                            <Package className="w-8 h-8 text-indigo-600" />
                                         </div>
                                         <div>
-                                            <p className="text-[11px] font-semibold text-emerald-600 uppercase tracking-wider">Tổng số vỏ thu hồi</p>
-                                            <p className="text-3xl font-bold text-foreground mt-1">
+                                            <p className="text-[11px] font-bold text-indigo-600 uppercase tracking-[0.1em] opacity-80">Tổng số vỏ thu hồi</p>
+                                            <p className="text-3xl font-black text-foreground mt-1 tracking-tight">
                                                 {formatNumber(filteredRecoveries.reduce((sum, r) => sum + (r.total_items || 0), 0))}
                                             </p>
                                         </div>
@@ -1114,125 +1134,51 @@ const CylinderRecoveries = () => {
                             </div>
 
                             {/* Charts Grid */}
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                                <div className="bg-card border border-border rounded-xl p-6 shadow-sm">
-                                    <h3 className="text-lg font-bold text-foreground mb-4">Thống kê theo trạng thái</h3>
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                                <div className="bg-white border border-border rounded-2xl p-6 shadow-sm hover:border-primary/20 transition-all">
+                                    <h3 className="text-[15px] font-bold text-foreground mb-6 flex items-center gap-2">
+                                        <div className="w-1.5 h-4 bg-primary rounded-full"></div>
+                                        Thống kê theo trạng thái
+                                    </h3>
                                     <div style={{ height: '300px' }}>
                                         <PieChartJS
                                             data={{
                                                 labels: getStatusStats().map(s => s.name),
                                                 datasets: [{
                                                     data: getStatusStats().map(s => s.value),
-                                                    backgroundColor: chartColors.slice(0, getStatusStats().length),
-                                                    borderColor: '#fff',
-                                                    borderWidth: 2
+                                                    backgroundColor: getStatusStats().map(s => s.color),
+                                                    borderWidth: 0,
                                                 }]
                                             }}
                                             options={{
-                                                responsive: true,
-                                                maintainAspectRatio: false,
                                                 plugins: {
-                                                    legend: {
-                                                        position: 'bottom'
-                                                    }
+                                                    legend: { position: 'right', labels: { usePointStyle: true, font: { weight: 'bold', size: 11 } } }
                                                 }
                                             }}
                                         />
                                     </div>
                                 </div>
 
-                                <div className="bg-card border border-border rounded-xl p-6 shadow-sm">
-                                    <h3 className="text-lg font-bold text-foreground mb-4">Xu hướng thu hồi (7 ngày)</h3>
+                                <div className="bg-white border border-border rounded-2xl p-6 shadow-sm hover:border-primary/20 transition-all">
+                                    <h3 className="text-[15px] font-bold text-foreground mb-6 flex items-center gap-2">
+                                        <div className="w-1.5 h-4 bg-primary rounded-full"></div>
+                                        Top 5 khách hàng thu hồi nhiều nhất
+                                    </h3>
                                     <div style={{ height: '300px' }}>
                                         <BarChartJS
                                             data={{
-                                                labels: getTrendData().labels,
+                                                labels: getTopCustomers().map(c => c.name.length > 15 ? c.name.substring(0, 15) + '...' : c.name),
                                                 datasets: [{
-                                                    label: 'Số phiếu',
-                                                    data: getTrendData().values,
-                                                    backgroundColor: chartColors[0],
-                                                    borderColor: chartColors[0],
-                                                    borderWidth: 1
+                                                    label: 'Số lượng vỏ',
+                                                    data: getTopCustomers().map(c => c.value),
+                                                    backgroundColor: CHART_COLORS,
+                                                    borderRadius: 8,
                                                 }]
                                             }}
                                             options={{
-                                                responsive: true,
-                                                maintainAspectRatio: false,
-                                                plugins: {
-                                                    legend: {
-                                                        display: false
-                                                    }
-                                                },
-                                                scales: {
-                                                    y: {
-                                                        beginAtZero: true
-                                                    }
-                                                }
-                                            }}
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="bg-card border border-border rounded-xl p-6 shadow-sm">
-                                    <h3 className="text-lg font-bold text-foreground mb-4">Top 10 Khách hàng thu hồi</h3>
-                                    <div style={{ height: '300px' }}>
-                                        <BarChartJS
-                                            data={{
-                                                labels: getCustomerStats().map(c => c.name.length > 20 ? c.name.substring(0, 20) + '...' : c.name),
-                                                datasets: [{
-                                                    label: 'Số phiếu',
-                                                    data: getCustomerStats().map(c => c.value),
-                                                    backgroundColor: chartColors[2],
-                                                    borderColor: chartColors[2],
-                                                    borderWidth: 1
-                                                }]
-                                            }}
-                                            options={{
-                                                responsive: true,
-                                                maintainAspectRatio: false,
                                                 indexAxis: 'y',
-                                                plugins: {
-                                                    legend: {
-                                                        display: false
-                                                    }
-                                                },
-                                                scales: {
-                                                    x: {
-                                                        beginAtZero: true
-                                                    }
-                                                }
-                                            }}
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="bg-card border border-border rounded-xl p-6 shadow-sm">
-                                    <h3 className="text-lg font-bold text-foreground mb-4">Phân bổ theo Kho nhận</h3>
-                                    <div style={{ height: '300px' }}>
-                                        <BarChartJS
-                                            data={{
-                                                labels: getWarehouseStats().map(w => w.name),
-                                                datasets: [{
-                                                    label: 'Số phiếu',
-                                                    data: getWarehouseStats().map(w => w.value),
-                                                    backgroundColor: chartColors[1],
-                                                    borderColor: chartColors[1],
-                                                    borderWidth: 1
-                                                }]
-                                            }}
-                                            options={{
-                                                responsive: true,
-                                                maintainAspectRatio: false,
-                                                plugins: {
-                                                    legend: {
-                                                        display: false
-                                                    }
-                                                },
-                                                scales: {
-                                                    y: {
-                                                        beginAtZero: true
-                                                    }
-                                                }
+                                                plugins: { legend: { display: false } },
+                                                scales: { x: { grid: { display: false } }, y: { grid: { display: false } } }
                                             }}
                                         />
                                     </div>
@@ -1252,13 +1198,13 @@ const CylinderRecoveries = () => {
                 />
             )}
 
-            {createPortal(
+            {recoveriesToPrint && createPortal(
                 <div className="print-only-container">
-                    {recoveriesToPrint?.map((rec, idx) => (
+                    {recoveriesToPrint.map((rec, idx) => (
                         <div key={rec.id}>
                             <CylinderRecoveryPrintTemplate
                                 recovery={rec}
-                                customerName={rec.customerName}
+                                customerName={getCustomerName(rec.customer_id)}
                                 onPrinted={idx === recoveriesToPrint.length - 1 ? () => setRecoveriesToPrint(null) : null}
                             />
                             {idx < recoveriesToPrint.length - 1 && <div style={{ pageBreakAfter: 'always' }} />}
@@ -1267,6 +1213,7 @@ const CylinderRecoveries = () => {
                 </div>,
                 document.body
             )}
+
             {/* ── MOBILE FILTER BOTTOM SHEET ── */}
             {showMobileFilter && createPortal(
                 <MobileFilterSheet

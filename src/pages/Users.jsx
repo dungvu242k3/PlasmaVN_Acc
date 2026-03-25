@@ -148,6 +148,7 @@ const Users = () => {
 
             if (error) throw error;
             setUsers(data || []);
+            setSelectedIds([]);
         } catch (error) {
             console.error('Error fetching users:', error);
         } finally {
@@ -230,12 +231,38 @@ const Users = () => {
                 .eq('id', id);
 
             if (error) throw error;
+            setSelectedIds(prev => prev.filter(i => i !== id));
             fetchUsers();
         } catch (error) {
             console.error('Error deleting user:', error);
             alert('❌ Có lỗi xảy ra khi xóa nhân sự: ' + error.message);
         }
     };
+
+    const handleBulkDelete = async () => {
+        if (selectedIds.length === 0) return;
+        if (!window.confirm(`Bạn có chắc chắn muốn xóa ${selectedIds.length} nhân sự đã chọn không? Hành động này không thể hoàn tác.`)) {
+            return;
+        }
+
+        try {
+            const { error } = await supabase
+                .from('app_users')
+                .delete()
+                .in('id', selectedIds);
+
+            if (error) throw error;
+            
+            setSelectedIds([]);
+            fetchUsers();
+            alert(`✅ Đã xóa ${selectedIds.length} nhân sự thành công!`);
+        } catch (error) {
+            console.error('Error deleting users:', error);
+            alert('❌ Lỗi khi xóa: ' + error.message);
+        }
+    };
+
+
 
     const handleEditUser = (user) => {
         setSelectedUser(user);
@@ -401,6 +428,15 @@ const Users = () => {
                                             </button>
                                         )}
                                     </div>
+                                    {selectedIds.length > 0 && (
+                                        <button
+                                            onClick={handleBulkDelete}
+                                            className="flex items-center gap-2 px-4 py-1.5 bg-rose-50 text-rose-600 rounded-xl border border-rose-200 text-[12px] font-bold hover:bg-rose-100 transition-all shadow-sm"
+                                        >
+                                            <Trash2 size={16} />
+                                            Xóa ({selectedIds.length})
+                                        </button>
+                                    )}
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <div className="relative" ref={columnPickerRef}>
