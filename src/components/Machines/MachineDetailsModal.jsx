@@ -5,25 +5,38 @@ import {
     MonitorIcon,
     Package,
     Thermometer,
-    X
+    X,
+    ChevronRight,
+    Calendar,
+    ArrowRightLeft,
+    Box
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { clsx } from 'clsx';
 import { supabase } from '../../supabase/config';
+import OrderFormModal from '../Orders/OrderFormModal';
 
 export default function MachineDetailsModal({ machine, onClose }) {
     const [loading, setLoading] = useState(true);
     const [orders, setOrders] = useState([]);
+    const [isClosing, setIsClosing] = useState(false);
+    const [selectedOrder, setSelectedOrder] = useState(null);
 
     useEffect(() => {
         if (!machine) return;
         fetchMachineHistory();
     }, [machine]);
 
+    const handleClose = () => {
+        setIsClosing(true);
+        setTimeout(onClose, 300);
+    };
+
     const fetchMachineHistory = async () => {
         setLoading(true);
         try {
             // Lấy các Đơn hàng (Orders) có đề cập đến Serial Máy này
-            // Trong quy trình, Mã Máy được nhập vào cột `department` (Khoa sd / Mã máy)
             const { data, error } = await supabase
                 .from('orders')
                 .select('*')
@@ -34,7 +47,6 @@ export default function MachineDetailsModal({ machine, onClose }) {
             setOrders(data || []);
         } catch (error) {
             console.error('Error fetching machine history:', error);
-            alert('Lỗi tải dữ liệu lịch sử máy!');
         } finally {
             setLoading(false);
         }
@@ -42,143 +54,194 @@ export default function MachineDetailsModal({ machine, onClose }) {
 
     const formatDate = (dateStr) => {
         if (!dateStr) return '—';
-        return new Date(dateStr).toLocaleDateString('vi-VN');
+        return new Date(dateStr).toLocaleDateString('vi-VN', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric'
+        });
     };
 
     const getStatusStyle = (status) => {
         if (['DA_DUYET', 'HOAN_THANH'].includes(status)) {
-            return 'bg-emerald-50 text-emerald-600 border-emerald-200';
+            return 'bg-emerald-50 text-emerald-600 border-emerald-100';
         }
         if (['HUY_DON', 'DOI_SOAT_THAT_BAI'].includes(status)) {
-            return 'bg-rose-50 text-rose-600 border-rose-200';
+            return 'bg-rose-50 text-rose-600 border-rose-100';
         }
-        return 'bg-amber-50 text-amber-600 border-amber-200';
+        return 'bg-amber-50 text-amber-600 border-amber-100';
     };
 
-    return (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-end md:items-center justify-center z-[100] p-0 md:p-4 animate-in fade-in duration-200">
-            <div className="bg-slate-50 rounded-t-[1.5rem] md:rounded-[2rem] shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col h-[100dvh] md:h-[80vh] mt-0 md:mt-12">
+    if (!machine) return null;
 
-                {/* Header Profile */}
-                <div className="bg-white px-4 md:px-8 py-4 md:py-6 border-b border-slate-200 shrink-0 relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-40 h-40 md:w-64 md:h-64 bg-indigo-50 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 opacity-60 pointer-events-none"></div>
+    const drawerContent = (
+        <div className={clsx(
+            "fixed inset-0 z-[100005] flex justify-end",
+            isClosing ? "pointer-events-none" : ""
+        )}>
+            {/* Backdrop */}
+            <div 
+                className={clsx(
+                    "absolute inset-0 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-300",
+                    isClosing && "animate-out fade-out duration-300"
+                )}
+                onClick={handleClose}
+            />
 
-                    <div className="flex items-start justify-between gap-3 relative z-10">
-                        <div className="flex items-start md:items-center gap-3 md:gap-5 min-w-0">
-                            <div className="w-12 h-12 md:w-16 md:h-16 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-indigo-200 shrink-0">
-                                <MonitorIcon className="w-6 h-6 md:w-8 md:h-8" />
-                            </div>
-                            <div className="min-w-0">
-                                <h2 className="text-xl md:text-2xl font-black text-slate-900 mb-1 tracking-tight flex items-center gap-2 md:gap-3 truncate">
-                                    Máy {machine.serial_number}
-                                </h2>
-                                <div className="flex flex-wrap items-center gap-2 md:gap-4 text-xs md:text-sm font-bold text-slate-500">
-                                    <span className="flex items-center gap-1.5"><Activity className="w-4 h-4 text-slate-400" /> {machine.machine_type || '—'}</span>
-                                    <span className="flex items-center gap-1.5"><Thermometer className="w-4 h-4 text-slate-400" /> {machine.status || '—'}</span>
-                                    {machine.customer_name && (
-                                        <span className="flex items-center gap-1.5 text-indigo-600 min-w-0"><MapPin className="w-4 h-4 text-indigo-400 shrink-0" /> <span className="truncate max-w-[220px] md:max-w-[320px]">Đang ở: {machine.customer_name}</span></span>
-                                    )}
-                                </div>
+            {/* Drawer Panel */}
+            <div 
+                className={clsx(
+                    "absolute top-0 right-0 h-full w-full max-w-[600px] bg-white shadow-2xl flex flex-col animate-in slide-in-from-right duration-500",
+                    isClosing && "animate-out slide-out-to-right duration-300"
+                )}
+            >
+                {/* Header */}
+                <div className="px-6 py-4 border-b border-primary/10 flex items-center justify-between bg-primary/5 shrink-0">
+                    <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center text-primary shadow-sm border border-primary/20">
+                            <MonitorIcon className="w-6 h-6" />
+                        </div>
+                        <div>
+                            <h2 className="text-lg font-black text-slate-900 tracking-tight leading-none mb-1">
+                                Chi tiết máy {machine.serial_number}
+                            </h2>
+                            <div className="flex items-center gap-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                                <span className={clsx(
+                                    "px-2 py-0.5 rounded-md border",
+                                    machine.status === 'sẵn sàng' ? "bg-emerald-50 text-emerald-600 border-emerald-100" : "bg-blue-50 text-blue-600 border-blue-100"
+                                )}>
+                                    {machine.status}
+                                </span>
+                                <span className="flex items-center gap-1.5"><Box size={14} className="text-slate-400" /> {machine.machine_type}</span>
                             </div>
                         </div>
-                        <button onClick={onClose} className="p-2 md:p-2.5 bg-slate-100 text-slate-400 hover:text-slate-900 hover:bg-slate-200 rounded-xl transition-colors shrink-0">
-                            <X className="w-5 h-5 md:w-6 md:h-6" />
-                        </button>
                     </div>
+                    <button 
+                        onClick={handleClose} 
+                        className="p-2.5 bg-white text-slate-400 hover:text-primary hover:border-primary/30 rounded-xl border border-transparent hover:shadow-sm transition-all shadow-sm"
+                    >
+                        <X className="w-5 h-5" />
+                    </button>
+                </div>
 
-                    <div className="flex items-center mt-5 md:mt-8 border-b border-slate-200 relative z-10">
-                        <button className="pb-3 md:pb-4 px-1 md:px-2 text-xs md:text-sm font-black tracking-normal md:tracking-wider transition-all duration-300 border-b-2 text-indigo-600 border-indigo-600 w-full md:w-auto">
-                            <div className="flex items-center justify-center md:justify-start gap-2 min-w-0">
-                                <History className="w-3.5 h-3.5 md:w-4 md:h-4 shrink-0" />
-                                <span className="text-center md:text-left">Lịch sử đơn hàng (Thuê / Trả)</span>
-                                <span className="hidden md:inline-flex bg-slate-100 text-slate-500 py-0.5 px-2 rounded-full text-[10px]">{orders.length}</span>
-                            </div>
-                        </button>
-                    </div>
+                {/* Sub-header Navigation */}
+                <div className="px-6 py-3 border-b border-primary/10 flex items-center gap-3 bg-white sticky top-0 z-10">
+                    <button className="px-4 py-2 text-[12px] font-black tracking-wider transition-all duration-300 border-b-2 text-primary border-primary">
+                        <div className="flex items-center gap-2">
+                            <History className="w-4 h-4" />
+                            LỊCH SỬ ĐƠN HÀNG
+                            <span className="bg-primary/10 text-primary py-0.5 px-2 rounded-full text-[10px]">{orders.length}</span>
+                        </div>
+                    </button>
                 </div>
 
                 {/* Body Details */}
-                <div className="flex-1 overflow-y-auto p-4 md:p-8 relative">
-                    {loading ? (
-                        <div className="flex flex-col items-center justify-center h-40 space-y-4">
-                            <div className="w-10 h-10 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin"></div>
-                            <p className="text-sm font-bold text-slate-400 animate-pulse">Đang tải dữ liệu Máy móc...</p>
-                        </div>
-                    ) : (
-                        <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm animate-in slide-in-from-bottom-4 duration-500">
-                            {orders.length === 0 ? (
-                                <div className="p-8 md:p-16 text-center flex flex-col items-center">
-                                    <Package className="w-12 h-12 md:w-16 md:h-16 text-slate-200 mb-4" />
-                                    <p className="text-slate-400 font-bold text-base md:text-lg">Thiết bị này chưa có biên bản giao dịch nào</p>
-                                </div>
-                            ) : (
-                                <>
-                                    <div className="md:hidden space-y-3 p-3">
-                                        {orders.map(o => (
-                                            <div key={o.id} className="p-3 bg-white border border-slate-200 rounded-2xl space-y-3">
-                                                <div className="flex items-center justify-between gap-2">
-                                                    <p className="font-black text-sm text-slate-800 truncate">{o.order_code}</p>
-                                                    <span className={`px-2.5 py-1 text-[10px] font-black tracking-wider uppercase rounded-lg border shrink-0 ${getStatusStyle(o.status)}`}>
-                                                        {o.status}
-                                                    </span>
+                <div className="flex-1 overflow-y-auto bg-slate-50/50">
+                    <div className="p-6 space-y-4">
+                        {loading ? (
+                            <div className="flex flex-col items-center justify-center py-20 gap-4">
+                                <div className="w-10 h-10 border-[3px] border-primary/10 border-t-primary rounded-full animate-spin"></div>
+                                <p className="text-[13px] font-bold text-slate-400 animate-pulse uppercase tracking-[0.2em]">Đang truy xuất dữ liệu...</p>
+                            </div>
+                        ) : orders.length === 0 ? (
+                            <div className="py-20 text-center flex flex-col items-center max-w-xs mx-auto">
+                                <Package className="w-16 h-16 text-slate-200 mb-4 stroke-[1.5]" />
+                                <h3 className="text-slate-900 font-black text-base mb-1 uppercase tracking-tight">Trống lịch sử</h3>
+                                <p className="text-slate-400 text-[13px] font-medium leading-relaxed">Thiết bị này chưa có biên bản giao dịch (Thuê/Trả) nào trên hệ thống.</p>
+                            </div>
+                        ) : (
+                            <div className="space-y-4">
+                                {orders.map(o => (
+                                    <div key={o.id} className="group bg-white border border-primary/10 rounded-2xl p-4 shadow-sm hover:shadow-md hover:border-primary/20 transition-all duration-300">
+                                        <div className="flex items-center justify-between gap-3 mb-3">
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-[12px] font-black tracking-tight text-slate-500 uppercase">Mã đơn:</span>
+                                                <span className="font-mono text-[13px] font-bold text-primary group-hover:text-primary/80">{o.order_code}</span>
+                                            </div>
+                                            <span className={clsx(
+                                                "px-2.5 py-1 text-[10px] font-black tracking-wider uppercase rounded-lg border shadow-sm",
+                                                getStatusStyle(o.status)
+                                            )}>
+                                                {o.status}
+                                            </span>
+                                        </div>
+
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <div className="col-span-2 bg-slate-50/80 border border-slate-100 rounded-xl p-3">
+                                                <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">
+                                                    <MapPin size={12} className="text-indigo-400" />
+                                                    Khách hàng & Loại đơn
                                                 </div>
-                                                <div className="bg-slate-50 border border-slate-100 rounded-xl p-3">
-                                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Khách hàng</p>
-                                                    <p className="font-black text-sm text-slate-800 mt-1">{o.customer_name || '—'}</p>
-                                                    <p className="text-[11px] text-slate-400 font-bold mt-1">{o.order_type || '—'}</p>
-                                                </div>
-                                                <div className="bg-slate-50 border border-slate-100 rounded-xl p-3">
-                                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Loại hàng / Ghi chú</p>
-                                                    <p className="font-bold text-sm text-slate-600 mt-1">{o.product_type || '—'}</p>
-                                                    {o.note && <p className="text-[11px] opacity-70 mt-1 italic text-slate-500">{o.note}</p>}
-                                                </div>
-                                                <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 flex items-center justify-between gap-3">
-                                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Ngày tạo</p>
-                                                    <p className="text-sm font-bold text-slate-700">{formatDate(o.created_at)}</p>
+                                                <div className="flex items-start justify-between">
+                                                    <div>
+                                                        <p className="font-black text-[14px] text-slate-800 leading-tight">{o.customer_name || '—'}</p>
+                                                        <p className="text-[11px] text-indigo-600 font-bold mt-1 bg-indigo-50 px-2 py-0.5 rounded-md inline-block uppercase tracking-wider">{o.order_type || 'Giao dịch thường'}</p>
+                                                    </div>
                                                 </div>
                                             </div>
-                                        ))}
-                                    </div>
 
-                                    <table className="hidden md:table w-full text-left">
-                                        <thead className="bg-slate-50 border-b border-slate-100">
-                                            <tr>
-                                                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Mã đơn</th>
-                                                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Khách Hàng (Tên Đơn)</th>
-                                                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Loại Hàng / Ghi Chú</th>
-                                                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Ngày tạo</th>
-                                                <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] text-center">Tình trạng</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-slate-50">
-                                            {orders.map(o => (
-                                                <tr key={o.id} className="hover:bg-slate-50/50 transition-colors">
-                                                    <td className="px-6 py-4 font-black text-sm text-slate-700">{o.order_code}</td>
-                                                    <td className="px-6 py-4 text-sm font-black text-slate-800">
-                                                        <div>{o.customer_name}</div>
-                                                        <div className="text-[11px] text-slate-400 font-bold mt-1">{o.order_type}</div>
-                                                    </td>
-                                                    <td className="px-6 py-4 text-sm font-bold text-slate-500 max-w-[250px] truncate" title={o.note || '—'}>
-                                                        <div>{o.product_type}</div>
-                                                        {o.note && <div className="text-[11px] opacity-70 mt-1 italic">{o.note}</div>}
-                                                    </td>
-                                                    <td className="px-6 py-4 text-sm font-bold text-slate-500">{formatDate(o.created_at)}</td>
-                                                    <td className="px-6 py-4 text-center">
-                                                        <span className={`px-3 py-1 text-[10px] font-black tracking-widest uppercase rounded-lg border ${getStatusStyle(o.status)}`}>
-                                                            {o.status}
-                                                        </span>
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </>
-                            )}
-                        </div>
-                    )}
+                                            <div className="bg-slate-50/80 border border-slate-100 rounded-xl p-3">
+                                                <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">
+                                                    <ArrowRightLeft size={12} className="text-emerald-400" />
+                                                    Tác vụ
+                                                </div>
+                                                <p className="font-bold text-[12px] text-slate-700 leading-tight">{o.product_type || '—'}</p>
+                                            </div>
+
+                                            <div className="bg-slate-50/80 border border-slate-100 rounded-xl p-3">
+                                                <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">
+                                                    <Calendar size={12} className="text-amber-400" />
+                                                    Ngày tạo
+                                                </div>
+                                                <p className="text-[12px] font-bold text-slate-700">{formatDate(o.created_at)}</p>
+                                            </div>
+                                        </div>
+
+                                        {o.note && (
+                                            <div className="mt-3 pt-3 border-t border-slate-100">
+                                                <p className="text-[11px] italic text-slate-500 font-medium">" {o.note} "</p>
+                                            </div>
+                                        )}
+                                        
+                                        <div className="mt-4 flex justify-end">
+                                            <button 
+                                                onClick={() => setSelectedOrder(o)}
+                                                className="flex items-center gap-1.5 text-[11px] font-black text-primary uppercase tracking-wider hover:underline"
+                                            >
+                                                CHI TIẾT ĐƠN
+                                                <ChevronRight size={14} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
                 </div>
 
+                {/* Footer Info */}
+                <div className="px-6 py-4 bg-slate-50 border-t border-primary/10 flex items-center justify-between text-[11px] font-bold text-slate-400 tracking-wider uppercase shrink-0">
+                    <div className="flex items-center gap-2">
+                        <Activity size={14} />
+                        PHỤ TRÁCH: {machine.department_in_charge || 'Phòng Kỹ Thuật'}
+                    </div>
+                    <span>{orders.length} bản ghi</span>
+                </div>
+
+                {/* Nested Modals */}
+                {selectedOrder && (
+                    <OrderFormModal 
+                        order={selectedOrder} 
+                        initialMode="view"
+                        onClose={() => setSelectedOrder(null)} 
+                        onSuccess={() => {
+                            setSelectedOrder(null);
+                            fetchMachineHistory();
+                        }}
+                    />
+                )}
             </div>
         </div>
     );
+
+    return createPortal(drawerContent, document.body);
 }

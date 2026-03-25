@@ -1,5 +1,7 @@
-import { Briefcase, CheckCircle2, Phone, ShieldCheck, UserCircle, X } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { clsx } from 'clsx';
+import { Briefcase, CheckCircle2, ChevronDown, Phone, ShieldCheck, UserCircle, X } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { USER_ROLES, USER_STATUSES } from '../../constants/userConstants';
 import { supabase } from '../../supabase/config';
 
@@ -7,6 +9,7 @@ export default function UserFormModal({ user, onClose, onSuccess }) {
     const isEdit = !!user;
     const [isLoading, setIsLoading] = useState(false);
     const [errorMsg, setErrorMsg] = useState('');
+    const [isClosing, setIsClosing] = useState(false);
 
     const defaultState = {
         name: '',
@@ -17,6 +20,13 @@ export default function UserFormModal({ user, onClose, onSuccess }) {
     };
 
     const [formData, setFormData] = useState(defaultState);
+
+    const handleClose = useCallback(() => {
+        setIsClosing(true);
+        setTimeout(() => {
+            onClose();
+        }, 300);
+    }, [onClose]);
 
     useEffect(() => {
         if (isEdit) {
@@ -52,7 +62,6 @@ export default function UserFormModal({ user, onClose, onSuccess }) {
         setIsLoading(true);
 
         try {
-            // Check if username already exists if it's new or changed
             if (!isEdit || formData.username.trim() !== user.username) {
                 const { data: existingUser } = await supabase
                     .from('app_users')
@@ -98,163 +107,216 @@ export default function UserFormModal({ user, onClose, onSuccess }) {
         }
     };
 
-    return (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4 animate-in fade-in duration-200">
-            <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[90vh]">
+    return createPortal(
+        <div className={clsx(
+            "fixed inset-0 z-[100005] flex justify-end transition-all duration-300",
+            isClosing ? "opacity-0 pointer-events-none" : "opacity-100"
+        )}>
+            {/* Backdrop */}
+            <div
+                className={clsx(
+                    "absolute inset-0 bg-black/45 backdrop-blur-sm animate-in fade-in duration-300",
+                    isClosing && "animate-out fade-out duration-300"
+                )}
+                onClick={handleClose}
+            />
 
+            {/* Panel */}
+            <div
+                className={clsx(
+                    "relative bg-slate-50 shadow-2xl w-full max-w-lg overflow-hidden flex flex-col h-full border-l border-slate-200 animate-in slide-in-from-right duration-500",
+                    isClosing && "animate-out slide-out-to-right duration-300"
+                )}
+                onClick={(e) => e.stopPropagation()}
+            >
                 {/* Header */}
-                <div className="p-6 border-b border-indigo-100 flex items-center justify-between shrink-0 bg-indigo-50/50">
+                <div className="px-4 py-3.5 border-b border-slate-200 flex items-center justify-between shrink-0 bg-white sticky top-0 z-20">
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-indigo-600 rounded-lg flex items-center justify-center text-white">
-                            <UserCircle className="w-6 h-6" />
+                        <div className="w-9 h-9 bg-primary/10 rounded-full flex items-center justify-center text-primary">
+                            <UserCircle className="w-5 h-5" />
                         </div>
                         <div>
-                            <h3 className="text-xl font-black text-slate-900">
-                                {isEdit ? 'Cập nhật Chức danh' : 'Thêm Nhân sự mới'}
+                            <h3 className="text-[20px] leading-tight font-bold text-slate-900 tracking-tight">
+                                {isEdit ? 'Cập nhật tài khoản' : 'Thêm nhân sự mới'}
                             </h3>
-                            <p className="text-sm font-medium text-slate-500">
-                                {isEdit ? `Tài khoản: @${user.username}` : 'Khởi tạo tài khoản truy cập hệ thống'}
+                            <p className="text-slate-500 text-[12px] font-semibold mt-0.5 uppercase tracking-wider">
+                                {isEdit ? `Tài khoản: @${user.username}` : 'Quản lý truy cập hệ thống'}
                             </p>
                         </div>
                     </div>
                     <button
-                        onClick={onClose}
-                        className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-colors"
+                        onClick={handleClose}
+                        className="p-2 text-primary hover:text-primary/90 hover:bg-primary/5 rounded-xl transition-all"
                     >
-                        <X className="w-6 h-6" />
+                        <X className="w-5 h-5" />
                     </button>
                 </div>
 
-                {/* Form Body */}
-                <div className="p-4 sm:p-8 overflow-y-auto pb-20 sm:pb-8">
+                {/* Body */}
+                <div className="p-5 sm:p-6 overflow-y-auto bg-slate-50 custom-scrollbar flex-1 min-h-0 pb-20 sm:pb-6">
                     {errorMsg && (
-                        <div className="mb-6 p-4 bg-rose-50 border border-rose-200 rounded-xl text-sm font-bold text-rose-600 flex items-center gap-2">
-                            <X className="w-5 h-5 shrink-0" />
+                        <div className="mb-4 p-3 bg-rose-50 border border-rose-200 rounded-xl text-[13px] font-semibold text-rose-600 flex items-center gap-2">
+                            <X className="w-4 h-4 shrink-0" />
                             {errorMsg}
                         </div>
                     )}
 
-                    <form id="userForm" onSubmit={handleSubmit} className="space-y-8">
-
-                        {/* Thông tin định danh */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="space-y-2">
-                                <label className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1 flex items-center gap-1.5">
-                                    <UserCircle className="w-3.5 h-3.5" />
-                                    Họ và tên nhân viên *
-                                </label>
-                                <input
-                                    type="text"
-                                    name="name"
-                                    value={formData.name}
-                                    onChange={handleChange}
-                                    placeholder="VD: Nguyễn Văn A"
-                                    className="w-full px-5 py-3.5 bg-white border border-slate-200 rounded-xl outline-none focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 font-bold text-lg shadow-sm transition-all text-slate-900"
-                                    required
-                                />
+                    <form id="userForm" onSubmit={handleSubmit} className="space-y-6">
+                        {/* Section 1: Định danh */}
+                        <div className="rounded-3xl border border-primary/20 bg-white p-5 sm:p-6 space-y-5 shadow-sm [&_label]:text-primary [&_label_svg]:text-primary/80">
+                            <div className="flex items-center gap-2.5 pb-3 border-b border-primary/10">
+                                <ShieldCheck className="w-4 h-4 text-primary" />
+                                <h4 className="text-[18px] !font-extrabold !text-primary uppercase tracking-tight">Định danh & Tài khoản</h4>
                             </div>
-                            <div className="space-y-2">
-                                <label className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1 flex items-center gap-1.5">
-                                    <ShieldCheck className="w-3.5 h-3.5" />
-                                    Tên tài khoản (đăng nhập) *
-                                </label>
-                                <input
-                                    type="text"
-                                    name="username"
-                                    value={formData.username}
-                                    onChange={handleChange}
-                                    placeholder="VD: nguyenva"
-                                    className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 font-black text-lg shadow-sm transition-all text-indigo-600 lowercase"
-                                    required
-                                />
-                            </div>
-                        </div>
-
-                        {/* Chức vụ và liên hệ */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 bg-slate-50/50 rounded-2xl border border-slate-100">
-                            <div className="space-y-2">
-                                <label className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1 flex items-center gap-1.5">
-                                    <Briefcase className="w-3.5 h-3.5" />
-                                    Vai trò hệ thống *
-                                </label>
-                                <select
-                                    name="role"
-                                    value={formData.role}
-                                    onChange={handleChange}
-                                    className="w-full px-5 py-3.5 bg-white border border-slate-200 rounded-xl outline-none focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 font-bold text-base shadow-sm transition-all text-slate-900 appearance-none cursor-pointer"
-                                >
-                                    {USER_ROLES.map(role => (
-                                        <option key={role.id} value={role.id}>{role.label}</option>
-                                    ))}
-                                </select>
-                            </div>
-                            <div className="space-y-2">
-                                <label className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1 flex items-center gap-1.5">
-                                    <Phone className="w-3.5 h-3.5" />
-                                    Số điện thoại *
-                                </label>
-                                <input
-                                    type="text"
-                                    name="phone"
-                                    value={formData.phone}
-                                    onChange={handlePhoneChange}
-                                    placeholder="09xxxxxxxx..."
-                                    className="w-full px-5 py-3.5 bg-white border border-slate-200 rounded-xl outline-none focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 font-bold text-base shadow-sm transition-all text-slate-900"
-                                    required
-                                />
+                            
+                            <div className="space-y-4">
+                                <div className="space-y-1.5">
+                                    <label className="flex items-center gap-1.5 text-[14px] font-semibold text-slate-800">
+                                        Họ và tên nhân viên <span className="text-rose-500">*</span>
+                                    </label>
+                                    <input
+                                        type="text"
+                                        name="name"
+                                        value={formData.name}
+                                        onChange={handleChange}
+                                        placeholder="VD: Nguyễn Văn A"
+                                        className="w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-2xl text-[15px] font-semibold text-slate-800 transition-all focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary/40 focus:bg-white"
+                                        required
+                                    />
+                                </div>
+                                
+                                <div className="space-y-1.5">
+                                    <label className="flex items-center gap-1.5 text-[14px] font-semibold text-slate-800">
+                                        Tên tài khoản (đăng nhập) <span className="text-rose-500">*</span>
+                                    </label>
+                                    <input
+                                        type="text"
+                                        name="username"
+                                        value={formData.username}
+                                        onChange={handleChange}
+                                        disabled={isEdit}
+                                        placeholder="VD: nguyenva"
+                                        className={clsx(
+                                            "w-full h-12 px-4 border rounded-2xl font-bold text-[15px] transition-all uppercase tracking-wider",
+                                            isEdit 
+                                                ? "bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed" 
+                                                : "bg-slate-50 border-slate-200 text-primary focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary/40 focus:bg-white"
+                                        )}
+                                        required
+                                    />
+                                    {!isEdit && <p className="text-[10px] text-slate-400 ml-1 font-bold italic">* Viết liền không dấu, không chứa ký tự đặc biệt.</p>}
+                                </div>
                             </div>
                         </div>
 
-                        {/* Trạng thái */}
-                        <div className="space-y-4">
-                            <label className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">
-                                Trạng thái hoạt động *
+                        {/* Section 2: Công việc */}
+                        <div className="rounded-3xl border border-primary/20 bg-white p-5 sm:p-6 space-y-5 shadow-sm [&_label]:text-primary [&_label_svg]:text-primary/80">
+                            <div className="flex items-center gap-2.5 pb-3 border-b border-primary/10">
+                                <Briefcase className="w-4 h-4 text-primary" />
+                                <h4 className="text-[18px] !font-extrabold !text-primary uppercase tracking-tight">Chức vụ & Liên lạc</h4>
+                            </div>
+                            
+                            <div className="space-y-4">
+                                <div className="space-y-1.5">
+                                    <label className="flex items-center gap-1.5 text-[14px] font-semibold text-slate-800">
+                                        Vai trò hệ thống <span className="text-rose-500">*</span>
+                                    </label>
+                                    <div className="relative">
+                                        <select
+                                            name="role"
+                                            value={formData.role}
+                                            onChange={handleChange}
+                                            className="w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-2xl text-[15px] font-semibold text-slate-800 appearance-none transition-all focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary/40 focus:bg-white"
+                                        >
+                                            {USER_ROLES.map(role => (
+                                                <option key={role.id} value={role.id}>{role.label}</option>
+                                            ))}
+                                        </select>
+                                        <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-primary/70">
+                                            <ChevronDown className="w-4 h-4" />
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div className="space-y-1.5">
+                                    <label className="flex items-center gap-1.5 text-[14px] font-semibold text-slate-800">
+                                        <Phone className="w-3.5 h-3.5" />
+                                        Số điện thoại <span className="text-rose-500">*</span>
+                                    </label>
+                                    <input
+                                        type="tel"
+                                        name="phone"
+                                        value={formData.phone}
+                                        onChange={handlePhoneChange}
+                                        placeholder="09xxxxxxxx"
+                                        className="w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-2xl text-[15px] font-semibold text-slate-800 transition-all focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary/40 focus:bg-white"
+                                        required
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Section 3: Trạng thái */}
+                        <div className="rounded-3xl border border-primary/20 bg-white p-5 sm:p-6 space-y-4 shadow-sm">
+                            <label className="text-[14px] font-extrabold text-primary uppercase tracking-wider block mb-1">
+                                Trạng thái hoạt động <span className="text-rose-500">*</span>
                             </label>
-                            <div className="flex flex-wrap gap-3">
-                                {USER_STATUSES.map(status => (
-                                    <button
-                                        key={status.id}
-                                        type="button"
-                                        onClick={() => setFormData(p => ({ ...p, status: status.label }))}
-                                        className={`px-6 py-2.5 rounded-xl font-bold text-sm border transition-all ${formData.status === status.label
-                                                ? 'bg-emerald-600 text-white border-emerald-700 shadow-lg shadow-emerald-100'
-                                                : 'bg-white text-slate-500 border-slate-100 hover:bg-slate-50'
-                                            }`}
-                                    >
-                                        {status.label}
-                                    </button>
-                                ))}
+                            <div className="grid grid-cols-2 gap-3">
+                                {USER_STATUSES.map(status => {
+                                    const isActive = formData.status === status.label;
+                                    return (
+                                        <button
+                                            key={status.id}
+                                            type="button"
+                                            onClick={() => setFormData(p => ({ ...p, status: status.label }))}
+                                            className={clsx(
+                                                "px-4 py-3.5 rounded-2xl font-black text-xs uppercase tracking-widest border transition-all duration-300 flex items-center justify-center gap-2",
+                                                isActive
+                                                    ? "bg-primary text-white border-primary shadow-lg shadow-primary/20 scale-[1.02]"
+                                                    : "bg-white text-slate-400 border-slate-100 hover:border-primary/30 hover:text-slate-600"
+                                            )}
+                                        >
+                                            {isActive && <CheckCircle2 className="w-4 h-4" />}
+                                            {status.label}
+                                        </button>
+                                    );
+                                })}
                             </div>
                         </div>
                     </form>
                 </div>
 
-                {/* Footer Actions */}
-                <div className="p-6 bg-white border-t border-slate-100 shrink-0 flex items-center justify-end gap-3 shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.05)] relative z-10">
+                {/* Footer */}
+                <div className="sticky bottom-0 z-40 px-6 py-4 pb-12 md:px-10 md:py-6 bg-[#F9FAFB] border-t border-slate-200 shrink-0 flex flex-col-reverse md:flex-row items-center justify-between gap-4 md:gap-6 shadow-[0_-8px_20px_rgba(0,0,0,0.08)]">
                     <button
                         type="button"
-                        onClick={onClose}
-                        className="px-6 py-3 text-sm font-bold text-slate-500 hover:bg-slate-100 rounded-xl transition-colors"
+                        onClick={handleClose}
+                        className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-slate-300 bg-white text-slate-500 hover:text-primary font-bold text-[15px] transition-colors outline-none"
                         disabled={isLoading}
                     >
-                        Đóng lại
+                        Hủy
                     </button>
                     <button
                         type="submit"
                         form="userForm"
                         disabled={isLoading}
-                        className="px-12 py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-black rounded-xl shadow-xl shadow-indigo-200 transition-all flex items-center gap-3 border border-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className={clsx(
+                            "w-full md:flex-1 sm:w-auto px-6 py-3 font-bold text-[15px] rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 border disabled:opacity-50",
+                            "bg-primary text-white border-primary-700/40 hover:bg-primary-700 shadow-primary-200"
+                        )}
                     >
                         {isLoading ? (
-                            <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                            <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
                         ) : (
-                            <CheckCircle2 className="w-5 h-5" />
+                            <CheckCircle2 className="w-4 h-4" />
                         )}
-                        {isEdit ? 'Lưu cập nhật' : 'Xác nhận Thêm nhân sự'}
+                        {isLoading 
+                            ? (isEdit ? 'Đang lưu...' : 'Đang thêm...') 
+                            : (isEdit ? 'Lưu cập nhật' : 'Xác nhận Thêm')}
                     </button>
                 </div>
-
             </div>
-        </div>
+        </div>,
+        document.body
     );
 }

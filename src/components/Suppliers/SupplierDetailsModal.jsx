@@ -13,11 +13,14 @@ import {
     X
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { clsx } from 'clsx';
 import { supabase } from '../../supabase/config';
 
 export default function SupplierDetailsModal({ supplier, onClose }) {
     const [activeTab, setActiveTab] = useState('overview'); // overview, receipts, transactions
     const [loading, setLoading] = useState(true);
+    const [isClosing, setIsClosing] = useState(false);
 
     const [receipts, setReceipts] = useState([]);
     const [transactions, setTransactions] = useState([]);
@@ -40,6 +43,11 @@ export default function SupplierDetailsModal({ supplier, onClose }) {
         if (!supplier) return;
         fetchSupplierData();
     }, [supplier]);
+
+    const handleClose = () => {
+        setIsClosing(true);
+        setTimeout(onClose, 300);
+    };
 
     const fetchSupplierData = async () => {
         setLoading(true);
@@ -155,185 +163,199 @@ export default function SupplierDetailsModal({ supplier, onClose }) {
         return new Date(dateStr).toLocaleDateString('vi-VN');
     };
 
-    return (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-end md:items-center justify-center z-[100] p-0 md:p-4 animate-in fade-in duration-200">
-            <div className="bg-slate-50 rounded-t-[1.5rem] md:rounded-[2rem] shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col h-[100dvh] md:h-[80vh] mt-0 md:mt-12">
+    const drawerContent = (
+        <div className={clsx(
+            "fixed inset-0 z-[100005] flex justify-end",
+            isClosing ? "pointer-events-none" : ""
+        )}>
+            {/* Backdrop */}
+            <div 
+                className={clsx(
+                    "absolute inset-0 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-300",
+                    isClosing && "animate-out fade-out duration-300"
+                )}
+                onClick={handleClose}
+            />
+
+            {/* Drawer Panel */}
+            <div className={clsx(
+                "relative h-full w-full max-w-[850px] bg-slate-50 shadow-2xl flex flex-col animate-in slide-in-from-right duration-500",
+                isClosing && "animate-out slide-out-to-right duration-300"
+            )}>
 
                 {/* Header Profile */}
-                <div className="bg-white px-4 md:px-8 py-4 md:py-6 border-b border-slate-200 shrink-0 relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-40 h-40 md:w-64 md:h-64 bg-blue-50 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 opacity-60 pointer-events-none"></div>
+                <div className="bg-white px-6 md:px-8 py-6 border-b border-slate-200 shrink-0 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 opacity-60 pointer-events-none"></div>
 
-                    <div className="flex items-start justify-between gap-3 relative z-10">
-                        <div className="flex items-start md:items-center gap-3 md:gap-5 min-w-0">
-                            <div className="w-12 h-12 md:w-16 md:h-16 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-blue-200 shrink-0">
-                                <Building2 className="w-6 h-6 md:w-8 md:h-8" />
+                    <div className="flex items-start justify-between gap-4 relative z-10">
+                        <div className="flex items-center gap-5 min-w-0">
+                            <div className="w-16 h-16 bg-gradient-to-br from-primary to-primary/80 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-primary/20 shrink-0 border border-primary/20">
+                                <Building2 className="w-8 h-8" />
                             </div>
                             <div className="min-w-0">
-                                <h2 className="text-xl md:text-2xl font-black text-slate-900 mb-1 tracking-tight truncate">{supplier.name}</h2>
-                                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-xs md:text-sm font-bold text-slate-500">
-                                    <span className="flex items-center gap-1.5"><Phone className="w-4 h-4 text-slate-400" /> {supplier.phone}</span>
-                                    <span className="flex items-center gap-1.5 min-w-0"><MapPin className="w-4 h-4 text-slate-400 shrink-0" /> <span className="max-w-[220px] md:max-w-[300px] truncate" title={supplier.address}>{supplier.address}</span></span>
+                                <h2 className="text-2xl font-black text-slate-900 mb-1.5 tracking-tight truncate">{supplier.name}</h2>
+                                <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-[12px] font-bold text-slate-500 uppercase tracking-wider">
+                                    <span className="flex items-center gap-2"><Phone className="w-4 h-4 text-primary/60" /> {supplier.phone}</span>
+                                    <span className="flex items-center gap-2 min-w-0">
+                                        <MapPin className="w-4 h-4 text-primary/60 shrink-0" /> 
+                                        <span className="truncate max-w-[300px]" title={supplier.address}>{supplier.address}</span>
+                                    </span>
                                 </div>
                             </div>
                         </div>
-                        <button onClick={onClose} className="p-2 md:p-2.5 bg-slate-100 text-slate-400 hover:text-slate-900 hover:bg-slate-200 rounded-xl transition-colors shrink-0">
-                            <X className="w-5 h-5 md:w-6 md:h-6" />
+                        <button 
+                            onClick={handleClose} 
+                            className="p-2.5 bg-slate-50 text-slate-400 hover:text-primary hover:bg-white hover:border-primary/20 rounded-xl border border-transparent transition-all shadow-sm shrink-0"
+                        >
+                            <X className="w-6 h-6" />
                         </button>
                     </div>
 
                     {/* Navigation Tabs */}
-                    <div className="grid grid-cols-3 md:flex md:items-center md:gap-6 mt-5 md:mt-8 border-b border-slate-200 relative z-10 overflow-hidden">
+                    <div className="flex items-center gap-8 mt-8 border-b border-slate-200 relative z-10">
                         <button
                             onClick={() => setActiveTab('overview')}
-                            className={`pt-1.5 pb-2.5 md:pb-4 px-1 md:px-2 text-[11px] md:text-sm font-black tracking-normal md:tracking-wider transition-all duration-300 border-b-2 min-w-0 ${activeTab === 'overview' ? 'text-blue-600 border-blue-600' : 'text-slate-400 border-transparent hover:text-slate-700'}`}
+                            className={`pb-4 px-2 text-[13px] font-black tracking-wider transition-all duration-300 border-b-2 ${activeTab === 'overview' ? 'text-primary border-primary' : 'text-slate-400 border-transparent hover:text-slate-600'}`}
                         >
-                            <div className="flex items-center justify-center gap-1 md:gap-2 min-w-0">
-                                <Activity className="w-3.5 h-3.5 md:w-4 md:h-4 shrink-0" />
-                                <span className="text-center leading-tight">Tổng quan</span>
+                            <div className="flex items-center gap-2">
+                                <Activity className="w-4 h-4" />
+                                TỔNG QUAN
                             </div>
                         </button>
                         <button
                             onClick={() => setActiveTab('receipts')}
-                            className={`pt-1.5 pb-2.5 md:pb-4 px-1 md:px-2 text-[11px] md:text-sm font-black tracking-normal md:tracking-wider transition-all duration-300 border-b-2 min-w-0 ${activeTab === 'receipts' ? 'text-emerald-600 border-emerald-600' : 'text-slate-400 border-transparent hover:text-slate-700'}`}
+                            className={`pb-4 px-2 text-[13px] font-black tracking-wider transition-all duration-300 border-b-2 ${activeTab === 'receipts' ? 'text-emerald-600 border-emerald-600' : 'text-slate-400 border-transparent hover:text-slate-600'}`}
                         >
-                            <div className="flex items-center justify-center gap-1 md:gap-2 min-w-0">
-                                <Package className="w-3.5 h-3.5 md:w-4 md:h-4 shrink-0" />
-                                <span className="text-center leading-tight">Phiếu nhập</span>
-                                <span className="hidden md:inline-flex bg-slate-100 text-slate-500 py-0.5 px-2 rounded-full text-[10px] leading-none shrink-0">{receipts.length}</span>
+                            <div className="flex items-center gap-2">
+                                <Package className="w-4 h-4" />
+                                PHIẾU NHẬP
+                                <span className="bg-emerald-50 text-emerald-600 py-0.5 px-2 rounded-full text-[10px] leading-none shrink-0 border border-emerald-100">{receipts.length}</span>
                             </div>
                         </button>
                         <button
                             onClick={() => setActiveTab('transactions')}
-                            className={`pt-1.5 pb-2.5 md:pb-4 px-1 md:px-2 text-[11px] md:text-sm font-black tracking-normal md:tracking-wider transition-all duration-300 border-b-2 min-w-0 ${activeTab === 'transactions' ? 'text-indigo-600 border-indigo-600' : 'text-slate-400 border-transparent hover:text-slate-700'}`}
+                            className={`pb-4 px-2 text-[13px] font-black tracking-wider transition-all duration-300 border-b-2 ${activeTab === 'transactions' ? 'text-indigo-600 border-indigo-600' : 'text-slate-400 border-transparent hover:text-slate-600'}`}
                         >
-                            <div className="flex items-center justify-center gap-1 md:gap-2 min-w-0">
-                                <History className="w-3.5 h-3.5 md:w-4 md:h-4 shrink-0" />
-                                <span className="text-center leading-tight">Thu / Chi</span>
-                                <span className="hidden md:inline-flex bg-slate-100 text-slate-500 py-0.5 px-2 rounded-full text-[10px] leading-none shrink-0">{transactions.length}</span>
+                            <div className="flex items-center gap-2">
+                                <History className="w-4 h-4" />
+                                THU / CHI
+                                <span className="bg-indigo-50 text-indigo-600 py-0.5 px-2 rounded-full text-[10px] leading-none shrink-0 border border-indigo-100">{transactions.length}</span>
                             </div>
                         </button>
                     </div>
                 </div>
 
                 {/* Body Details */}
-                <div className="flex-1 overflow-y-auto p-4 md:p-8 relative">
+                <div className="flex-1 overflow-y-auto p-8 bg-slate-50/50 custom-scrollbar">
                     {loading ? (
-                        <div className="flex flex-col items-center justify-center h-40 space-y-4">
-                            <div className="w-10 h-10 border-4 border-blue-100 border-t-blue-600 rounded-full animate-spin"></div>
-                            <p className="text-sm font-bold text-slate-400 animate-pulse">Đang tải dữ liệu NCC...</p>
+                        <div className="flex flex-col items-center justify-center py-20 gap-4">
+                            <div className="w-12 h-12 border-[3px] border-primary/10 border-t-primary rounded-full animate-spin"></div>
+                            <p className="text-[13px] font-black text-slate-400 animate-pulse uppercase tracking-[0.2em]">Đang truy xuất dữ liệu...</p>
                         </div>
                     ) : (
-                        <div className="animate-in slide-in-from-bottom-4 duration-500 fade-in">
+                        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
 
                             {/* TAB: OVERVIEW */}
                             {activeTab === 'overview' && (
-                                <div className="space-y-6 md:space-y-8">
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
-                                        {/* Card CÔNG NỢ */}
-                                        <div className="bg-rose-50 border border-rose-100 rounded-3xl p-4 md:p-6 relative overflow-hidden group hover:-translate-y-1 transition-transform duration-300">
-                                            <div className="absolute -right-4 -bottom-4 bg-rose-200/50 w-24 h-24 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-500"></div>
-                                            <div className="flex justify-between items-start mb-4 relative z-10">
-                                                <div className="w-12 h-12 bg-rose-100 text-rose-600 rounded-xl flex items-center justify-center">
-                                                    <DollarSign className="w-6 h-6" />
-                                                </div>
+                                <div className="space-y-8">
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                        <div className="bg-rose-50 border border-rose-100/50 rounded-3xl p-6 shadow-sm group hover:-translate-y-1 transition-all duration-300">
+                                            <div className="w-12 h-12 bg-rose-100 text-rose-600 rounded-2xl flex items-center justify-center mb-4 border border-rose-200">
+                                                <DollarSign className="w-6 h-6" />
                                             </div>
-                                            <p className="text-[11px] font-black text-rose-400 uppercase tracking-widest relative z-10">Công Nợ Hiện Tại</p>
-                                            <h3 className="text-2xl md:text-3xl font-black text-rose-700 mt-1 relative z-10 break-words">{formatCurrency(stats.currentDebt)}</h3>
+                                            <p className="text-[11px] font-black text-rose-400 uppercase tracking-[0.2em] mb-1.5">Công Nợ Hiện Tại</p>
+                                            <h3 className="text-2xl font-black text-rose-700">{formatCurrency(stats.currentDebt)}</h3>
                                         </div>
 
-                                        <div className="bg-white border border-slate-200 shadow-sm rounded-3xl p-4 md:p-6 relative overflow-hidden group hover:-translate-y-1 transition-transform duration-300">
-                                            <div className="absolute -right-4 -bottom-4 bg-slate-100 w-24 h-24 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-500"></div>
-                                            <div className="flex justify-between items-start mb-4 relative z-10">
-                                                <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center">
-                                                    <ArrowDownRight className="w-6 h-6" />
-                                                </div>
+                                        <div className="bg-white border border-slate-200/60 rounded-3xl p-6 shadow-sm group hover:-translate-y-1 transition-all duration-300">
+                                            <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center mb-4 border border-emerald-100">
+                                                <ArrowDownRight className="w-6 h-6" />
                                             </div>
-                                            <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest relative z-10">Tổng Tiền Đã Nhập</p>
-                                            <h3 className="text-2xl md:text-3xl font-black text-slate-800 mt-1 relative z-10 break-words">{formatCurrency(stats.totalImportValue)}</h3>
+                                            <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1.5">Tổng Đã Nhập</p>
+                                            <h3 className="text-2xl font-black text-slate-800">{formatCurrency(stats.totalImportValue)}</h3>
                                         </div>
 
-                                        <div className="bg-white border border-slate-200 shadow-sm rounded-3xl p-4 md:p-6 relative overflow-hidden group hover:-translate-y-1 transition-transform duration-300">
-                                            <div className="absolute -right-4 -bottom-4 bg-slate-100 w-24 h-24 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-500"></div>
-                                            <div className="flex justify-between items-start mb-4 relative z-10">
-                                                <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center">
-                                                    <ArrowUpRight className="w-6 h-6" />
-                                                </div>
+                                        <div className="bg-white border border-slate-200/60 rounded-3xl p-6 shadow-sm group hover:-translate-y-1 transition-all duration-300">
+                                            <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center mb-4 border border-indigo-100">
+                                                <ArrowUpRight className="w-6 h-6" />
                                             </div>
-                                            <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest relative z-10">Tổng Tiền Đã Trả</p>
-                                            <h3 className="text-2xl md:text-3xl font-black text-slate-800 mt-1 relative z-10 break-words">{formatCurrency(stats.totalPaid)}</h3>
+                                            <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1.5">Tổng Đã Trả</p>
+                                            <h3 className="text-2xl font-black text-slate-800">{formatCurrency(stats.totalPaid)}</h3>
                                         </div>
                                     </div>
 
-                                    {/* Action Shortcuts */}
-                                    <div className="flex flex-col items-stretch gap-4 pt-4 border-t border-slate-100">
+                                    <div className="pt-4 border-t border-slate-200/60">
                                         {!showPaymentForm ? (
                                             <button
                                                 onClick={() => setShowPaymentForm(true)}
-                                                className="w-full md:w-auto px-6 py-3.5 bg-slate-900 text-white rounded-xl font-black text-sm shadow-xl shadow-slate-200 hover:bg-slate-800 transition-colors flex items-center justify-center gap-2"
+                                                className="px-8 py-4 bg-slate-900 text-white rounded-2xl font-black text-[13px] uppercase tracking-widest shadow-xl shadow-slate-200 hover:bg-primary transition-all flex items-center gap-3"
                                             >
-                                                <CreditCard className="w-4 h-4" /> Trả nợ NCC (Tạo phiếu Chi)
+                                                <CreditCard className="w-4 h-4" /> Lập phiếu chi trả nợ
                                             </button>
                                         ) : (
-                                            <div className="w-full bg-slate-50 border border-slate-200 rounded-3xl p-4 md:p-6 animate-in slide-in-from-top-4 duration-300">
-                                                <div className="flex items-start md:items-center justify-between gap-3 mb-5 md:mb-6">
-                                                    <h3 className="text-base md:text-lg font-black text-slate-900 flex items-center gap-2"><CreditCard className="w-5 h-5 text-indigo-600" /> TẠO PHIẾU CHI TRẢ NỢ</h3>
-                                                    <button onClick={() => setShowPaymentForm(false)} className="text-slate-400 hover:text-rose-500 font-bold text-sm">Hủy bỏ</button>
+                                            <div className="bg-white border border-primary/20 rounded-[2.5rem] p-8 shadow-xl animate-in slide-in-from-top-4 duration-300">
+                                                <div className="flex items-center justify-between mb-8">
+                                                    <h3 className="text-lg font-black text-slate-900 tracking-tight flex items-center gap-3">
+                                                        <div className="w-10 h-10 bg-indigo-100 text-indigo-600 rounded-xl flex items-center justify-center">
+                                                            <CreditCard className="w-5 h-5" />
+                                                        </div>
+                                                        TẠO PHIẾU CHI MỚI
+                                                    </h3>
+                                                    <button onClick={() => setShowPaymentForm(false)} className="px-4 py-2 bg-slate-50 text-slate-400 hover:text-rose-500 font-black text-[11px] uppercase tracking-wider rounded-lg transition-colors">Hủy bỏ</button>
                                                 </div>
-                                                <form onSubmit={handlePaymentSubmit} className="space-y-5">
-                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                                                        <div className="space-y-2">
-                                                            <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest ml-1">Số tiền thanh toán (VNĐ) *</label>
+                                                <form onSubmit={handlePaymentSubmit} className="space-y-6">
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                        <div className="space-y-2.5">
+                                                            <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest ml-1">Số tiền thanh toán *</label>
                                                             <input
                                                                 type="text"
                                                                 required
                                                                 value={paymentAmount ? Number(paymentAmount.replace(/\./g, '')).toLocaleString('vi-VN') : ''}
                                                                 onChange={(e) => setPaymentAmount(e.target.value)}
-                                                                placeholder="Nhập số tiền..."
-                                                                className="w-full px-4 md:px-5 py-3.5 bg-white border border-slate-200 rounded-xl font-black text-indigo-700 text-base md:text-lg outline-none focus:ring-4 focus:ring-indigo-100 focus:border-indigo-400 transition-all placeholder:font-medium placeholder:text-slate-300"
+                                                                placeholder="VNĐ"
+                                                                className="w-full h-14 px-6 bg-slate-50 border border-slate-200 rounded-2xl font-black text-primary text-xl focus:ring-4 focus:ring-primary/5 focus:border-primary focus:bg-white transition-all shadow-sm"
                                                             />
                                                         </div>
-                                                        <div className="space-y-2">
-                                                            <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest ml-1">Hình thức *</label>
+                                                        <div className="space-y-2.5">
+                                                            <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest ml-1">Hình thức thanh toán *</label>
                                                             <select
                                                                 value={paymentMethod}
                                                                 onChange={(e) => setPaymentMethod(e.target.value)}
-                                                                className="w-full px-4 md:px-5 py-3.5 bg-white border border-slate-200 rounded-xl font-bold text-slate-700 outline-none focus:ring-4 focus:ring-indigo-100 focus:border-indigo-400 transition-all"
+                                                                className="w-full h-14 px-6 bg-slate-50 border border-slate-200 rounded-2xl font-bold text-slate-700 focus:ring-4 focus:ring-primary/5 focus:border-primary focus:bg-white transition-all shadow-sm"
                                                             >
-                                                                <option value="CHUYEN_KHOAN">💳 Chuyển khoản (Ngân hàng)</option>
-                                                                <option value="TIEN_MAT">💵 Tiền mặt</option>
-                                                                <option value="KHAC">🔄 Phương thức khác</option>
+                                                                <option value="CHUYEN_KHOAN">💳 Chuyển khoản ngân hàng</option>
+                                                                <option value="TIEN_MAT">💵 Thanh toán tiền mặt</option>
+                                                                <option value="KHAC">🔄 Hình thức khác</option>
                                                             </select>
                                                         </div>
-                                                    </div>
-                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                                                        <div className="space-y-2">
+                                                        <div className="space-y-2.5">
                                                             <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest ml-1">Ngày lập phiếu *</label>
                                                             <input
                                                                 type="date"
                                                                 required
                                                                 value={paymentDate}
                                                                 onChange={(e) => setPaymentDate(e.target.value)}
-                                                                className="w-full px-4 md:px-5 py-3.5 bg-white border border-slate-200 rounded-xl font-bold text-slate-700 outline-none focus:ring-4 focus:ring-indigo-100 focus:border-indigo-400 transition-all"
+                                                                className="w-full h-14 px-6 bg-slate-50 border border-slate-200 rounded-2xl font-bold text-slate-700 focus:ring-4 focus:ring-primary/5 focus:border-primary focus:bg-white transition-all shadow-sm"
                                                             />
                                                         </div>
-                                                        <div className="space-y-2">
-                                                            <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest ml-1">Nội dung chuyển khoản</label>
+                                                        <div className="space-y-2.5">
+                                                            <label className="text-[11px] font-black text-slate-500 uppercase tracking-widest ml-1">Ghi chú giao dịch</label>
                                                             <input
                                                                 type="text"
                                                                 value={paymentNote}
                                                                 onChange={(e) => setPaymentNote(e.target.value)}
-                                                                placeholder="Thanh toán tiền hàng cho NCC..."
-                                                                className="w-full px-4 md:px-5 py-3.5 bg-white border border-slate-200 rounded-xl font-bold text-slate-700 outline-none focus:ring-4 focus:ring-indigo-100 focus:border-indigo-400 transition-all placeholder:font-medium placeholder:text-slate-300"
+                                                                placeholder="VD: Thanh toán đợt 1 phiếu nhập tháng 10..."
+                                                                className="w-full h-14 px-6 bg-slate-50 border border-slate-200 rounded-2xl font-bold text-slate-700 focus:ring-4 focus:ring-primary/5 focus:border-primary focus:bg-white transition-all shadow-sm"
                                                             />
                                                         </div>
                                                     </div>
-                                                    <div className="flex justify-end pt-2">
+                                                    <div className="flex justify-end pt-4">
                                                         <button
                                                             type="submit"
                                                             disabled={isSubmittingPayment}
-                                                            className="w-full md:w-auto px-6 md:px-8 py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-black text-sm shadow-xl shadow-indigo-200 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                                                            className="w-full md:w-auto px-10 py-4 bg-primary text-white rounded-2xl font-black text-[13px] uppercase tracking-widest shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50"
                                                         >
-                                                            {isSubmittingPayment ? 'Đang lưu Phiếu chi...' : 'Xác nhận Đã Chuyển Tiền'}
+                                                            {isSubmittingPayment ? 'Đang khởi tạo phiếu chi...' : 'Xác nhận thanh toán'}
                                                         </button>
                                                     </div>
                                                 </form>
@@ -343,167 +365,89 @@ export default function SupplierDetailsModal({ supplier, onClose }) {
                                 </div>
                             )}
 
-                            {/* TAB: RECEIPTS */}
-                            {activeTab === 'receipts' && (
-                                <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
-                                    {receipts.length === 0 ? (
-                                        <div className="p-8 md:p-16 text-center flex flex-col items-center">
-                                            <Package className="w-12 h-12 md:w-16 md:h-16 text-slate-200 mb-4" />
-                                            <p className="text-slate-400 font-bold text-base md:text-lg">Chưa có phiếu nhập nào từ NCC này</p>
+                            {/* TAB: RECEIPTS & TRANSACTIONS TABLE STYLING */}
+                            {(activeTab === 'receipts' || activeTab === 'transactions') && (
+                                <div className="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden min-h-[400px]">
+                                    {(activeTab === 'receipts' && receipts.length === 0) || (activeTab === 'transactions' && transactions.length === 0) ? (
+                                        <div className="flex flex-col items-center justify-center py-32 opacity-30 grayscale">
+                                            <FileText size={64} className="mb-4" />
+                                            <p className="font-black tracking-widest uppercase text-sm">Trống dữ liệu</p>
                                         </div>
                                     ) : (
-                                        <>
-                                            <div className="md:hidden space-y-3 p-3">
-                                                {receipts.map(r => (
-                                                    <div key={r.id} className="p-3 bg-white border border-slate-200 rounded-2xl space-y-3">
-                                                        <div className="flex items-center justify-between gap-2">
-                                                            <p className="font-black text-sm text-slate-800 truncate">{r.receipt_code}</p>
-                                                            <span className={`px-2.5 py-1 text-[10px] font-black tracking-wider uppercase rounded-lg border shrink-0 ${r.status === 'DA_NHAP' || r.status === 'HOAN_THANH' ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-amber-50 text-amber-600 border-amber-200'
-                                                                }`}>
+                                        <table className="w-full text-left">
+                                            <thead className="bg-slate-50/80 border-b border-slate-100">
+                                                {activeTab === 'receipts' ? (
+                                                    <tr>
+                                                        <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Mã phiếu</th>
+                                                        <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Ngày nhập</th>
+                                                        <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Số lượng</th>
+                                                        <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Tổng giá trị</th>
+                                                        <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Trạng thái</th>
+                                                    </tr>
+                                                ) : (
+                                                    <tr>
+                                                        <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Mã GD</th>
+                                                        <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Ngày TT</th>
+                                                        <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Loại GD</th>
+                                                        <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Phương thức</th>
+                                                        <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Số tiền</th>
+                                                    </tr>
+                                                )}
+                                            </thead>
+                                            <tbody className="divide-y divide-slate-50">
+                                                {activeTab === 'receipts' ? receipts.map(r => (
+                                                    <tr key={r.id} className="hover:bg-slate-50/50 transition-colors">
+                                                        <td className="px-8 py-5 font-black text-[13px] text-slate-800 tracking-tight">{r.receipt_code}</td>
+                                                        <td className="px-8 py-5 text-[13px] font-bold text-slate-500">{formatDate(r.receipt_date)}</td>
+                                                        <td className="px-8 py-5 text-[13px] font-black text-slate-700 text-center">{r.total_items} item</td>
+                                                        <td className="px-8 py-5 text-[13px] font-black text-emerald-600 text-right">{formatCurrency(r.total_amount)}</td>
+                                                        <td className="px-8 py-5 text-center">
+                                                            <span className={clsx(
+                                                                "px-3 py-1 text-[10px] font-black tracking-widest uppercase rounded-lg border",
+                                                                (r.status === 'DA_NHAP' || r.status === 'HOAN_THANH') ? "bg-emerald-50 text-emerald-600 border-emerald-100" : "bg-amber-50 text-amber-600 border-amber-100"
+                                                            )}>
                                                                 {r.status}
                                                             </span>
-                                                        </div>
-                                                        <div className="grid grid-cols-2 gap-3 text-sm">
-                                                            <div className="bg-slate-50 border border-slate-100 rounded-xl p-3">
-                                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Ngày nhập</p>
-                                                                <p className="font-bold text-slate-600 mt-1">{formatDate(r.receipt_date)}</p>
-                                                            </div>
-                                                            <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 text-right">
-                                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Số lượng</p>
-                                                                <p className="font-black text-slate-800 mt-1">{r.total_items} hàng</p>
-                                                            </div>
-                                                        </div>
-                                                        <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 flex items-center justify-between gap-3">
-                                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Tổng giá trị</p>
-                                                            <p className="text-sm font-black text-emerald-600">{formatCurrency(r.total_amount)}</p>
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </div>
-
-                                            <table className="hidden md:table w-full text-left">
-                                                <thead className="bg-slate-50 border-b border-slate-100">
-                                                    <tr>
-                                                        <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Mã phiếu</th>
-                                                        <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Ngày nhập</th>
-                                                        <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] text-center">Số lượng</th>
-                                                        <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] text-right">Tổng giá trị</th>
-                                                        <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] text-center">Trạng thái</th>
+                                                        </td>
                                                     </tr>
-                                                </thead>
-                                                <tbody className="divide-y divide-slate-50">
-                                                    {receipts.map(r => (
-                                                        <tr key={r.id} className="hover:bg-slate-50/50 transition-colors">
-                                                            <td className="px-6 py-4 font-black text-sm text-slate-700">{r.receipt_code}</td>
-                                                            <td className="px-6 py-4 text-sm font-bold text-slate-500">{formatDate(r.receipt_date)}</td>
-                                                            <td className="px-6 py-4 text-sm font-black text-slate-700 text-center">{r.total_items} hàng</td>
-                                                            <td className="px-6 py-4 text-sm font-black text-emerald-600 text-right">{formatCurrency(r.total_amount)}</td>
-                                                            <td className="px-6 py-4 text-center">
-                                                                <span className={`px-3 py-1 text-[10px] font-black tracking-widest uppercase rounded-lg border ${r.status === 'DA_NHAP' || r.status === 'HOAN_THANH' ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-amber-50 text-amber-600 border-amber-200'
-                                                                    }`}>
-                                                                    {r.status}
-                                                                </span>
-                                                            </td>
-                                                        </tr>
-                                                    ))}
-                                                </tbody>
-                                            </table>
-                                        </>
-                                    )}
-                                </div>
-                            )}
-
-                            {/* TAB: TRANSACTIONS */}
-                            {activeTab === 'transactions' && (
-                                <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
-                                    {transactions.length === 0 ? (
-                                        <div className="p-8 md:p-16 text-center flex flex-col items-center">
-                                            <FileText className="w-12 h-12 md:w-16 md:h-16 text-slate-200 mb-4" />
-                                            <p className="text-slate-400 font-bold text-base md:text-lg mb-6">Chưa có giao dịch thanh toán nào</p>
-                                            <button
-                                                onClick={() => {
-                                                    setActiveTab('overview');
-                                                    setShowPaymentForm(true);
-                                                }}
-                                                className="w-full sm:w-auto px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-black text-sm shadow-xl shadow-indigo-200 transition-all flex items-center justify-center gap-2"
-                                            >
-                                                <CreditCard className="w-4 h-4" /> Bắt đầu tạo Phiếu Chi đầu tiên
-                                            </button>
-                                        </div>
-                                    ) : (
-                                        <>
-                                            <div className="md:hidden divide-y divide-slate-100">
-                                                {transactions.map(tx => (
-                                                    <div key={tx.id} className="p-4 space-y-3">
-                                                        <div className="flex items-center justify-between gap-2">
-                                                            <p className="font-black text-sm text-slate-800 truncate">{tx.transaction_code}</p>
+                                                )) : transactions.map(tx => (
+                                                    <tr key={tx.id} className="hover:bg-slate-50/50 transition-colors">
+                                                        <td className="px-8 py-5 font-black text-[13px] text-slate-800 tracking-tight">{tx.transaction_code}</td>
+                                                        <td className="px-8 py-5 text-[13px] font-bold text-slate-500">{formatDate(tx.transaction_date)}</td>
+                                                        <td className="px-8 py-5">
                                                             {tx.transaction_type === 'CHI' ? (
-                                                                <span className="text-indigo-600 flex items-center gap-1 text-xs font-black"><ArrowUpRight className="w-3.5 h-3.5" /> TRẢ NỢ</span>
+                                                                <span className="text-indigo-600 flex items-center gap-1.5 text-[11px] font-black"><ArrowUpRight className="w-4 h-4" /> PHIẾU CHI</span>
                                                             ) : (
-                                                                <span className="text-emerald-600 flex items-center gap-1 text-xs font-black"><ArrowDownRight className="w-3.5 h-3.5" /> HOÀN TIỀN</span>
+                                                                <span className="text-emerald-600 flex items-center gap-1.5 text-[11px] font-black"><ArrowDownRight className="w-4 h-4" /> HOÀN TIỀN</span>
                                                             )}
-                                                        </div>
-                                                        <div className="grid grid-cols-2 gap-3 text-sm">
-                                                            <div>
-                                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Ngày TT</p>
-                                                                <p className="font-bold text-slate-600 mt-1">{formatDate(tx.transaction_date)}</p>
-                                                            </div>
-                                                            <div className="text-right">
-                                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Phương thức</p>
-                                                                <p className="font-bold text-slate-700 mt-1 break-words">{tx.payment_method}</p>
-                                                            </div>
-                                                        </div>
-                                                        <div className="flex items-center justify-between pt-2 border-t border-slate-100">
-                                                            <div>
-                                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Người tạo</p>
-                                                                <p className="font-bold text-slate-600 mt-1">{tx.created_by || '—'}</p>
-                                                            </div>
-                                                            <p className="text-sm font-black text-slate-900">{formatCurrency(tx.amount)}</p>
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </div>
-
-                                            <table className="hidden md:table w-full text-left">
-                                                <thead className="bg-slate-50 border-b border-slate-100">
-                                                    <tr>
-                                                        <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Mã GD</th>
-                                                        <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Ngày TT</th>
-                                                        <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Loại</th>
-                                                        <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Phương thức</th>
-                                                        <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] text-right">Số tiền</th>
-                                                        <th className="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Người tạo</th>
+                                                        </td>
+                                                        <td className="px-8 py-5 text-[13px] font-bold text-slate-600 uppercase tracking-tight">{tx.payment_method?.replace(/_/g, ' ')}</td>
+                                                        <td className="px-8 py-5 text-[13px] font-black text-slate-900 text-right">{formatCurrency(tx.amount)}</td>
                                                     </tr>
-                                                </thead>
-                                                <tbody className="divide-y divide-slate-50">
-                                                    {transactions.map(tx => (
-                                                        <tr key={tx.id} className="hover:bg-slate-50/50 transition-colors">
-                                                            <td className="px-6 py-4 font-black text-sm text-slate-700">{tx.transaction_code}</td>
-                                                            <td className="px-6 py-4 text-sm font-bold text-slate-500">{formatDate(tx.transaction_date)}</td>
-                                                            <td className="px-6 py-4 text-sm font-black">
-                                                                {tx.transaction_type === 'CHI' ? (
-                                                                    <span className="text-indigo-600 flex items-center gap-1"><ArrowUpRight className="w-3.5 h-3.5" /> TRẢ NỢ</span>
-                                                                ) : (
-                                                                    <span className="text-emerald-600 flex items-center gap-1"><ArrowDownRight className="w-3.5 h-3.5" /> HOÀN TIỀN</span>
-                                                                )}
-                                                            </td>
-                                                            <td className="px-6 py-4 text-sm font-bold text-slate-600">{tx.payment_method}</td>
-                                                            <td className="px-6 py-4 text-sm font-black text-slate-900 text-right">{formatCurrency(tx.amount)}</td>
-                                                            <td className="px-6 py-4 text-sm font-bold text-slate-500">{tx.created_by || '—'}</td>
-                                                        </tr>
-                                                    ))}
-                                                </tbody>
-                                            </table>
-                                        </>
+                                                ))}
+                                            </tbody>
+                                        </table>
                                     )}
                                 </div>
                             )}
-
                         </div>
                     )}
+                </div>
+
+                {/* Footer Info */}
+                <div className="px-8 py-4 bg-white border-t border-slate-200 flex items-center justify-between text-[11px] font-black text-slate-400 tracking-widest uppercase shrink-0">
+                    <div className="flex items-center gap-3">
+                        <Activity size={14} className="text-primary/40" />
+                        TRẠNG THÁI HỒ SƠ: <span className="text-primary tracking-normal font-black">ACTIVE</span>
+                    </div>
+                    <div>
+                        {activeTab === 'receipts' ? receipts.length : transactions.length} BẢN GHI ĐƯỢC TÌM THẤY
+                    </div>
                 </div>
 
             </div>
         </div>
     );
+
+    return createPortal(drawerContent, document.body);
 }

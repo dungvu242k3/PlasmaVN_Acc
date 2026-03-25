@@ -30,11 +30,11 @@ function Sidebar({ isOpen, setIsOpen }) {
         >
           <div
             className={clsx(
-              'rounded-xl bg-primary text-white flex items-center justify-center shrink-0 transition-all duration-300',
+              'rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 text-white flex items-center justify-center shrink-0 transition-all duration-300 shadow-lg shadow-blue-500/25',
               isOpen ? 'w-8 h-8' : 'w-10 h-10'
             )}
           >
-            <Sparkles size={20} />
+            <Sparkles size={20} className="drop-shadow-sm" />
           </div>
           <div className={clsx('flex flex-col ml-3 whitespace-nowrap transition-opacity duration-300', !isOpen && 'opacity-0 hidden')}>
             <span className="font-bold text-[15px] leading-tight text-foreground">PlasmaVN</span>
@@ -69,6 +69,8 @@ function NavItem({ item, onClick, isOpen }) {
   );
 
   const isParentModuleActive = modulePathByItemPath[location.pathname] === item.path;
+  const itemColor = item.color || 'text-primary';
+  const colorName = itemColor.replace('text-', '').split('-')[0];
 
   return (
     <NavLink
@@ -76,19 +78,36 @@ function NavItem({ item, onClick, isOpen }) {
       onClick={onClick}
       className={({ isActive }) =>
         clsx(
-          'flex items-center rounded-xl text-sm font-medium transition-all duration-300 overflow-hidden whitespace-nowrap',
+          'flex items-center rounded-xl text-sm font-medium transition-all duration-300 overflow-hidden whitespace-nowrap border-l-4',
           isOpen ? 'px-3 py-2.5 w-full justify-start' : 'w-11 h-11 justify-center',
           (isActive || isParentModuleActive)
-            ? 'bg-primary text-white shadow-sm'
-            : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+            ? clsx('bg-slate-50 shadow-sm border-current', itemColor)
+            : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground border-transparent'
         )
       }
       title={!isOpen ? item.label : undefined}
     >
-      <div className={clsx('flex items-center justify-center shrink-0', isOpen && 'w-5 mr-3')}>
-        <item.icon size={22} className={clsx(!isOpen && 'mt-0.5')} strokeWidth={1.75} />
+      <div 
+        className={clsx(
+          'flex items-center justify-center shrink-0 transition-all duration-300', 
+          isOpen && 'w-5 mr-3'
+        )}
+      >
+        <item.icon 
+          size={22} 
+          className={clsx(
+            !isOpen && 'mt-0.5',
+            (location.pathname === item.path || isParentModuleActive) ? itemColor : 'text-inherit'
+          )} 
+          strokeWidth={1.75} 
+          style={(location.pathname === item.path || isParentModuleActive) ? {
+            filter: `drop-shadow(0 0 5px currentColor)`
+          } : {}}
+        />
       </div>
-      <span className={clsx('transition-all duration-300', !isOpen && 'opacity-0 w-0 hidden')}>{item.label}</span>
+      <span className={clsx('transition-all duration-300', !isOpen && 'opacity-0 w-0 hidden')}>
+        {item.label}
+      </span>
     </NavLink>
   );
 }

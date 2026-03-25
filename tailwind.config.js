@@ -15,8 +15,8 @@ export default {
         'xs': '480px',
       },
       colors: {
-        primary: '#5FA8FF',
-        secondary: '#4CAF50',
+        primary: '#3b82f6', // Blue 500
+        secondary: '#2563eb', // Blue 600
         'lumi-blue': '#007BFF',
         'lumi-orange': '#FF6600',
         'lumi-green': '#28A745',

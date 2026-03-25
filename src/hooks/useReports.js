@@ -216,16 +216,24 @@ export const useReports = () => {
         .select('*');
 
       if (filters.year) {
-        query = query.eq('nam', filters.year);
+        const years = (Array.isArray(filters.year) ? filters.year : [filters.year])
+          .map(y => parseInt(y))
+          .filter(y => !isNaN(y));
+        if (years.length > 0) query = query.in('nam', years);
       }
       if (filters.month) {
-        query = query.eq('thang', filters.month);
+        const months = (Array.isArray(filters.month) ? filters.month : [filters.month])
+          .map(m => parseInt(m))
+          .filter(m => !isNaN(m));
+        if (months.length > 0) query = query.in('thang', months);
       }
       if (filters.warehouse) {
-        query = query.eq('kho', filters.warehouse);
+        const warehouses = Array.isArray(filters.warehouse) ? filters.warehouse : [filters.warehouse];
+        if (warehouses.length > 0) query = query.in('kho', warehouses);
       }
       if (filters.customer_category) {
-        query = query.eq('loai_khach_hang', filters.customer_category);
+        const categories = Array.isArray(filters.customer_category) ? filters.customer_category : [filters.customer_category];
+        if (categories.length > 0) query = query.in('loai_khach_hang', categories);
       }
 
       const { data, error } = await query;
@@ -272,35 +280,37 @@ export const useReports = () => {
     setLoading(true);
     setError(null);
     try {
-      const [warehousesRes, customerTypesRes, salespersonsRes, machineTypesRes, yearsRes] = await Promise.all([
-        supabase.from('warehouses').select('id, name').eq('status', 'Đang hoạt động').order('name'),
-        supabase.from('customers').select('customer_type').order('customer_type'),
+      const [warehousesRes, customerTypesRes, categoriesRes, salespersonsRes, machineTypesRes, yearsRes] = await Promise.all([
+        supabase.from('warehouses').select('id, name').order('name'),
+        supabase.from('customers').select('customer_type').not('customer_type', 'is', null).order('customer_type'),
+        supabase.from('customers').select('category').not('category', 'is', null).order('category'),
         supabase.from('app_users').select('name').order('name'),
         supabase.from('machines').select('machine_type').order('machine_type'),
-        supabase.rpc('get_distinct_years').catch(() => {
-          const currentYear = new Date().getFullYear();
-          return { data: [currentYear, currentYear - 1], error: null };
-        })
+        supabase.rpc('get_distinct_years').catch(() => ({ data: [new Date().getFullYear()] }))
       ]);
 
       const warehouses = warehousesRes.data || [];
-      const customerTypes = [...new Set((customerTypesRes.data || []).map(r => r.customer_type).filter(Boolean))];
-      const salespersons = [...new Set((salespersonsRes.data || []).map(r => r.name).filter(Boolean))];
-      const machineTypes = [...new Set((machineTypesRes.data || []).map(r => r.machine_type).filter(Boolean))];
-      const years = yearsRes.data || [new Date().getFullYear(), new Date().getFullYear() - 1];
+      const customerTypes = [...new Set((customerTypesRes.data || []).map(r => r.customer_type))];
+      const categories = [...new Set((categoriesRes.data || []).map(r => r.category))];
+      const salespersons = [...new Set((salespersonsRes.data || []).map(r => r.name))];
+      const machineTypes = [...new Set((machineTypesRes.data || []).map(r => r.machine_type))];
+      const years = Array.isArray(yearsRes.data) ? yearsRes.data : [new Date().getFullYear()];
 
       return {
         warehouses,
         customerTypes,
+        categories,
         salespersons,
         machineTypes,
         years: [...new Set(years)].sort((a, b) => b - a)
       };
     } catch (err) {
+      console.error('fetchFilterOptions error:', err);
       setError(err.message);
       return {
         warehouses: [],
         customerTypes: [],
+        categories: [],
         salespersons: [],
         machineTypes: [],
         years: [new Date().getFullYear()]

@@ -1,5 +1,7 @@
 import { Building, Hash, MapPin, Phone, Receipt, Save, User, X } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { clsx } from 'clsx';
 import { supabase } from '../../supabase/config';
 
 export default function CustomerFormModal({ customer, onClose, onSuccess, categories, warehouses }) {
@@ -8,6 +10,14 @@ export default function CustomerFormModal({ customer, onClose, onSuccess, catego
     const [errorMsg, setErrorMsg] = useState('');
     const [staffList, setStaffList] = useState([]);
     const [agencySuggestions, setAgencySuggestions] = useState([]);
+    const [isClosing, setIsClosing] = useState(false);
+
+    const handleClose = useCallback(() => {
+        setIsClosing(true);
+        setTimeout(() => {
+            onClose();
+        }, 300);
+    }, [onClose]);
 
     useEffect(() => {
         const loadStaff = async () => {
@@ -136,14 +146,33 @@ export default function CustomerFormModal({ customer, onClose, onSuccess, catego
         }
     };
 
-    return (
-        <div className="fixed inset-0 bg-slate-900/55 backdrop-blur-sm flex items-stretch sm:items-center justify-center z-[100] p-0 sm:p-4 animate-in fade-in duration-200 [&_input]:!font-[600] [&_select]:!font-[600] [&_textarea]:!font-[600] [&_input]:!text-slate-800 [&_select]:!text-slate-800 [&_textarea]:!text-slate-800 [&_input::placeholder]:!text-slate-400 [&_textarea::placeholder]:!text-slate-400">
-            <div className="bg-slate-50 rounded-none sm:rounded-3xl shadow-2xl w-full max-w-5xl overflow-hidden flex flex-col h-[100dvh] sm:h-auto sm:max-h-[92vh] border-0 sm:border sm:border-slate-200">
+    return createPortal(
+        <div className={clsx(
+            "fixed inset-0 z-[100005] flex justify-end transition-all duration-300",
+            isClosing ? "opacity-0 pointer-events-none" : "opacity-100"
+        )}>
+            {/* Backdrop */}
+            <div 
+                className={clsx(
+                    "absolute inset-0 bg-black/45 backdrop-blur-sm animate-in fade-in duration-300",
+                    isClosing && "animate-out fade-out duration-300"
+                )}
+                onClick={handleClose}
+            />
+
+            {/* Panel */}
+            <div 
+                className={clsx(
+                    "relative bg-slate-50 shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col h-full border-l border-slate-200 animate-in slide-in-from-right duration-500",
+                    isClosing && "animate-out slide-out-to-right duration-300"
+                )}
+                onClick={e => e.stopPropagation()}
+            >
 
                 {/* Header */}
                 <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between shrink-0 bg-white sticky top-0 z-20">
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center text-emerald-600">
+                        <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center text-primary">
                             <User className="w-6 h-6" />
                         </div>
                         <div>
@@ -156,8 +185,8 @@ export default function CustomerFormModal({ customer, onClose, onSuccess, catego
                         </div>
                     </div>
                     <button
-                        onClick={onClose}
-                        className="p-2 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 rounded-xl transition-all"
+                        onClick={handleClose}
+                        className="p-2 text-primary hover:text-primary/80 hover:bg-primary/5 rounded-xl transition-all"
                     >
                         <X className="w-6 h-6" />
                     </button>
@@ -175,15 +204,15 @@ export default function CustomerFormModal({ customer, onClose, onSuccess, catego
                     <form id="customerForm" onSubmit={handleSubmit} className="space-y-6">
 
                         {/* Section 1: Thông tin cơ bản */}
-                        <div className="rounded-3xl border border-emerald-100 bg-white p-5 sm:p-6 space-y-5 shadow-sm [&_label]:text-emerald-700 [&_label_svg]:text-emerald-600">
-                            <h4 className="flex items-center gap-2.5 text-[18px] !font-extrabold !text-emerald-700 pb-3 border-b border-emerald-100">
-                                <User className="w-4 h-4 text-emerald-600" /> Thông tin định danh
+                        <div className="rounded-3xl border border-primary/10 bg-white p-5 sm:p-6 space-y-5 shadow-sm [&_label]:text-primary [&_label_svg]:text-primary/80">
+                            <h4 className="flex items-center gap-2.5 text-[18px] !font-extrabold !text-primary pb-3 border-b border-primary/10">
+                                <User className="w-4 h-4 text-primary/80" /> Thông tin định danh
                             </h4>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div>
                                     <label className="flex items-center gap-1.5 text-[14px] font-semibold mb-1.5"><Hash className="w-4 h-4" />Mã Khách Hàng <span className="text-red-500">*</span></label>
                                     <div className="relative">
-                                        <Hash className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-500" />
+                                        <Hash className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary/70" />
                                         <input
                                             type="text"
                                             name="code"
@@ -204,7 +233,7 @@ export default function CustomerFormModal({ customer, onClose, onSuccess, catego
                                         value={formData.name}
                                         onChange={handleChange}
                                         placeholder="Tên đơn vị khách hàng..."
-                                        className="w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-emerald-100 focus:border-emerald-400 focus:bg-white outline-none transition-all font-semibold text-slate-900"
+                                        className="w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-primary/10 focus:border-primary/40 focus:bg-white outline-none transition-all font-semibold text-slate-900"
                                         required
                                     />
                                 </div>
@@ -214,7 +243,7 @@ export default function CustomerFormModal({ customer, onClose, onSuccess, catego
                                         name="category"
                                         value={formData.category}
                                         onChange={handleChange}
-                                        className="w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-emerald-100 focus:border-emerald-400 focus:bg-white outline-none transition-all font-semibold text-slate-700 cursor-pointer"
+                                        className="w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-primary/10 focus:border-primary/40 focus:bg-white outline-none transition-all font-semibold text-slate-700 cursor-pointer"
                                     >
                                         <option value="BV">Bệnh viện (BV)</option>
                                         <option value="TM">Thẩm mỹ viện (TM)</option>
@@ -231,7 +260,7 @@ export default function CustomerFormModal({ customer, onClose, onSuccess, catego
                                         value={formData.legal_rep}
                                         onChange={handleChange}
                                         placeholder="Tên người đại diện..."
-                                        className="w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-emerald-100 focus:border-emerald-400 focus:bg-white outline-none transition-all font-semibold text-slate-900"
+                                        className="w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-primary/10 focus:border-primary/40 focus:bg-white outline-none transition-all font-semibold text-slate-900"
                                         required
                                     />
                                 </div>
@@ -243,29 +272,29 @@ export default function CustomerFormModal({ customer, onClose, onSuccess, catego
                                         value={formData.contact_info}
                                         onChange={handleChange}
                                         placeholder="Tên, chức vụ người liên hệ phụ..."
-                                        className="w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-emerald-100 focus:border-emerald-400 focus:bg-white outline-none transition-all font-semibold text-slate-900"
+                                        className="w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-primary/10 focus:border-primary/40 focus:bg-white outline-none transition-all font-semibold text-slate-900"
                                     />
                                 </div>
                             </div>
                         </div>
 
                         {/* Section 2: Liên hệ và Phân công */}
-                        <div className="rounded-3xl border border-green-100 bg-white p-5 sm:p-6 space-y-5 shadow-sm [&_label]:text-green-700 [&_label_svg]:text-green-600">
-                            <h4 className="flex items-center gap-2.5 text-[18px] !font-extrabold !text-green-700 pb-3 border-b border-green-100">
-                                <MapPin className="w-4 h-4 text-green-600" /> Địa chỉ & ưu tiên liên hệ
+                        <div className="rounded-3xl border border-primary/10 bg-white p-5 sm:p-6 space-y-5 shadow-sm [&_label]:text-primary [&_label_svg]:text-primary/80">
+                            <h4 className="flex items-center gap-2.5 text-[18px] !font-extrabold !text-primary pb-3 border-b border-primary/10">
+                                <MapPin className="w-4 h-4 text-primary/80" /> Địa chỉ & ưu tiên liên hệ
                             </h4>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div>
                                     <label className="flex items-center gap-1.5 text-[14px] font-semibold mb-1.5"><Phone className="w-4 h-4" />Số điện thoại liên lạc <span className="text-red-500">*</span></label>
                                     <div className="relative">
-                                        <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-green-500" />
+                                        <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary/70" />
                                         <input
                                             type="text"
                                             name="phone"
                                             value={formData.phone}
                                             onChange={handleChange}
                                             placeholder="09xx.xxx.xxx"
-                                            className="w-full h-12 pl-9 pr-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-green-100 focus:border-green-400 focus:bg-white outline-none transition-all font-semibold text-slate-900"
+                                            className="w-full h-12 pl-9 pr-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-primary/10 focus:border-primary/40 focus:bg-white outline-none transition-all font-semibold text-slate-900"
                                             required
                                         />
                                     </div>
@@ -276,7 +305,7 @@ export default function CustomerFormModal({ customer, onClose, onSuccess, catego
                                         name="warehouse_id"
                                         value={formData.warehouse_id}
                                         onChange={handleChange}
-                                        className="w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-green-100 focus:border-green-400 focus:bg-white outline-none transition-all font-semibold text-slate-700 cursor-pointer"
+                                        className="w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-primary/10 focus:border-primary/40 focus:bg-white outline-none transition-all font-semibold text-slate-700 cursor-pointer"
                                         required
                                     >
                                         {warehouses && warehouses.map(wh => (
@@ -292,7 +321,7 @@ export default function CustomerFormModal({ customer, onClose, onSuccess, catego
                                         value={formData.address}
                                         onChange={handleChange}
                                         placeholder="Số nhà, đường, phường, quận/huyện, tỉnh/thành phố..."
-                                        className="w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-green-100 focus:border-green-400 focus:bg-white outline-none transition-all font-semibold text-slate-900"
+                                        className="w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-primary/10 focus:border-primary/40 focus:bg-white outline-none transition-all font-semibold text-slate-900"
                                         required
                                     />
                                 </div>
@@ -304,7 +333,7 @@ export default function CustomerFormModal({ customer, onClose, onSuccess, catego
                                         value={formData.business_group}
                                         onChange={handleChange}
                                         placeholder="Ví dụ: Nhóm KD Miền Bắc..."
-                                        className="w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-green-100 focus:border-green-400 focus:bg-white outline-none transition-all font-semibold text-slate-900"
+                                        className="w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-primary/10 focus:border-primary/40 focus:bg-white outline-none transition-all font-semibold text-slate-900"
                                     />
                                 </div>
                                 <div>
@@ -313,7 +342,7 @@ export default function CustomerFormModal({ customer, onClose, onSuccess, catego
                                         name="care_by"
                                         value={formData.care_by}
                                         onChange={handleChange}
-                                        className="w-full h-12 px-4 bg-emerald-50 border border-emerald-100 rounded-2xl focus:ring-4 focus:ring-emerald-100 focus:border-emerald-500 outline-none transition-all font-semibold text-emerald-900 cursor-pointer"
+                                        className="w-full h-12 px-4 bg-primary/5 border border-primary/10 rounded-2xl focus:ring-4 focus:ring-primary/10 focus:border-primary/40 outline-none transition-all font-semibold text-primary cursor-pointer"
                                     >
                                         <option value="">-- Chọn NVKD --</option>
                                         {staffList.map(u => <option key={u.id} value={u.name}>{u.name}{u.role ? ` (${u.role})` : ''}</option>)}
@@ -328,7 +357,7 @@ export default function CustomerFormModal({ customer, onClose, onSuccess, catego
                                         onChange={handleChange}
                                         placeholder="Gõ tên đại lý..."
                                         list="modal-agency-suggestions"
-                                        className="w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-green-100 focus:border-green-400 focus:bg-white outline-none transition-all font-semibold text-slate-900"
+                                        className="w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-primary/10 focus:border-primary/40 focus:bg-white outline-none transition-all font-semibold text-slate-900"
                                     />
                                     <datalist id="modal-agency-suggestions">
                                         {agencySuggestions.map((a, i) => <option key={i} value={a} />)}
@@ -340,7 +369,7 @@ export default function CustomerFormModal({ customer, onClose, onSuccess, catego
                                         name="managed_by"
                                         value={formData.managed_by}
                                         onChange={handleChange}
-                                        className="w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-green-100 focus:border-green-400 focus:bg-white outline-none transition-all font-semibold text-slate-900 cursor-pointer"
+                                        className="w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-primary/10 focus:border-primary/40 focus:bg-white outline-none transition-all font-semibold text-slate-900 cursor-pointer"
                                     >
                                         <option value="">-- Chọn NVKD phụ trách --</option>
                                         {staffList.map(u => <option key={u.id} value={u.name}>{u.name}{u.role ? ` (${u.role})` : ''}</option>)}
@@ -350,22 +379,22 @@ export default function CustomerFormModal({ customer, onClose, onSuccess, catego
                         </div>
 
                         {/* Section 3: Thông tin xuất hoá đơn */}
-                        <div className="rounded-3xl border border-emerald-100 bg-white p-5 sm:p-6 space-y-5 shadow-sm [&_label]:text-emerald-700 [&_label_svg]:text-emerald-600">
-                            <h4 className="flex items-center gap-2.5 text-[18px] !font-extrabold !text-emerald-700 pb-3 border-b border-emerald-100">
-                                <Receipt className="w-4 h-4 text-emerald-600" /> Thông tin xuất hoá đơn
+                        <div className="rounded-3xl border border-primary/10 bg-white p-5 sm:p-6 space-y-5 shadow-sm [&_label]:text-primary [&_label_svg]:text-primary/80">
+                            <h4 className="flex items-center gap-2.5 text-[18px] !font-extrabold !text-primary pb-3 border-b border-primary/10">
+                                <Receipt className="w-4 h-4 text-primary/80" /> Thông tin xuất hoá đơn
                             </h4>
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                 <div>
                                     <label className="flex items-center gap-1.5 text-[14px] font-semibold mb-1.5"><Building className="w-4 h-4" />Mã số thuế</label>
                                     <div className="relative">
-                                        <Building className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-500" />
+                                        <Building className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary/70" />
                                         <input
                                             type="text"
                                             name="tax_code"
                                             value={formData.tax_code}
                                             onChange={handleChange}
                                             placeholder="VD: 0101234567"
-                                            className="w-full h-12 pl-9 pr-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-emerald-100 focus:border-emerald-400 focus:bg-white outline-none transition-all font-semibold text-slate-900"
+                                            className="w-full h-12 pl-9 pr-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-primary/10 focus:border-primary/40 focus:bg-white outline-none transition-all font-semibold text-slate-900"
                                         />
                                     </div>
                                 </div>
@@ -377,7 +406,7 @@ export default function CustomerFormModal({ customer, onClose, onSuccess, catego
                                         value={formData.invoice_company_name}
                                         onChange={handleChange}
                                         placeholder="Tên công ty ghi trên hoá đơn..."
-                                        className="w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-emerald-100 focus:border-emerald-400 focus:bg-white outline-none transition-all font-semibold text-slate-900"
+                                        className="w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-primary/10 focus:border-primary/40 focus:bg-white outline-none transition-all font-semibold text-slate-900"
                                     />
                                 </div>
                                 <div>
@@ -388,7 +417,7 @@ export default function CustomerFormModal({ customer, onClose, onSuccess, catego
                                         value={formData.invoice_address}
                                         onChange={handleChange}
                                         placeholder="Địa chỉ ghi trên hoá đơn GTGT..."
-                                        className="w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-emerald-100 focus:border-emerald-400 focus:bg-white outline-none transition-all font-semibold text-slate-900"
+                                        className="w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-primary/10 focus:border-primary/40 focus:bg-white outline-none transition-all font-semibold text-slate-900"
                                     />
                                 </div>
                             </div>
@@ -400,11 +429,11 @@ export default function CustomerFormModal({ customer, onClose, onSuccess, catego
                 </div>
 
                 {/* Footer Actions */}
-                <div className="px-4 py-3 bg-white border-t border-slate-200 shrink-0 flex items-center justify-end gap-3 sticky bottom-0 z-20">
+                <div className="sticky bottom-0 z-40 px-6 py-4 pb-12 md:px-10 md:py-6 bg-[#F9FAFB] border-t border-slate-200 shrink-0 flex flex-col-reverse md:flex-row items-center justify-between gap-4 md:gap-6 shadow-[0_-8px_20px_rgba(0,0,0,0.08)]">
                     <button
                         type="button"
-                        onClick={onClose}
-                        className="px-4 py-2.5 rounded-xl border border-slate-300 bg-slate-100 text-slate-500 hover:text-slate-700 font-semibold text-[15px] transition-colors outline-none"
+                        onClick={handleClose}
+                        className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-slate-300 bg-white text-slate-500 hover:text-primary font-bold text-[15px] transition-colors outline-none"
                         disabled={isLoading}
                     >
                         Hủy
@@ -413,7 +442,7 @@ export default function CustomerFormModal({ customer, onClose, onSuccess, catego
                         type="submit"
                         form="customerForm"
                         disabled={isLoading}
-                        className="px-8 py-2.5 bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-white text-[15px] font-bold rounded-2xl shadow-md shadow-emerald-200 transition-all flex items-center gap-2 border border-emerald-700/40 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-full md:flex-1 sm:w-auto px-6 py-3 bg-primary text-white font-bold text-[15px] rounded-xl shadow-lg shadow-primary/20 transition-all flex items-center justify-center gap-2 border border-primary/40 disabled:opacity-50 hover:bg-primary/90"
                     >
                         {isLoading ? (
                             <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
@@ -425,6 +454,7 @@ export default function CustomerFormModal({ customer, onClose, onSuccess, catego
                 </div>
 
             </div>
-        </div>
+        </div>,
+        document.body
     );
 }

@@ -9,6 +9,13 @@ export const USER_ROLES = [
 ];
 
 export const USER_STATUSES = [
-    { id: 'Hoạt động', label: 'Hoạt động', colorClass: 'text-green-700 bg-green-50 border-green-200' },
-    { id: 'Dừng hoạt động', label: 'Dừng hoạt động', colorClass: 'text-red-700 bg-red-50 border-red-200' }
+    { id: 'Hoạt động', label: 'Hoạt động', color: 'green' },
+    { id: 'Dừng hoạt động', label: 'Dừng hoạt động', color: 'red' }
+];
+
+export const TABLE_COLUMNS = [
+    { key: 'info', label: 'Thông tin nhân sự' },
+    { key: 'contact', label: 'Liên lạc' },
+    { key: 'role', label: 'Vai trò / Công việc' },
+    { key: 'status', label: 'Trạng thái' },
 ];

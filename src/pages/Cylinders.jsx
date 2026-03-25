@@ -1099,7 +1099,7 @@ const Cylinders = () => {
             )}
 
             {activeView === 'stats' && (
-                <div className="bg-white rounded-2xl border border-border shadow-sm flex flex-col flex-1 min-h-0 w-full">
+                <div className="bg-white rounded-2xl border border-border shadow-sm flex flex-col w-full">
                     <div className="space-y-0">
                         <div className="md:hidden flex items-center gap-2 p-3 border-b border-border">
                             <button
@@ -1287,52 +1287,52 @@ const Cylinders = () => {
                             </div>
                         </div>
 
-                        <div className="px-3 md:px-4 pt-4 md:pt-5 pb-5 md:pb-6 space-y-5">
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                                <div className="bg-blue-50 rounded-2xl p-3.5 md:p-5 shadow-sm">
-                                    <div className="flex items-center justify-start gap-3 md:gap-4">
-                                        <div className="w-10 h-10 md:w-12 md:h-12 bg-blue-100 rounded-full flex items-center justify-center shrink-0">
+                        <div className="w-full px-3 md:px-4 pt-4 md:pt-5 pb-5 md:pb-6 space-y-5">
+                            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                                <div className="bg-blue-50/70 border border-blue-100 rounded-2xl p-4 md:p-5 shadow-sm">
+                                    <div className="flex flex-col md:flex-row items-center md:items-center justify-center md:justify-start text-center md:text-left gap-3 md:gap-4">
+                                        <div className="w-10 h-10 md:w-12 md:h-12 bg-blue-100/80 rounded-full flex items-center justify-center shrink-0 ring-1 ring-blue-200/70">
                                             <ActivitySquare className="w-5 h-5 md:w-6 md:h-6 text-blue-600" />
                                         </div>
                                         <div>
-                                            <p className="text-[11px] font-semibold text-blue-600 uppercase tracking-wider">Tổng bình</p>
-                                            <p className="text-[34px] md:text-3xl font-bold text-blue-900 mt-0.5 md:mt-1 leading-none">{formatNumber(filteredCylindersCount)}</p>
+                                            <p className="text-[10px] md:text-[11px] font-semibold text-blue-600 uppercase tracking-wider">Tổng bình</p>
+                                            <p className="text-2xl md:text-3xl font-bold text-foreground mt-0.5 md:mt-1 leading-none">{formatNumber(filteredCylindersCount)}</p>
                                         </div>
                                     </div>
                                 </div>
 
-                                <div className="bg-green-50 rounded-2xl p-3.5 md:p-5 shadow-sm">
-                                    <div className="flex items-center justify-start gap-3 md:gap-4">
-                                        <div className="w-10 h-10 md:w-12 md:h-12 bg-green-100 rounded-full flex items-center justify-center shrink-0">
+                                <div className="bg-green-50/70 border border-green-100 rounded-2xl p-4 md:p-5 shadow-sm">
+                                    <div className="flex flex-col md:flex-row items-center md:items-center justify-center md:justify-start text-center md:text-left gap-3 md:gap-4">
+                                        <div className="w-10 h-10 md:w-12 md:h-12  bg-green-100/80 rounded-full flex items-center justify-center shrink-0 ring-1 ring-green-200/70">
                                             <BarChart2 className="w-5 h-5 md:w-6 md:h-6 text-green-600" />
                                         </div>
                                         <div>
-                                            <p className="text-[11px] font-semibold text-green-600 uppercase tracking-wider">Sẵn sàng</p>
-                                            <p className="text-[34px] md:text-3xl font-bold text-green-900 mt-0.5 md:mt-1 leading-none">{formatNumber(readyCount)}</p>
+                                            <p className="text-[10px] md:text-[11px] font-semibold text-green-600 uppercase tracking-wider">Sẵn sàng</p>
+                                            <p className="text-2xl md:text-3xl font-bold text-foreground mt-0.5 md:mt-1 leading-none">{formatNumber(readyCount)}</p>
                                         </div>
                                     </div>
                                 </div>
 
-                                <div className="bg-orange-50 rounded-2xl p-3.5 md:p-5 shadow-sm">
-                                    <div className="flex items-center justify-start gap-3 md:gap-4">
-                                        <div className="w-10 h-10 md:w-12 md:h-12 bg-orange-100 rounded-full flex items-center justify-center shrink-0">
+                                <div className="bg-orange-50/70 border border-orange-100 rounded-2xl p-4 md:p-5 shadow-sm">
+                                    <div className="flex flex-col md:flex-row items-center md:items-center justify-center md:justify-start text-center md:text-left gap-3 md:gap-4">
+                                        <div className="w-10 h-10 md:w-12 md:h-12  bg-orange-100/80 rounded-full flex items-center justify-center shrink-0 ring-1 ring-orange-200/70">
                                             <BarChart2 className="w-5 h-5 md:w-6 md:h-6 text-orange-600" />
                                         </div>
                                         <div>
-                                            <p className="text-[11px] font-semibold text-orange-600 uppercase tracking-wider">Đang dùng</p>
-                                            <p className="text-[34px] md:text-3xl font-bold text-orange-900 mt-0.5 md:mt-1 leading-none">{formatNumber(inUseCount)}</p>
+                                            <p className="text-[10px] md:text-[11px] font-semibold text-orange-600 uppercase tracking-wider">Đang dùng</p>
+                                            <p className="text-2xl md:text-3xl font-bold text-foreground mt-0.5 md:mt-1 leading-none">{formatNumber(inUseCount)}</p>
                                         </div>
                                     </div>
                                 </div>
 
-                                <div className="bg-amber-50 rounded-2xl p-3.5 md:p-5 shadow-sm">
-                                    <div className="flex items-center justify-start gap-3 md:gap-4">
-                                        <div className="w-10 h-10 md:w-12 md:h-12 bg-amber-100 rounded-full flex items-center justify-center shrink-0">
+                                <div className="bg-amber-50/70 border border-amber-100 rounded-2xl p-4 md:p-5 shadow-sm">
+                                    <div className="flex flex-col md:flex-row items-center md:items-center justify-center md:justify-start text-center md:text-left gap-3 md:gap-4">
+                                        <div className="w-10 h-10 md:w-12 md:h-12  bg-amber-100/80 rounded-full flex items-center justify-center shrink-0 ring-1 ring-amber-200/70">
                                             <BarChart2 className="w-5 h-5 md:w-6 md:h-6 text-amber-600" />
                                         </div>
                                         <div>
-                                            <p className="text-[11px] font-semibold text-amber-600 uppercase tracking-wider">Rỗng/Chờ</p>
-                                            <p className="text-[34px] md:text-3xl font-bold text-amber-900 mt-0.5 md:mt-1 leading-none">{formatNumber(emptyCount)}</p>
+                                            <p className="text-[10px] md:text-[11px] font-semibold text-amber-600 uppercase tracking-wider">Rỗng/Chờ</p>
+                                            <p className="text-2xl md:text-3xl font-bold text-foreground mt-0.5 md:mt-1 leading-none">{formatNumber(emptyCount)}</p>
                                         </div>
                                     </div>
                                 </div>

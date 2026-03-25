@@ -7,20 +7,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import ScrollToTop from './components/ScrollToTop';
 import MainLayout from './components/layout/MainLayout';
 
-import CreateCustomer from './pages/CreateCustomer';
-import CreateCylinder from './pages/CreateCylinder';
-import CreateCylinderRecovery from './pages/CreateCylinderRecovery';
-import CreateGoodsIssue from './pages/CreateGoodsIssue';
-import CreateGoodsReceipt from './pages/CreateGoodsReceipt';
-import CreateMachine from './pages/CreateMachine';
-import CreateMaterial from './pages/CreateMaterial';
-import CreateOrder from './pages/CreateOrder';
-import CreatePermission from './pages/CreatePermission';
-import CreatePromotion from './pages/CreatePromotion';
-import CreateShipper from './pages/CreateShipper';
-import CreateSupplier from './pages/CreateSupplier';
-import CreateUser from './pages/CreateUser';
-import CreateWarehouse from './pages/CreateWarehouse';
+
 import Customers from './pages/Customers';
 import CylinderRecoveries from './pages/CylinderRecoveries';
 import Cylinders from './pages/Cylinders';
@@ -40,7 +27,6 @@ import Warehouses from './pages/Warehouses';
 import RepairTickets from './pages/RepairTickets';
 import CreateRepairTicket from './pages/CreateRepairTicket';
 import CreateMachineIssueRequest from './pages/CreateMachineIssueRequest';
-
 import StatisticsDashboard from './pages/StatisticsDashboard';
 import CustomerReport from './pages/CustomerReport';
 import SalespersonReport from './pages/SalespersonReport';
@@ -74,9 +60,10 @@ const legacyRedirects = [
   ['/danh-sach-dvvc', '/don-vi-van-chuyen'],
   ['/tao-dvvc', '/don-vi-van-chuyen/tao'],
   ['/xuat-kho', '/xuat-tra-ncc'],
-  ['/tao-phieu-nhap', '/phieu-nhap/tao'],
-  ['/tao-phieu-xuat', '/phieu-xuat/tao'],
-  ['/tao-phieu-thu-hoi', '/phieu-thu-hoi/tao'],
+  ['/tao-phieu-nhap', '/nhap-hang'],
+  ['/tao-phieu-xuat', '/xuat-tra-ncc'],
+  ['/phieu-xuat/tao', '/xuat-tra-ncc'],
+
   ['/tao-nha-cung-cap', '/nha-cung-cap/tao'],
   ['/thong-tin-vat-tu', '/vat-tu/danh-sach'],
   ['/tao-vat-tu', '/vat-tu/tao'],
@@ -118,35 +105,22 @@ function App() {
                 <Route key={path} path={path} element={<ModulePage />} />
               ))}
               <Route path="/don-hang" element={<Orders />} />
-              <Route path="/don-hang/tao" element={<CreateOrder />} />
               <Route path="/binh" element={<Cylinders />} />
-              <Route path="/binh/tao" element={<CreateCylinder />} />
               <Route path="/may" element={<Machines />} />
-              <Route path="/may/tao" element={<CreateMachine />} />
               <Route path="/kho/danh-sach" element={<Warehouses />} />
-              <Route path="/kho/tao" element={<CreateWarehouse />} />
               <Route path="/khach-hang" element={<Customers />} />
-              <Route path="/khach-hang/tao" element={<CreateCustomer />} />
               <Route path="/don-vi-van-chuyen" element={<Shippers />} />
-              <Route path="/don-vi-van-chuyen/tao" element={<CreateShipper />} />
               <Route path="/nhap-hang" element={<GoodsReceipts />} />
               <Route path="/xuat-tra-ncc" element={<GoodsIssues />} />
-              <Route path="/phieu-nhap/tao" element={<CreateGoodsReceipt />} />
-              <Route path="/phieu-xuat/tao" element={<CreateGoodsIssue />} />
               <Route path="/thu-hoi-vo" element={<CylinderRecoveries />} />
-              <Route path="/phieu-thu-hoi/tao" element={<CreateCylinderRecovery />} />
+
               <Route path="/nha-cung-cap" element={<Suppliers />} />
-              <Route path="/nha-cung-cap/tao" element={<CreateSupplier />} />
               <Route path="/vat-tu/danh-sach" element={<Materials />} />
-              <Route path="/vat-tu/tao" element={<CreateMaterial />} />
               <Route path="/nguoi-dung" element={<Users />} />
-              <Route path="/nguoi-dung/tao" element={<CreateUser />} />
               <Route path="/phan-quyen" element={<Permissions />} />
-              <Route path="/phan-quyen/tao" element={<CreatePermission />} />
               <Route path="/khuyen-mai" element={<Promotions />} />
-              <Route path="/khuyen-mai/tao" element={<CreatePromotion />} />
               <Route path="/phieu-sua-chua" element={<RepairTickets />} />
-          <Route path="/phieu-sua-chua/tao" element={<CreateRepairTicket />} />
+              <Route path="/phieu-sua-chuatao" element={<CreateRepairTicket />} />
               <Route path="/de-nghi-xuat-may/tao" element={<CreateMachineIssueRequest />} />
               {legacyRedirects.map(([from, to]) => (
                 <Route key={from} path={from} element={<Navigate to={to} replace />} />
@@ -156,7 +130,7 @@ function App() {
             <Route path="*" element={<Navigate to="/trang-chu" replace />} />
           </Routes>
         </ErrorBoundary>
-        <ToastContainer position="bottom-right" autoClose={3000} />
+        <ToastContainer position="top-right" autoClose={3000} />
       </div>
     </Router>
   );

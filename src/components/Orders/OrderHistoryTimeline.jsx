@@ -3,9 +3,9 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../../supabase/config';
 
 const ACTION_CONFIG = {
-    CREATED: { icon: Plus, color: 'emerald', label: 'Tạo đơn hàng' },
+    CREATED: { icon: Plus, color: 'primary', label: 'Tạo đơn hàng' },
     EDITED: { icon: Edit3, color: 'amber', label: 'Chỉnh sửa' },
-    STATUS_CHANGED: { icon: TrendingUp, color: 'blue', label: 'Đổi trạng thái' }
+    STATUS_CHANGED: { icon: TrendingUp, color: 'primary', label: 'Đổi trạng thái' }
 };
 
 const FIELD_LABELS = {
@@ -80,7 +80,7 @@ export default function OrderHistoryTimeline({ orderId }) {
                     <div key={item.id} className="flex gap-4">
                         {/* Timeline line + dot */}
                         <div className="flex flex-col items-center">
-                            <div className={`w-9 h-9 rounded-xl bg-${config.color}-100 text-${config.color}-600 flex items-center justify-center shrink-0`}>
+                            <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${config.color === 'primary' ? 'bg-primary/10 text-primary' : `bg-${config.color}-100 text-${config.color}-600`}`}>
                                 <Icon className="w-4 h-4" />
                             </div>
                             {!isLast && <div className="w-0.5 flex-1 bg-slate-200 my-1"></div>}
@@ -103,7 +103,7 @@ export default function OrderHistoryTimeline({ orderId }) {
                                 <div className="flex items-center gap-2 mt-2">
                                     <span className="px-2 py-0.5 bg-slate-100 text-slate-600 rounded-md text-[10px] font-black uppercase">{item.old_status}</span>
                                     <span className="text-slate-400">→</span>
-                                    <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-md text-[10px] font-black uppercase">{item.new_status}</span>
+                                    <span className="px-2 py-0.5 bg-primary/10 text-primary rounded-md text-[10px] font-black uppercase">{item.new_status}</span>
                                 </div>
                             )}
 
@@ -115,7 +115,7 @@ export default function OrderHistoryTimeline({ orderId }) {
                                             <span className="font-bold text-slate-500 min-w-[100px]">{FIELD_LABELS[field] || field}:</span>
                                             <span className="text-red-400 line-through">{vals.old || '(trống)'}</span>
                                             <span className="text-slate-400">→</span>
-                                            <span className="font-bold text-emerald-600">{vals.new || '(trống)'}</span>
+                                            <span className="font-bold text-primary">{vals.new || '(trống)'}</span>
                                         </div>
                                     ))}
                                 </div>

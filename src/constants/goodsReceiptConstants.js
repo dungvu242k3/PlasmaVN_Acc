@@ -23,12 +23,13 @@ export const ITEM_UNITS = [
     { id: 'kg', label: 'Kg' },
 ];
 
-export const RECEIPT_TABLE_COLUMNS = [
-    { key: 'receipt_code', label: 'Mã phiếu' },
-    { key: 'supplier_name', label: 'Nhà cung cấp' },
-    { key: 'warehouse_id', label: 'Kho nhận' },
-    { key: 'receipt_date', label: 'Ngày nhập' },
-    { key: 'total_items', label: 'Số mặt hàng' },
-    { key: 'received_by', label: 'Người nhận' },
+export const TABLE_COLUMNS = [
+    { key: 'code', label: 'Mã phiếu' },
+    { key: 'supplier', label: 'Nhà cung cấp' },
+    { key: 'warehouse', label: 'Kho nhận' },
+    { key: 'date', label: 'Ngày nhập' },
+    { key: 'items', label: 'Số MH' },
+    { key: 'amount', label: 'Tổng giá trị' },
+    { key: 'receiver', label: 'Người nhận' },
     { key: 'status', label: 'Trạng thái' },
 ];

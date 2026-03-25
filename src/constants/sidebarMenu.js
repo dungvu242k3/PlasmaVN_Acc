@@ -18,16 +18,16 @@ import {
 } from 'lucide-react';
 
 export const sidebarMenu = [
-  { path: '/trang-chu', label: 'Bảng điều khiển', icon: Layout },
-  { path: '/thong-ke', label: 'Thống kê', icon: BarChart3 },
-  { path: '/don-hang-kinh-doanh', label: 'Đơn hàng & Kinh doanh', icon: Package },
-  { path: '/quan-ly-thiet-bi', label: 'Quản lý thiết bị', icon: Monitor },
-  { path: '/kho', label: 'Kho', icon: Warehouse },
-  { path: '/mua-hang-nha-cung-cap', label: 'Mua hàng & Nhà cung cấp', icon: ShoppingCart },
-  { path: '/van-chuyen', label: 'Vận chuyển', icon: Truck },
-  { path: '/thu-hoi', label: 'Thu hồi', icon: RefreshCw },
-  { path: '/vat-tu', label: 'Vật tư', icon: Layers },
-  { path: '/he-thong', label: 'Hệ thống', icon: Settings2 },
+  { path: '/trang-chu', label: 'Bảng điều khiển', icon: Layout, color: 'text-blue-500' },
+  { path: '/thong-ke', label: 'Thống kê', icon: BarChart3, color: 'text-amber-500' },
+  { path: '/don-hang-kinh-doanh', label: 'Đơn hàng & Kinh doanh', icon: Package, color: 'text-emerald-500' },
+  { path: '/quan-ly-thiet-bi', label: 'Quản lý thiết bị', icon: Monitor, color: 'text-cyan-500' },
+  { path: '/kho', label: 'Kho', icon: Warehouse, color: 'text-orange-500' },
+  { path: '/mua-hang-nha-cung-cap', label: 'Mua hàng & Nhà cung cấp', icon: ShoppingCart, color: 'text-rose-500' },
+  { path: '/van-chuyen', label: 'Vận chuyển', icon: Truck, color: 'text-sky-500' },
+  { path: '/thu-hoi', label: 'Thu hồi', icon: RefreshCw, color: 'text-teal-500' },
+  { path: '/vat-tu', label: 'Vật tư', icon: Layers, color: 'text-slate-500' },
+  { path: '/he-thong', label: 'Hệ thống', icon: Settings2, color: 'text-indigo-500' },
 ];
 
 export const extraMenuItems = [
@@ -58,7 +58,6 @@ export const extraMenuItems = [
   { path: '/phieu-nhap/tao', label: 'Tạo phiếu nhập kho', icon: PackagePlus },
   { path: '/phieu-xuat/tao', label: 'Tạo phiếu xuất trả', icon: PackageMinus },
   { path: '/thu-hoi-vo', label: 'Thu hồi vỏ bình', icon: PackageCheck },
-  { path: '/phieu-thu-hoi/tao', label: 'Tạo phiếu thu hồi', icon: PackageCheck },
   { path: '/don-vi-van-chuyen', label: 'Đơn vị vận chuyển', icon: Truck },
   { path: '/don-vi-van-chuyen/tao', label: 'Thêm ĐVVC mới', icon: Truck },
   { path: '/vat-tu/danh-sach', label: 'Nguồn vật tư', icon: Layers },
