@@ -37,6 +37,10 @@ import MachineStatsReport from './pages/MachineStatsReport';
 import OrdersMonthlyReport from './pages/OrdersMonthlyReport';
 import MachineRevenueReport from './pages/MachineRevenueReport';
 import QuarterlyReport from './pages/QuarterlyReport';
+import CustomerCylinderReport from './pages/CustomerCylinderReport';
+import MachineInventoryReport from './pages/MachineInventoryReport';
+import SalesReport from './pages/SalesReport';
+import ErrorReport from './pages/ErrorReport';
 
 const moduleRoutes = ['/don-hang-kinh-doanh', '/quan-ly-thiet-bi', '/van-chuyen', '/thu-hoi', '/mua-hang-nha-cung-cap', '/kho', '/he-thong', '/vat-tu', '/thong-ke'];
 
@@ -94,6 +98,10 @@ function App() {
               <Route path="/thong-ke" element={<StatisticsDashboard />} />
               <Route path="/bao-cao/khach-hang" element={<CustomerReport />} />
               <Route path="/bao-cao/nhan-vien" element={<SalespersonReport />} />
+              <Route path="/bao-cao/ton-kho-binh-khach" element={<CustomerCylinderReport />} />
+              <Route path="/bao-cao/ton-kho-may-khach" element={<MachineInventoryReport />} />
+              <Route path="/bao-cao/doanh-so" element={<SalesReport />} />
+              <Route path="/bao-cao/loi-thiet-bi" element={<ErrorReport />} />
               <Route path="/bao-cao/binh-qua-han" element={<CylinderExpiryReport />} />
               <Route path="/bao-cao/khach-qua-han" element={<CustomerExpiryReport />} />
               <Route path="/bao-cao/binh-loi" element={<CylinderErrorReport />} />
@@ -101,6 +109,7 @@ function App() {
               <Route path="/bao-cao/don-xuat" element={<OrdersMonthlyReport />} />
               <Route path="/bao-cao/doanh-so-may" element={<MachineRevenueReport />} />
               <Route path="/bao-cao/bao-cao-quy" element={<QuarterlyReport />} />
+              <Route path="/bao-cao/binh-theo-khach" element={<CustomerCylinderReport />} />
               {moduleRoutes.map((path) => (
                 <Route key={path} path={path} element={<ModulePage />} />
               ))}

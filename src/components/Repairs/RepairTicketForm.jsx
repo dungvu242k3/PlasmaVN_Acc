@@ -27,6 +27,7 @@ export default function RepairTicketForm({ ticket, initialCustomer, onClose, onS
     const [errorTypes, setErrorTypes] = useState([]);
     const [salesUsers, setSalesUsers] = useState([]);
     const [techUsers, setTechUsers] = useState([]);
+    const [cskhUsers, setCskhUsers] = useState([]);
     const [allUsers, setAllUsers] = useState([]);
 
     // Custom dropdown states for Customer
@@ -65,6 +66,7 @@ export default function RepairTicketForm({ ticket, initialCustomer, onClose, onS
         detailImages: [],
         salesId: '',
         technicianId: '',
+        cskhId: '',
         technicalFeedback: '',
         technicalImages: [],
         status: 'Mới',
@@ -92,6 +94,7 @@ export default function RepairTicketForm({ ticket, initialCustomer, onClose, onS
                 detailImages: ticket.error_images || [],
                 salesId: ticket.sales_id || '',
                 technicianId: ticket.technician_id || '',
+                cskhId: ticket.cskh_id || '',
                 technicalFeedback: ticket.technical_feedback || '',
                 technicalImages: ticket.technical_images || [],
                 status: ticket.status || 'Mới',
@@ -140,6 +143,7 @@ export default function RepairTicketForm({ ticket, initialCustomer, onClose, onS
                 // Filter by the user's requested role labels
                 setSalesUsers(usrData.filter(u => u.role === 'Nhân viên kinh doanh'));
                 setTechUsers(usrData.filter(u => u.role === 'Nhân viên kỹ thuật'));
+                setCskhUsers(usrData.filter(u => u.role === 'Nhân viên CSKH'));
             }
 
         } catch (error) {
@@ -308,6 +312,7 @@ export default function RepairTicketForm({ ticket, initialCustomer, onClose, onS
                 error_images: newDetailImgUrls,
                 sales_id: formData.salesId || null,
                 technician_id: formData.technicianId || null,
+                cskh_id: formData.cskhId || null,
                 technical_feedback: formData.technicalFeedback,
                 technical_images: newTechImgUrls,
                 status: formData.status,
@@ -627,6 +632,16 @@ export default function RepairTicketForm({ ticket, initialCustomer, onClose, onS
                             </div>
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <label className="text-[14px] font-bold text-primary flex items-center gap-1.5"><User className="w-4 h-4 text-primary/80" />Nhân viên CSKH</label>
+                                    <div className="relative">
+                                        <select name="cskhId" value={formData.cskhId} onChange={handleChange} className="w-full h-12 px-5 bg-slate-50 border border-slate-200 rounded-2xl text-[14px] font-semibold text-slate-800 appearance-none focus:border-primary/40 focus:ring-4 focus:ring-primary/10 outline-none hover:bg-white shadow-sm transition-all cursor-pointer">
+                                            <option value="">-- Chọn nhân viên CSKH --</option>
+                                            {cskhUsers.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+                                        </select>
+                                        <ChevronDown className="w-5 h-5 text-primary/60 absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none" />
+                                    </div>
+                                </div>
                                 <div className="space-y-2">
                                     <label className="text-[14px] font-bold text-primary flex items-center gap-1.5"><Activity className="w-4 h-4 text-primary/80" />Trạng thái phiếu</label>
                                     <div className="relative">

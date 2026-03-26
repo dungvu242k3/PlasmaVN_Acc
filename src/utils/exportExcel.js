@@ -166,3 +166,73 @@ export const exportMachineRevenueReport = (data) => {
   }));
   exportToExcel(formattedData, 'BaoCao_DoanhSo_May', 'Doanh số máy');
 };
+
+
+
+export const exportErrorReport = (data, filters) => {
+  const fileName = `Bao_cao_loi_thiet_bi_${filters.year}${filters.month ? '_Thang_' + filters.month : filters.quarter ? '_Quy_' + filters.quarter : ''}.xlsx`;
+  const worksheet = XLSX.utils.json_to_sheet(data.map(item => ({
+    'STT': item.stt,
+    'Ngày báo lỗi': item.ngay_bao_loi,
+    'Loại (Máy/Bình)': item.error_category,
+    'Tên lỗi': item.ten_loi,
+    'Serial': item.serial_thiet_bi,
+    'Tên thiết bị': item.ten_thiet_bi,
+    'Khách hàng': item.ten_khach_hang,
+    'Kho': item.kho,
+    'Người báo': item.nguoi_bao_loi,
+    'Kỹ thuật xử lý': item.ky_thuat_xu_ly,
+    'Trạng thái': item.trang_thai_phieu
+  })));
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, "Errors");
+  XLSX.writeFile(workbook, fileName);
+};
+
+export const exportCustomerCylinderReport = (data, filters) => {
+  const formattedData = data.map(item => ({
+    'Tên khách hàng': item.customer_name,
+    'Loại': item.loai_khach,
+    'Kho': item.kho,
+    'Năm': item.nam,
+    'Tháng': item.thang,
+    'Tồn đầu': item.opening_balance,
+    'Xuất bình': item.xuat,
+    'Thu hồi': item.thu_hoi,
+    'Tồn cuối': item.closing_balance
+  }));
+  const filename = `BaoCao_BinhTheoKhach_${filters.year}_${filters.month}`;
+  exportToExcel(formattedData, filename, 'Bình theo khách');
+};
+
+export const exportMachineInventoryReport = (data, filters) => {
+    const filename = `bao_cao_may_khach_${filters.month || 'all'}_${filters.year || 'all'}.xlsx`;
+    const headers = ['Năm', 'Tháng', 'Khách hàng', 'Kho', 'Tồn đầu', 'Bàn giao', 'Thu hồi', 'Tồn cuối'];
+    const rows = data.map(item => [
+        item.nam,
+        item.thang,
+        item.customer_name,
+        item.kho,
+        item.ton_dau,
+        item.ban_giao,
+        item.thu_hoi,
+        item.ton_cuoi
+    ]);
+    exportToExcel(rows, headers, filename);
+};
+
+export const exportSalesReport = (data, filters) => {
+    const filename = `bao_cao_doanh_so_${filters.month || 'all'}_${filters.year || 'all'}.xlsx`;
+    const headers = ['Khách hàng', 'NVKD', 'Loại khách', 'Kho', 'Tháng', 'Năm', 'Doanh số', 'Số đơn hàng'];
+    const rows = data.map(item => [
+        item.customer_name,
+        item.nvkd,
+        item.loai_khach,
+        item.kho,
+        item.thang,
+        item.nam,
+        item.doanh_so,
+        item.so_don_hang
+    ]);
+    exportToExcel(rows, headers, filename);
+};

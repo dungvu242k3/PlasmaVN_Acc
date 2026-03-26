@@ -9,6 +9,7 @@ const FilterDropdown = ({
   setFilterSearch,
 }) => {
   const normalizeText = (text) => {
+    if (!text) return '';
     return text
       .toLowerCase()
       .normalize('NFD')
@@ -17,9 +18,11 @@ const FilterDropdown = ({
   };
 
   const filteredOptions = options.filter(opt => {
-    const normalizedLabel = normalizeText(opt.label);
-    const normalizedSearch = normalizeText(filterSearch);
-    return opt.label.toLowerCase().includes(filterSearch.toLowerCase()) || 
+    const search = filterSearch || '';
+    const label = opt.label || '';
+    const normalizedLabel = normalizeText(label);
+    const normalizedSearch = normalizeText(search);
+    return label.toLowerCase().includes(search.toLowerCase()) || 
            normalizedLabel.includes(normalizedSearch);
   });
 

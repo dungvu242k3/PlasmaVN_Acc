@@ -45,6 +45,7 @@ const TICKET_COLUMNS = [
     { key: 'error_images', label: 'Hình ảnh chi tiết' },
     { key: 'sales', label: 'Kinh doanh' },
     { key: 'technician', label: 'Kỹ thuật' },
+    { key: 'cskh', label: 'CSKH' },
     { key: 'technical_feedback', label: 'Phản hồi kỹ thuật' },
     { key: 'technical_images', label: 'hình ảnh kỹ thuật' },
     { key: 'status', label: 'Trạng thái' }
@@ -73,6 +74,7 @@ export default function RepairTickets() {
     const [selectedCustomers, setSelectedCustomers] = useState([]);
     const [selectedErrorTypes, setSelectedErrorTypes] = useState([]);
     const [selectedTechnicians, setSelectedTechnicians] = useState([]);
+    const [selectedCskhStaff, setSelectedCskhStaff] = useState([]);
 
     const [selectedIds, setSelectedIds] = useState([]);
 
@@ -141,7 +143,8 @@ export default function RepairTickets() {
     // Derived unique filter lists
     const ticketCustomerIds = [...new Set(tickets.map(t => t.customer_id).filter(Boolean))];
     const ticketCustomerFilters = customers.filter(c => ticketCustomerIds.includes(c.id));
-    const techUsers = users.filter(u => u.role === 'ky_thuat' || u.role === 'admin');
+    const techUsers = users.filter(u => u.role === 'Nhân viên kỹ thuật' || u.role === 'admin');
+    const cskhUsers = users.filter(u => u.role === 'Nhân viên CSKH');
 
     const getCustomerName = (id) => customers.find(c => c.id === id)?.name || 'Chưa rõ';
     const getErrorTypeName = (id) => errorTypes.find(e => e.id === id)?.name || 'Chưa xác định';
@@ -160,8 +163,9 @@ export default function RepairTickets() {
         const matchesCustomer = selectedCustomers.length === 0 || selectedCustomers.includes(ticket.customer_id);
         const matchesErrorType = selectedErrorTypes.length === 0 || selectedErrorTypes.includes(ticket.error_type_id);
         const matchesTech = selectedTechnicians.length === 0 || selectedTechnicians.includes(ticket.technician_id);
+        const matchesCskh = selectedCskhStaff.length === 0 || selectedCskhStaff.includes(ticket.cskh_id);
 
-        return matchesSearch && matchesStatus && matchesCustomer && matchesErrorType && matchesTech;
+        return matchesSearch && matchesStatus && matchesCustomer && matchesErrorType && matchesTech && matchesCskh;
     });
 
     const getStatusBadge = (status) => {
@@ -491,6 +495,14 @@ export default function RepairTickets() {
                             </button>
                             {activeDropdown === 'techs' && <FilterDropdown options={techUsers.map(u => ({id: u.id, label: u.name}))} selected={selectedTechnicians} setSelected={setSelectedTechnicians} filterSearch={filterSearch} setFilterSearch={setFilterSearch} />}
                         </div>
+                        <div className="relative">
+                            <button onClick={() => handleDropdownChange('cskh')} className={clsx("flex items-center gap-2.5 px-4 py-2 rounded-xl border text-[13px] font-bold transition-all", selectedCskhStaff.length > 0 || activeDropdown === 'cskh' ? "border-indigo-500 bg-indigo-50/40 text-indigo-700" : "border-slate-200 text-slate-600 hover:bg-slate-50")}>
+                                <User size={14} className={selectedCskhStaff.length > 0 || activeDropdown === 'cskh' ? "text-indigo-500" : "text-slate-500"} /> CSKH
+                                {selectedCskhStaff.length > 0 && <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-indigo-500 text-white">{selectedCskhStaff.length}</span>}
+                                <ChevronDown size={14} className={clsx("transition-transform", activeDropdown === 'cskh' ? "rotate-180" : "")} />
+                            </button>
+                            {activeDropdown === 'cskh' && <FilterDropdown options={cskhUsers.map(u => ({id: u.id, label: u.name}))} selected={selectedCskhStaff} setSelected={setSelectedCskhStaff} filterSearch={filterSearch} setFilterSearch={setFilterSearch} />}
+                        </div>
                     </div>
 
                     {/* MOBILE FILTER TRIGGER */}
@@ -592,6 +604,8 @@ export default function RepairTickets() {
                                                         content = <span className="text-slate-600 font-semibold">{getUserName(ticket.sales_id)}</span>; break;
                                                     case 'technician':
                                                         content = <span className="text-slate-600 font-semibold">{getUserName(ticket.technician_id)}</span>; break;
+                                                    case 'cskh':
+                                                        content = <span className="text-indigo-600 font-bold bg-indigo-50 px-2 py-1 rounded-lg border border-indigo-100/50">{getUserName(ticket.cskh_id)}</span>; break;
                                                     case 'technical_feedback':
                                                         content = <div className="max-w-[250px] truncate text-blue-500 italic" title={ticket.technical_feedback}>{ticket.technical_feedback || '---'}</div>; break;
                                                     case 'technical_images':

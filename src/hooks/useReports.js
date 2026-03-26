@@ -276,6 +276,104 @@ export const useReports = () => {
     }
   };
 
+  const fetchCustomerCylinderReport = async (filters = {}) => {
+    setLoading(true);
+    setError(null);
+    try {
+      let query = supabase
+        .from('view_customer_cylinder_monthly_balance')
+        .select('*');
+
+      if (filters.year) query = query.eq('nam', filters.year);
+      if (filters.month) query = query.eq('thang', filters.month);
+      if (filters.warehouse) query = query.eq('kho', filters.warehouse);
+      if (filters.customer) query = query.ilike('customer_name', `%${filters.customer}%`);
+
+      const { data, error } = await query.order('nam', { ascending: false }).order('thang', { ascending: false });
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error fetching customer cylinder report:', error);
+      setError('Lỗi khi tải báo cáo bình thuộc khách');
+      return [];
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchMachineInventoryReport = async (filters = {}) => {
+    setLoading(true);
+    setError(null);
+    try {
+      let query = supabase
+        .from('view_machine_monthly_balance')
+        .select('*');
+
+      if (filters.year) query = query.eq('nam', filters.year);
+      if (filters.month) query = query.eq('thang', filters.month);
+      if (filters.warehouse) query = query.eq('kho', filters.warehouse);
+      if (filters.customer) query = query.ilike('customer_name', `%${filters.customer}%`);
+
+      const { data, error } = await query.order('nam', { ascending: false }).order('thang', { ascending: false });
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error('Error fetching machine inventory report:', error);
+      setError('Lỗi khi tải báo cáo máy thuộc khách');
+      return [];
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchSalesReport = async (filters = {}) => {
+    setLoading(true);
+    try {
+      let query = supabase
+        .from('view_sales_summary_monthly')
+        .select('*');
+
+      if (filters.year) query = query.eq('nam', filters.year);
+      if (filters.month) query = query.eq('thang', filters.month);
+      if (filters.warehouse) query = query.eq('kho', filters.warehouse);
+      if (filters.nvkd) query = query.eq('nvkd', filters.nvkd);
+      if (filters.customer_category) query = query.eq('loai_khach', filters.customer_category);
+
+      const { data, error } = await query.order('doanh_so', { ascending: false });
+      if (error) throw error;
+      return data;
+    } catch (err) {
+      console.error('Error fetching sales report:', err);
+      toast.error('Lỗi tải báo cáo doanh số');
+      return [];
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchErrorReport = async (filters = {}) => {
+    setLoading(true);
+    try {
+      let query = supabase.from('view_error_summary_monthly').select('*');
+
+      if (filters.year) query = query.eq('nam', filters.year);
+      if (filters.month) query = query.eq('thang', filters.month);
+      if (filters.quarter) query = query.eq('quy', filters.quarter);
+      if (filters.category) query = query.eq('error_category', filters.category);
+      if (filters.warehouse) query = query.eq('kho', filters.warehouse);
+
+      const { data, error } = await query.order('ngay_bao_loi', { ascending: false });
+      if (error) throw error;
+      return data;
+    } catch (err) {
+      console.error('Error fetching error report:', err);
+      toast.error('Lỗi tải báo cáo lỗi thiết bị');
+      return [];
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const fetchCylinderAgingStats = async (filters = {}) => {
     setLoading(true);
     setError(null);
@@ -336,7 +434,7 @@ export const useReports = () => {
         supabase.from('customers').select('category').not('category', 'is', null).order('category'),
         supabase.from('app_users').select('name').order('name'),
         supabase.from('machines').select('machine_type').order('machine_type'),
-        supabase.rpc('get_distinct_years').catch(() => ({ data: [new Date().getFullYear()] }))
+        supabase.rpc('get_distinct_years')
       ]);
 
       const warehouses = warehousesRes.data || [];
@@ -344,7 +442,11 @@ export const useReports = () => {
       const categories = [...new Set((categoriesRes.data || []).map(r => r.category))];
       const salespersons = [...new Set((salespersonsRes.data || []).map(r => r.name))];
       const machineTypes = [...new Set((machineTypesRes.data || []).map(r => r.machine_type))];
-      const years = Array.isArray(yearsRes.data) ? yearsRes.data : [new Date().getFullYear()];
+      const currentYear = new Date().getFullYear();
+      const defaultYears = Array.from({ length: currentYear - 2023 }, (_, i) => 2024 + i).reverse(); 
+      const years = Array.isArray(yearsRes?.data) 
+        ? yearsRes.data.map(r => typeof r === 'object' ? Object.values(r)[0] : r)
+        : defaultYears;
 
       return {
         warehouses,
@@ -382,6 +484,10 @@ export const useReports = () => {
     fetchMachineStats,
     fetchMachineSummary,
     fetchOrdersMonthly,
+    fetchCustomerCylinderReport,
+    fetchMachineInventoryReport,
+    fetchSalesReport,
+    fetchErrorReport,
     fetchMachineRevenue,
     fetchCylinderAgingStats,
     fetchCylinderAgingDetails,
