@@ -10,11 +10,13 @@ import {
     PointElement,
     Title
 } from 'chart.js';
+import { clsx } from 'clsx';
 import {
     BarChart2,
     Building2,
     ChevronLeft,
     ChevronRight,
+    Download,
     Edit,
     Eye,
     List,
@@ -23,15 +25,13 @@ import {
     Search,
     SlidersHorizontal,
     Trash2,
-    Download,
     Upload,
     X
 } from 'lucide-react';
-import * as XLSX from 'xlsx';
 import { useEffect, useRef, useState } from 'react';
 import { Bar as BarChartJS } from 'react-chartjs-2';
 import { useNavigate } from 'react-router-dom';
-import { clsx } from 'clsx';
+import * as XLSX from 'xlsx';
 import SupplierDetailsModal from '../components/Suppliers/SupplierDetailsModal';
 import SupplierFormModal from '../components/Suppliers/SupplierFormModal';
 import ColumnPicker from '../components/ui/ColumnPicker';
@@ -52,6 +52,8 @@ ChartJS.register(
 
 const TABLE_COLUMNS_DEF = [
     { key: 'name', label: 'Tên nhà cung cấp' },
+    { key: 'tax_id', label: 'MST' },
+    { key: 'email', label: 'Email' },
     { key: 'phone', label: 'Số điện thoại' },
     { key: 'address', label: 'Địa chỉ liên hệ' },
 ];
@@ -189,6 +191,8 @@ const Suppliers = () => {
     const downloadTemplate = () => {
         const headers = [
             'Tên nhà cung cấp',
+            'MST',
+            'Email',
             'Số điện thoại',
             'Địa chỉ',
         ];
@@ -196,6 +200,8 @@ const Suppliers = () => {
         const exampleData = [
             {
                 'Tên nhà cung cấp': 'Công ty TNHH Oxy Việt Nam',
+                'MST': '0123456789',
+                'Email': 'contact@oxyvietnam.vn',
                 'Số điện thoại': '02412345678',
                 'Địa chỉ': 'KCN Tiên Sơn, Bắc Ninh',
             },
@@ -229,6 +235,8 @@ const Suppliers = () => {
 
                 const suppliersToInsert = data.map(row => ({
                     name: row['Tên nhà cung cấp']?.toString(),
+                    tax_id: row['MST']?.toString() || row['Mã số thuế']?.toString(),
+                    email: row['Email']?.toString(),
                     phone: row['Số điện thoại']?.toString(),
                     address: row['Địa chỉ']?.toString(),
                     updated_at: new Date().toISOString()
@@ -268,6 +276,8 @@ const Suppliers = () => {
         const search = searchTerm.toLowerCase();
         return (
             supplier.name?.toLowerCase().includes(search) ||
+            supplier.tax_id?.toLowerCase().includes(search) ||
+            supplier.email?.toLowerCase().includes(search) ||
             supplier.phone?.includes(search) ||
             supplier.address?.toLowerCase().includes(search)
         );
@@ -451,8 +461,8 @@ const Suppliers = () => {
                             filteredSuppliers.map((supplier) => (
                                 <div key={supplier.id} className={clsx(
                                     "rounded-2xl border bg-gradient-to-br shadow-sm p-4 transition-all duration-200",
-                                    selectedIds.includes(supplier.id) 
-                                        ? "border-primary bg-primary/[0.05] ring-1 ring-primary/20" 
+                                    selectedIds.includes(supplier.id)
+                                        ? "border-primary bg-primary/[0.05] ring-1 ring-primary/20"
                                         : "border-primary/20 from-white to-primary/[0.03]"
                                 )}>
                                     <div className="flex items-start justify-between gap-2 mb-2">
@@ -476,22 +486,61 @@ const Suppliers = () => {
                                     </div>
 
                                     <div className="space-y-1.5 mb-3 rounded-xl border border-border/60 bg-muted/10 px-3 py-2.5">
-                                        <div className="flex items-center gap-2 text-[12px] text-muted-foreground">
-                                            <Phone className="w-3.5 h-3.5" />
-                                            <span>{supplier.phone || '—'}</span>
+                                        <div className="flex items-center justify-between gap-2">
+                                            <div className="flex items-center gap-2 text-[12px] text-muted-foreground">
+                                                <Phone className="w-3.5 h-3.5" />
+                                                <span>{supplier.phone || '—'}</span>
+                                            </div>
+                                            {supplier.tax_id && (
+                                                <span className="text-[10px] font-bold text-primary/70 bg-primary/5 px-2 py-0.5 rounded-md border border-primary/10">
+                                                    MST: {supplier.tax_id}
+                                                </span>
+                                            )}
                                         </div>
+                                        {supplier.email && (
+                                            <div className="flex items-center gap-2 text-[12px] text-muted-foreground">
+                                                <div className="w-3.5 h-3.5 flex items-center justify-center">
+                                                    <div className="w-2.5 h-2.5 border border-muted-foreground/60 rounded-[2px] relative">
+                                                        <div className="absolute top-0 left-0 w-full h-[1px] bg-muted-foreground/60 transform rotate-45 origin-top-left"></div>
+                                                    </div>
+                                                </div>
+                                                <span>{supplier.email}</span>
+                                            </div>
+                                        )}
                                         <div className="flex items-start gap-2 text-[12px] text-muted-foreground">
                                             <Building2 className="w-3.5 h-3.5 mt-0.5" />
                                             <span className="line-clamp-2">{supplier.address || '—'}</span>
                                         </div>
                                     </div>
 
-                                    <div className="flex items-center justify-end pt-2 border-t border-border/70">
-                                        <div className="flex items-center gap-3">
-                                            <button onClick={() => handleViewSupplier(supplier)} className="text-blue-500 hover:text-blue-700 transition-colors"><Eye size={18} /></button>
-                                            <button onClick={() => handleEditSupplier(supplier)} className="text-amber-500 hover:text-amber-700 transition-colors"><Edit size={18} /></button>
+                                    <div className="flex items-center justify-between pt-3 border-t border-border/70 mt-1">
+                                        <div className="flex flex-col">
+                                            <span className="text-[10px] font-bold text-muted-foreground uppercase leading-none mb-1 opacity-70">Thao tác</span>
+                                            <span className="text-[12px] font-bold text-slate-800 tracking-tight">Quản trị NCC</span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <button 
+                                                onClick={() => handleViewSupplier(supplier)} 
+                                                className="w-9 h-9 rounded-xl flex items-center justify-center text-slate-950 bg-blue-50 border border-blue-100 shadow-sm transition-all"
+                                                title="Xem chi tiết"
+                                            >
+                                                <Eye size={18} />
+                                            </button>
+                                            <button 
+                                                onClick={() => handleEditSupplier(supplier)} 
+                                                className="w-9 h-9 rounded-xl flex items-center justify-center text-slate-950 bg-amber-50 border border-amber-100 shadow-sm transition-all"
+                                                title="Chỉnh sửa"
+                                            >
+                                                <Edit size={18} />
+                                            </button>
                                             {(role === 'admin' || role === 'manager') && (
-                                                <button onClick={() => handleDeleteSupplier(supplier.id, supplier.name)} className="text-rose-500 hover:text-rose-700 transition-colors"><Trash2 size={18} /></button>
+                                                <button 
+                                                    onClick={() => handleDeleteSupplier(supplier.id, supplier.name)} 
+                                                    className="w-9 h-9 rounded-xl flex items-center justify-center text-slate-950 bg-rose-50 border border-rose-100 shadow-sm transition-all"
+                                                    title="Xóa"
+                                                >
+                                                    <Trash2 size={18} />
+                                                </button>
                                             )}
                                         </div>
                                     </div>
@@ -620,19 +669,19 @@ const Suppliers = () => {
                                             {col.label}
                                         </th>
                                     ))}
-                                    <th className="px-4 py-4 text-[10px] font-black text-muted-foreground text-center uppercase tracking-widest border-l border-primary/20">Quản trị</th>
+                                    <th className="sticky right-0 z-30 bg-[#F1F5FF] px-4 py-3.5 text-[10px] font-black text-muted-foreground text-center uppercase tracking-widest shadow-[-6px_0_10px_-8px_rgba(15,23,42,0.35)] before:content-[''] before:absolute before:left-0 before:top-0 before:bottom-0 before:w-[3px] before:bg-slate-300">Quản trị</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-primary/5">
                                 {isLoading ? (
                                     <tr>
-                                        <td colSpan={visibleTableColumns.length + 1} className="px-4 py-16 text-center text-muted-foreground">
+                                        <td colSpan={visibleTableColumns.length + 2} className="px-4 py-16 text-center text-muted-foreground">
                                             Đang tải dữ liệu...
                                         </td>
                                     </tr>
                                 ) : filteredSuppliers.length === 0 ? (
                                     <tr>
-                                        <td colSpan={visibleTableColumns.length + 1} className="px-4 py-16 text-center text-muted-foreground">
+                                        <td colSpan={visibleTableColumns.length + 2} className="px-4 py-16 text-center text-muted-foreground">
                                             Không tìm thấy nhà cung cấp nào
                                         </td>
                                     </tr>
@@ -650,18 +699,32 @@ const Suppliers = () => {
                                             />
                                         </td>
                                         {isColumnVisible('name') && <td className="px-4 py-4 text-[13px] font-black text-slate-800 border-r border-primary/10">{supplier.name || '—'}</td>}
+                                        {isColumnVisible('tax_id') && <td className="px-4 py-4 text-[13px] font-bold text-slate-500 whitespace-nowrap">{supplier.tax_id || '—'}</td>}
+                                        {isColumnVisible('email') && <td className="px-4 py-4 text-[13px] font-bold text-slate-500">{supplier.email || '—'}</td>}
                                         {isColumnVisible('phone') && <td className="px-4 py-4 text-[13px] font-bold text-slate-500 tabular-nums">{supplier.phone || '—'}</td>}
                                         {isColumnVisible('address') && <td className="px-4 py-4 text-[13px] font-bold text-slate-500">{supplier.address || '—'}</td>}
-                                        <td className="px-4 py-4 text-center border-l border-primary/10">
-                                            <div className="flex items-center justify-center gap-1.5 opacity-60 group-hover:opacity-100 transition-opacity">
-                                                <button onClick={() => handleViewSupplier(supplier)} className="w-9 h-9 rounded-xl flex items-center justify-center text-primary/80 hover:bg-primary/5 ring-1 ring-transparent hover:ring-primary/10 transition-all font-bold" title="Xem chi tiết">
+                                        <td className="sticky right-0 z-20 bg-white group-hover:bg-blue-50/40 px-4 py-4 text-center shadow-[-6px_0_10px_-8px_rgba(15,23,42,0.25)] before:content-[''] before:absolute before:left-0 before:top-0 before:bottom-0 before:w-[3px] before:bg-slate-300">
+                                            <div className="flex items-center justify-center gap-2">
+                                                <button 
+                                                    onClick={() => handleViewSupplier(supplier)} 
+                                                    className="w-9 h-9 rounded-xl flex items-center justify-center text-slate-950 bg-blue-50 border border-blue-100 shadow-sm hover:bg-blue-600 hover:text-white hover:shadow-md transition-all duration-300" 
+                                                    title="Xem chi tiết"
+                                                >
                                                     <Eye className="w-4.5 h-4.5" />
                                                 </button>
-                                                <button onClick={() => handleEditSupplier(supplier)} className="w-9 h-9 rounded-xl flex items-center justify-center text-amber-600/80 hover:bg-amber-50 ring-1 ring-transparent hover:ring-amber-200 transition-all font-bold" title="Chỉnh sửa">
+                                                <button 
+                                                    onClick={() => handleEditSupplier(supplier)} 
+                                                    className="w-9 h-9 rounded-xl flex items-center justify-center text-slate-950 bg-amber-50 border border-amber-100 shadow-sm hover:bg-amber-500 hover:text-white hover:shadow-md transition-all duration-300" 
+                                                    title="Chỉnh sửa"
+                                                >
                                                     <Edit className="w-4.5 h-4.5" />
                                                 </button>
                                                 {(role === 'admin' || role === 'manager') && (
-                                                    <button onClick={() => handleDeleteSupplier(supplier.id, supplier.name)} className="w-9 h-9 rounded-xl flex items-center justify-center text-rose-600/80 hover:bg-rose-50 ring-1 ring-transparent hover:ring-rose-200 transition-all font-bold" title="Xóa">
+                                                    <button 
+                                                        onClick={() => handleDeleteSupplier(supplier.id, supplier.name)} 
+                                                        className="w-9 h-9 rounded-xl flex items-center justify-center text-slate-950 bg-rose-50 border border-rose-100 shadow-sm hover:bg-rose-600 hover:text-white hover:shadow-md transition-all duration-300" 
+                                                        title="Xóa"
+                                                    >
                                                         <Trash2 className="w-4.5 h-4.5" />
                                                     </button>
                                                 )}

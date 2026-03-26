@@ -80,43 +80,46 @@ LEFT JOIN warehouses w ON w.id::text = c.warehouse_id;
 -- Tiêu chí: Tên NV, SĐT, tổng KH, đơn xuất bán, số bình bán, đơn demo, số bình demo, đơn thu hồi, bình thu hồi, tồn kho
 -- ==============================================================================
 CREATE OR REPLACE VIEW view_salesperson_stats AS
+WITH salesperson_names AS (
+    SELECT DISTINCT name FROM app_users WHERE role NOT IN ('Admin', 'admin')
+    UNION
+    SELECT DISTINCT care_by FROM customers WHERE care_by IS NOT NULL AND care_by != ''
+    UNION
+    SELECT DISTINCT sales_person FROM orders WHERE sales_person IS NOT NULL AND sales_person != ''
+)
 SELECT 
     u.id,
-    u.name AS ten_nhan_vien,
-    u.phone AS so_dien_thoai,
-    u.role AS vai_tro,
+    sn.name AS ten_nhan_vien,
+    COALESCE(u.phone, '-') AS so_dien_thoai,
+    COALESCE(u.role, 'Kinh doanh') AS vai_tro,
     
     -- Tổng số khách hàng phụ trách
-    COUNT(DISTINCT c.id) AS tong_khach_hang,
+    (SELECT COUNT(*) FROM customers c WHERE c.care_by = sn.name) AS tong_khach_hang,
     
     -- Tổng đơn xuất bán
-    COUNT(DISTINCT CASE WHEN o.order_type = 'Xuất bán' AND o.status IN ('DA_DUYET', 'CHO_GIAO_HANG', 'DANG_GIAO_HANG', 'HOAN_THANH') THEN o.id END) AS don_xuat_ban,
+    (SELECT COUNT(*) FROM orders o WHERE o.sales_person = sn.name AND o.order_type = 'Xuất bán' AND o.status IN ('DA_DUYET', 'CHO_GIAO_HANG', 'DANG_GIAO_HANG', 'HOAN_THANH')) AS don_xuat_ban,
     
     -- Số bình bán
-    COALESCE(SUM(CASE WHEN o.order_type = 'Xuất bán' AND o.status IN ('DA_DUYET', 'CHO_GIAO_HANG', 'DANG_GIAO_HANG', 'HOAN_THANH') THEN o.quantity ELSE 0 END), 0) AS binh_ban,
+    (SELECT COALESCE(SUM(o.quantity), 0) FROM orders o WHERE o.sales_person = sn.name AND o.order_type = 'Xuất bán' AND o.status IN ('DA_DUYET', 'CHO_GIAO_HANG', 'DANG_GIAO_HANG', 'HOAN_THANH')) AS binh_ban,
     
     -- Tổng đơn demo
-    COUNT(DISTINCT CASE WHEN o.order_type = 'Demo' AND o.status IN ('DA_DUYET', 'CHO_GIAO_HANG', 'DANG_GIAO_HANG', 'HOAN_THANH') THEN o.id END) AS don_demo,
+    (SELECT COUNT(*) FROM orders o WHERE o.sales_person = sn.name AND o.order_type = 'Demo' AND o.status IN ('DA_DUYET', 'CHO_GIAO_HANG', 'DANG_GIAO_HANG', 'HOAN_THANH')) AS don_demo,
     
     -- Số bình demo
-    COALESCE(SUM(CASE WHEN o.order_type = 'Demo' AND o.status IN ('DA_DUYET', 'CHO_GIAO_HANG', 'DANG_GIAO_HANG', 'HOAN_THANH') THEN o.quantity ELSE 0 END), 0) AS binh_demo,
+    (SELECT COALESCE(SUM(o.quantity), 0) FROM orders o WHERE o.sales_person = sn.name AND o.order_type = 'Demo' AND o.status IN ('DA_DUYET', 'CHO_GIAO_HANG', 'DANG_GIAO_HANG', 'HOAN_THANH')) AS binh_demo,
     
     -- Tổng đơn thu hồi
-    COUNT(DISTINCT cr.id) AS don_thu_hoi,
+    (SELECT COUNT(*) FROM cylinder_recoveries cr JOIN customers c ON c.id = cr.customer_id WHERE c.care_by = sn.name AND cr.status = 'HOAN_THANH') AS don_thu_hoi,
     
     -- Số bình thu hồi
-    COALESCE(SUM(cr.total_items), 0) AS binh_thu_hoi,
+    (SELECT COALESCE(SUM(cr.total_items), 0) FROM cylinder_recoveries cr JOIN customers c ON c.id = cr.customer_id WHERE c.care_by = sn.name AND cr.status = 'HOAN_THANH') AS binh_thu_hoi,
     
-    -- Tổng tồn kho (bình)
-    COALESCE(SUM(CASE WHEN inv.item_type = 'BINH' THEN inv.quantity ELSE 0 END), 0) AS binh_ton_kho
+    -- Tổng tồn kho (bình tại các kho mà nhân viên phụ trách KH)
+    (SELECT COALESCE(SUM(inv.quantity), 0) FROM inventory inv WHERE inv.item_type = 'BINH' AND inv.warehouse_id IN (SELECT DISTINCT warehouse_id FROM customers WHERE care_by = sn.name)) AS binh_ton_kho
     
-FROM app_users u
-LEFT JOIN customers c ON c.care_by = u.name
-LEFT JOIN orders o ON o.sales_person = u.name
-LEFT JOIN cylinder_recoveries cr ON cr.customer_id = c.id
-LEFT JOIN inventory inv ON inv.warehouse_id = c.warehouse_id
-WHERE u.role NOT IN ('Admin', 'admin')
-GROUP BY u.id, u.name, u.phone, u.role;
+FROM salesperson_names sn
+LEFT JOIN app_users u ON u.name = sn.name
+WHERE (u.role IS NULL OR u.role NOT IN ('Admin', 'admin'));
 
 -- ==============================================================================
 -- View: Bình quá hạn
@@ -149,21 +152,21 @@ AND cy.expiry_date < CURRENT_DATE;
 CREATE OR REPLACE VIEW view_customer_expiry AS
 SELECT 
     c.id,
-    c.code AS ma_khach_hang,
-    c.name AS ten_khach_hang,
-    COALESCE(w.name, c.warehouse_id) AS kho,
-    c.category AS loai_khach,
-    c.last_order_date AS ngay_dat_hang_gan_nhat,
-    GREATEST(0, CURRENT_DATE - c.last_order_date) AS so_ngay_chua_phat_sinh,
-    (SELECT order_code FROM orders WHERE customer_name = c.name ORDER BY created_at DESC LIMIT 1) AS ma_don_gan_nhat,
-    (SELECT created_at FROM orders WHERE customer_name = c.name ORDER BY created_at DESC LIMIT 1) AS ngay_tao_don_gan_nhat,
-    (SELECT COUNT(*) FROM cylinders cy WHERE cy.customer_name = c.name AND cy.status = 'bình rỗng') AS so_vo_ton,
-    (SELECT COUNT(*) FROM cylinders cy WHERE cy.customer_name = c.name) AS binh_ton,
-    c.care_by AS nhan_vien_kinh_doanh
-FROM customers c
-LEFT JOIN warehouses w ON w.id::text = c.warehouse_id
-WHERE c.last_order_date IS NOT NULL 
-AND c.last_order_date < CURRENT_DATE - INTERVAL '30 days';
+    c.ma_khach_hang,
+    c.ten_khach_hang,
+    c.kho,
+    c.loai_khach,
+    c.ngay_dat_hang_gan_nhat,
+    GREATEST(0, CURRENT_DATE - c.ngay_dat_hang_gan_nhat) AS so_ngay_chua_phat_sinh,
+    (SELECT order_code FROM orders WHERE customer_name = c.ten_khach_hang ORDER BY created_at DESC LIMIT 1) AS ma_don_gan_nhat,
+    c.binh_hien_co AS binh_ton,
+    c.may_dang_su_dung,
+    c.danh_sach_binh,
+    c.danh_sach_may,
+    c.nhan_vien_kinh_doanh
+FROM view_customer_stats c
+WHERE c.ngay_dat_hang_gan_nhat IS NOT NULL 
+AND c.ngay_dat_hang_gan_nhat < CURRENT_DATE - INTERVAL '30 days';
 
 -- ==============================================================================
 -- View: Bình lỗi (status = 'hỏng')
@@ -231,7 +234,7 @@ LEFT JOIN customers c ON c.name = m.customer_name;
 CREATE OR REPLACE VIEW view_machine_summary AS
 SELECT 
     m.machine_type AS loai_may,
-    m.warehouse AS kho,
+    COALESCE(w.name, m.warehouse) AS kho,
     COUNT(*) AS tong_so_may,
     COUNT(CASE WHEN m.status = 'thuộc khách hàng' THEN 1 END) AS may_ban,
     COUNT(CASE WHEN m.status = 'sẵn sàng' AND m.customer_name IS NULL THEN 1 END) AS may_ton_kho,
@@ -239,7 +242,8 @@ SELECT
     COUNT(CASE WHEN m.status = 'đang sửa' THEN 1 END) AS may_sua_chua,
     COUNT(CASE WHEN m.status = 'đang sử dụng' THEN 1 END) AS may_dang_su_dung
 FROM machines m
-GROUP BY m.machine_type, m.warehouse;
+LEFT JOIN warehouses w ON w.id::text = m.warehouse
+GROUP BY m.machine_type, COALESCE(w.name, m.warehouse);
 
 -- ==============================================================================
 -- View: Đơn hàng theo tháng/năm
@@ -250,7 +254,7 @@ SELECT
     o.id,
     o.order_code AS ma_don,
     o.customer_category AS loai_khach_hang,
-    o.warehouse AS kho,
+    COALESCE(w.name, o.warehouse) AS kho,
     o.customer_name AS ten_khach_hang,
     o.recipient_name AS nguoi_nhan,
     o.recipient_address AS dia_chi_nhan,
@@ -265,10 +269,18 @@ SELECT
     o.ordered_by AS nguoi_dat,
     o.created_at AS ngay_tao,
     DATE_TRUNC('month', o.created_at)::DATE AS thang_nam,
-    EXTRACT(YEAR FROM o.created_at) AS nam,
-    EXTRACT(MONTH FROM o.created_at) AS thang
+    EXTRACT(YEAR FROM o.created_at)::INT AS nam,
+    EXTRACT(MONTH FROM o.created_at)::INT AS thang
 FROM orders o
-WHERE o.status IN ('DA_DUYET', 'CHO_GIAO_HANG', 'DANG_GIAO_HANG', 'HOAN_THANH');
+LEFT JOIN warehouses w ON w.id::text = o.warehouse
+WHERE o.status IN (
+    'DA_DUYET', 
+    'CHO_GIAO_HANG', 
+    'DANG_GIAO_HANG', 
+    'CHO_DOI_SOAT', 
+    'HOAN_THANH',
+    'DOI_SOAT_THAT_BAI'
+);
 
 -- ==============================================================================
 -- View: Dashboard tổng quan
@@ -276,8 +288,8 @@ WHERE o.status IN ('DA_DUYET', 'CHO_GIAO_HANG', 'DANG_GIAO_HANG', 'HOAN_THANH');
 CREATE OR REPLACE VIEW view_dashboard_summary AS
 SELECT 
     (SELECT COUNT(*) FROM customers) AS tong_khach_hang,
-    (SELECT COUNT(*) FROM orders WHERE status IN ('DA_DUYET', 'CHO_GIAO_HANG', 'DANG_GIAO_HANG', 'HOAN_THANH')) AS tong_don_hang,
-    (SELECT COALESCE(SUM(total_amount), 0) FROM orders WHERE status IN ('DA_DUYET', 'CHO_GIAO_HANG', 'DANG_GIAO_HANG', 'HOAN_THANH')) AS tong_doanh_thu,
+    (SELECT COUNT(*) FROM orders WHERE status IN ('DA_DUYET', 'CHO_GIAO_HANG', 'DANG_GIAO_HANG', 'CHO_DOI_SOAT', 'HOAN_THANH', 'DOI_SOAT_THAT_BAI')) AS tong_don_hang,
+    (SELECT COALESCE(SUM(total_amount), 0) FROM orders WHERE order_type = 'THUONG' AND status IN ('DA_DUYET', 'CHO_GIAO_HANG', 'DANG_GIAO_HANG', 'CHO_DOI_SOAT', 'HOAN_THANH', 'DOI_SOAT_THAT_BAI')) AS tong_doanh_thu,
     (SELECT COUNT(*) FROM cylinders WHERE status = 'sẵn sàng') AS binh_ton_kho,
     (SELECT COUNT(*) FROM cylinders WHERE status = 'hỏng') AS binh_loi,
     (SELECT COUNT(*) FROM machines WHERE status = 'sẵn sàng') AS may_ton_kho,

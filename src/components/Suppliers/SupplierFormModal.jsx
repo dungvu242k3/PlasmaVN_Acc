@@ -12,6 +12,8 @@ export default function SupplierFormModal({ supplier, onClose, onSuccess }) {
 
     const defaultState = {
         name: '',
+        tax_id: '',
+        email: '',
         phone: '',
         address: '',
     };
@@ -22,6 +24,8 @@ export default function SupplierFormModal({ supplier, onClose, onSuccess }) {
         if (isEdit) {
             setFormData({
                 name: supplier.name || '',
+                tax_id: supplier.tax_id || '',
+                email: supplier.email || '',
                 phone: supplier.phone || '',
                 address: supplier.address || '',
             });
@@ -52,6 +56,8 @@ export default function SupplierFormModal({ supplier, onClose, onSuccess }) {
         try {
             const payload = {
                 name: formData.name.trim(),
+                tax_id: formData.tax_id.trim(),
+                email: formData.email.trim(),
                 phone: formData.phone.trim(),
                 address: formData.address.trim(),
                 updated_at: new Date().toISOString()
@@ -155,6 +161,36 @@ export default function SupplierFormModal({ supplier, onClose, onSuccess }) {
                                         placeholder="VD: Công ty TNHH Oxy Việt Nam..."
                                         className="w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-2xl text-[14px] focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary focus:bg-white transition-all shadow-sm"
                                         required
+                                    />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="flex items-center gap-2 text-[12px] font-black text-slate-500 uppercase tracking-widest pl-1">
+                                        <Building2 className="w-3.5 h-3.5 text-primary" />
+                                        Mã số thuế (MST)
+                                    </label>
+                                    <input
+                                        type="text"
+                                        name="tax_id"
+                                        value={formData.tax_id}
+                                        onChange={handleChange}
+                                        placeholder="Mã số thuế của doanh nghiệp..."
+                                        className="w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-2xl text-[14px] focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary focus:bg-white transition-all shadow-sm"
+                                    />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="flex items-center gap-2 text-[12px] font-black text-slate-500 uppercase tracking-widest pl-1">
+                                        <X className="w-3.5 h-3.5 text-primary rotate-45" />
+                                        Email liên hệ
+                                    </label>
+                                    <input
+                                        type="email"
+                                        name="email"
+                                        value={formData.email}
+                                        onChange={handleChange}
+                                        placeholder="Địa chỉ email nhận thông báo..."
+                                        className="w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-2xl text-[14px] focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary focus:bg-white transition-all shadow-sm"
                                     />
                                 </div>
 

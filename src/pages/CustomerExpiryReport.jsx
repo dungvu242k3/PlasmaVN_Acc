@@ -55,6 +55,11 @@ ChartJS.register(
 const COLUMN_DEFS = {
   ten_khach_hang: { label: 'Tên Khách Hàng' },
   kho: { label: 'Kho' },
+  nhan_vien_kinh_doanh: { label: 'NVKD' },
+  binh_ton: { label: 'Bình đang giữ' },
+  may_dang_su_dung: { label: 'Máy đang dùng' },
+  danh_sach_binh: { label: 'Mã bình' },
+  danh_sach_may: { label: 'Mã máy' },
   ngay_dat_hang_gan_nhat: { label: 'Ngày đặt gần nhất' },
   so_ngay_chua_phat_sinh: { label: 'Ngày chưa PS' },
   ma_don_gan_nhat: { label: 'Mã đơn gần nhất' }
@@ -361,6 +366,19 @@ const CustomerExpiryReport = () => {
                       {columnOrder.filter(isColumnVisible).map(colKey => {
                         if (colKey === 'ten_khach_hang') return <td key={colKey} className="px-4 py-4 font-bold text-foreground text-[13px]">{item.ten_khach_hang}</td>;
                         if (colKey === 'kho') return <td key={colKey} className="px-4 py-4 text-[13px] text-muted-foreground font-medium">{item.kho || '-'}</td>;
+                        if (colKey === 'nhan_vien_kinh_doanh') return <td key={colKey} className="px-4 py-4 text-[13px] text-muted-foreground">{item.nhan_vien_kinh_doanh || '-'}</td>;
+                        if (colKey === 'binh_ton') return <td key={colKey} className="px-4 py-4 text-[13px] text-center font-bold text-amber-600">{item.binh_ton || 0}</td>;
+                        if (colKey === 'may_dang_su_dung') return <td key={colKey} className="px-4 py-4 text-[13px] text-center font-bold text-blue-600">{item.may_dang_su_dung || 0}</td>;
+                        if (colKey === 'danh_sach_binh') return (
+                          <td key={colKey} className="px-4 py-4 text-[12px] text-muted-foreground max-w-[200px]">
+                            <div className="line-clamp-2" title={item.danh_sach_binh}>{item.danh_sach_binh || '-'}</div>
+                          </td>
+                        );
+                        if (colKey === 'danh_sach_may') return (
+                          <td key={colKey} className="px-4 py-4 text-[12px] text-muted-foreground max-w-[200px]">
+                            <div className="line-clamp-2" title={item.danh_sach_may}>{item.danh_sach_may || '-'}</div>
+                          </td>
+                        );
                         if (colKey === 'ngay_dat_hang_gan_nhat') return <td key={colKey} className="px-4 py-4 text-[13px] text-muted-foreground">{item.ngay_dat_hang_gan_nhat || 'Chưa đặt'}</td>;
                         if (colKey === 'so_ngay_chua_phat_sinh') return (
                           <td key={colKey} className="px-4 py-4 text-right">

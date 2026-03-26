@@ -195,7 +195,13 @@ export default function SupplierDetailsModal({ supplier, onClose }) {
                             <div className="min-w-0">
                                 <h2 className="text-2xl font-black text-slate-900 mb-1.5 tracking-tight truncate">{supplier.name}</h2>
                                 <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-[12px] font-bold text-slate-500 uppercase tracking-wider">
-                                    <span className="flex items-center gap-2"><Phone className="w-4 h-4 text-primary/60" /> {supplier.phone}</span>
+                                    <span className="flex items-center gap-2" title="Số điện thoại"><Phone className="w-4 h-4 text-primary/60" /> {supplier.phone}</span>
+                                    {supplier.tax_id && (
+                                        <span className="flex items-center gap-2" title="Mã số thuế"><Building2 className="w-4 h-4 text-primary/60" /> MST: {supplier.tax_id}</span>
+                                    )}
+                                    {supplier.email && (
+                                        <span className="flex items-center gap-2 lowercase" title="Email liên hệ"><X className="w-4 h-4 text-primary/60 rotate-45 shrink-0" /> {supplier.email}</span>
+                                    )}
                                     <span className="flex items-center gap-2 min-w-0">
                                         <MapPin className="w-4 h-4 text-primary/60 shrink-0" /> 
                                         <span className="truncate max-w-[300px]" title={supplier.address}>{supplier.address}</span>

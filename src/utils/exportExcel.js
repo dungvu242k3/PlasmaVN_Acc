@@ -81,11 +81,13 @@ export const exportCustomerExpiryReport = (data) => {
     'Tên KH': item.ten_khach_hang,
     'Kho': item.kho,
     'Loại khách': item.loai_khach,
+    'Bình đang giữ': item.binh_ton,
+    'Máy đang dùng': item.may_dang_su_dung,
+    'Mã bình': item.danh_sach_binh,
+    'Mã máy': item.danh_sach_may,
     'Ngày đặt gần nhất': item.ngay_dat_hang_gan_nhat,
     'Số ngày chưa phát sinh': item.so_ngay_chua_phat_sinh,
     'Mã đơn gần nhất': item.ma_don_gan_nhat,
-    'Số vỏ tồn': item.so_vo_ton,
-    'Bình tồn': item.binh_ton,
     'NVKD': item.nhan_vien_kinh_doanh
   }));
   exportToExcel(formattedData, 'BaoCao_KhachQuaHan', 'KH quá hạn');
