@@ -1,13 +1,13 @@
 import {
+    Download,
     Edit,
     PackageMinus,
     Trash2,
-    Download,
     Upload
 } from 'lucide-react';
-import * as XLSX from 'xlsx';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import * as XLSX from 'xlsx';
 import { ISSUE_STATUSES, ISSUE_TABLE_COLUMNS, ISSUE_TYPES } from '../constants/goodsIssueConstants';
 import useColumnVisibility from '../hooks/useColumnVisibility';
 import { supabase } from '../supabase/config';
@@ -95,7 +95,7 @@ const GoodsIssues = () => {
                 .in('id', selectedIds);
 
             if (error) throw error;
-            
+
             setSelectedIds([]);
             fetchIssues();
             alert(`✅ Đã xóa ${selectedIds.length} phiếu xuất thành công!`);
@@ -197,7 +197,7 @@ const GoodsIssues = () => {
                         supplier_id: supplierName ? supplierMap[supplierName] || null : null,
                         issue_date: row['Ngày xuất (YYYY-MM-DD)']?.toString() || new Date().toISOString().split('T')[0],
                         notes: row['Ghi chú phiếu']?.toString() || '',
-                        
+
                         item_type: row['Loại hàng (MAY/BINH/VAT_TU)']?.toString().toUpperCase() || 'VAT_TU',
                         item_code: row['Mã serial (hoặc mã RFID)']?.toString() || '',
                         quantity: parseInt(row['Số lượng xuất'], 10) || 1,
@@ -233,7 +233,7 @@ const GoodsIssues = () => {
                     groups[item.groupId].total_items += item.quantity;
                 });
 
-                let nextCodeNum = Date.now() % 100000; 
+                let nextCodeNum = Date.now() % 100000;
                 let importedIssues = 0;
                 let importedItems = 0;
 

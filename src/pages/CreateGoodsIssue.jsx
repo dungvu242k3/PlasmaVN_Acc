@@ -29,7 +29,7 @@ const CreateGoodsIssue = () => {
         issue_type: 'TRA_VO',
         supplier_id: '',
         warehouse_id: '',
-        notes: '',
+        notes: 'Khách hàng trả',
         total_items: 0,
         status: 'HOAN_THANH'
     });
@@ -66,7 +66,11 @@ const CreateGoodsIssue = () => {
         } else {
             generateCode();
             if (forcedType) {
-                setFormData(prev => ({ ...prev, issue_type: forcedType }));
+                setFormData(prev => ({
+                    ...prev,
+                    issue_type: forcedType,
+                    notes: (forcedType === 'TRA_VO' || forcedType === 'TRA_MAY') ? 'Nhà sản Xuất Trả Về ( Giải thích: Khách hàng trả)' : prev.notes
+                }));
                 if (filteredProducts.length > 0) {
                     setItems([{ id: Date.now(), item_type: filteredProducts[0].id, item_id: '', item_code: '', quantity: 1, _search: '' }]);
                 }
@@ -300,7 +304,14 @@ const CreateGoodsIssue = () => {
                             <label className="text-xs font-black text-gray-500 uppercase tracking-widest ml-1">Loại xuất</label>
                             <select
                                 value={formData.issue_type}
-                                onChange={(e) => setFormData({ ...formData, issue_type: e.target.value })}
+                                onChange={(e) => {
+                                    const type = e.target.value;
+                                    setFormData({
+                                        ...formData,
+                                        issue_type: type,
+                                        notes: (type === 'TRA_VO' || type === 'TRA_MAY') ? 'Nhà sản Xuất Trả Về ( Giải thích: Khách hàng trả)' : formData.notes
+                                    });
+                                }}
                                 className="w-full px-4 py-3 bg-white border border-gray-200 rounded-2xl font-bold text-gray-900 focus:ring-4 focus:ring-rose-100 focus:border-rose-500 transition-all outline-none cursor-pointer"
                             >
                                 {ISSUE_TYPES.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
