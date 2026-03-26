@@ -1,5 +1,6 @@
 import { Activity, Bluetooth, ChevronDown, Cpu, Hash, MapPin, MonitorIcon, Package, Radio, Save, ScanLine, Search, Settings2, Wind, X } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
     CYLINDER_VOLUMES,
     EMISSION_HEAD_TYPES,
@@ -10,10 +11,12 @@ import {
 } from '../../constants/machineConstants';
 import { supabase } from '../../supabase/config';
 import BarcodeScanner from '../Common/BarcodeScanner';
+import clsx from 'clsx';
 
 export default function MachineFormModal({ machine, onClose, onSuccess }) {
     const isEdit = !!machine;
     const [isLoading, setIsLoading] = useState(false);
+    const [isClosing, setIsClosing] = useState(false);
     const [errorMsg, setErrorMsg] = useState('');
     const [isScannerOpen, setIsScannerOpen] = useState(false);
 
@@ -40,6 +43,11 @@ export default function MachineFormModal({ machine, onClose, onSuccess }) {
     const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
     const customerDropdownRef = useRef(null);
 
+    const handleClose = useCallback(() => {
+        setIsClosing(true);
+        setTimeout(onClose, 300);
+    }, [onClose]);
+
     useEffect(() => {
         const fetchWarehouses = async () => {
             try {
@@ -50,7 +58,6 @@ export default function MachineFormModal({ machine, onClose, onSuccess }) {
                     .order('name');
                 if (!error && data) {
                     setWarehousesList(data);
-                    // Default to first warehouse if creating new
                     if (!isEdit && data.length > 0 && !formData.warehouse) {
                         setFormData(prev => ({ ...prev, warehouse: data[0].id }));
                     }
@@ -101,6 +108,7 @@ export default function MachineFormModal({ machine, onClose, onSuccess }) {
                 customer_name: machine.customer_name || '',
                 department_in_charge: machine.department_in_charge || ''
             });
+            setCustomerSearch(machine.customer_name || '');
         }
     }, [machine, isEdit]);
 
@@ -123,7 +131,6 @@ export default function MachineFormModal({ machine, onClose, onSuccess }) {
 
     const handleCustomerSearchChange = (e) => {
         setCustomerSearch(e.target.value);
-        setFormData(prev => ({ ...prev, customer_name: e.target.value }));
         setShowCustomerDropdown(true);
     };
 
@@ -133,14 +140,6 @@ export default function MachineFormModal({ machine, onClose, onSuccess }) {
             serial_number: decodedText,
             machine_account: decodedText
         }));
-        setIsScannerOpen(false);
-    }, []);
-
-    const startScanner = useCallback(() => {
-        setIsScannerOpen(true);
-    }, []);
-
-    const stopScanner = useCallback(() => {
         setIsScannerOpen(false);
     }, []);
 
@@ -156,9 +155,14 @@ export default function MachineFormModal({ machine, onClose, onSuccess }) {
         setIsLoading(true);
 
         try {
-            const payload = { ...formData, updated_at: new Date().toISOString() };
+            const payload = { ...formData };
 
             if (isEdit) {
+                // Remove internal fields for update safety
+                delete payload.id;
+                delete payload.created_at;
+                delete payload.updated_at;
+
                 const { error } = await supabase
                     .from('machines')
                     .update(payload)
@@ -184,72 +188,89 @@ export default function MachineFormModal({ machine, onClose, onSuccess }) {
         }
     };
 
-    return (
-        <>
+    const sideDrawerContent = (
+        <div className={clsx(
+            "fixed inset-0 z-[100005] flex justify-end transition-all duration-300",
+            isClosing ? "opacity-0 pointer-events-none" : "opacity-100"
+        )}>
             <BarcodeScanner
                 isOpen={isScannerOpen}
-                onClose={stopScanner}
+                onClose={() => setIsScannerOpen(false)}
                 onScanSuccess={handleScanSuccess}
                 title="Quét mã Serial máy"
             />
-            <div className="fixed inset-0 bg-slate-900/55 backdrop-blur-sm flex items-stretch sm:items-center justify-center z-[100] p-0 sm:p-4 animate-in fade-in duration-200 [&_input]:!font-[600] [&_select]:!font-[600] [&_textarea]:!font-[600] [&_input]:!text-slate-800 [&_select]:!text-slate-800 [&_textarea]:!text-slate-800 [&_input::placeholder]:!text-slate-400 [&_textarea::placeholder]:!text-slate-400">
-                <div className="bg-slate-50 rounded-none sm:rounded-3xl shadow-2xl w-full max-w-5xl overflow-hidden flex flex-col h-[100dvh] sm:h-auto sm:max-h-[92vh] border-0 sm:border sm:border-slate-200">
+            {/* Backdrop */}
+            <div
+                className={clsx(
+                    "absolute inset-0 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-300",
+                    isClosing && "animate-out fade-out duration-300"
+                )}
+                onClick={handleClose}
+            />
 
-                    {/* Header */}
-                    <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between shrink-0 bg-white sticky top-0 z-20">
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center text-emerald-600">
-                                <MonitorIcon className="w-6 h-6" />
-                            </div>
-                            <div>
-                                <h3 className="text-[20px] leading-tight font-bold text-slate-900 tracking-tight">
-                                    {isEdit ? 'Cập nhật thiết bị hệ thống' : 'Thêm máy mới vào hệ thống'}
-                                </h3>
-                                <p className="text-[12px] font-semibold text-slate-500 mt-0.5">
-                                    {isEdit ? `Mã máy: ${formData.serial_number}` : 'Điền đầy đủ thông tin kỹ thuật bên dưới'}
-                                </p>
-                            </div>
+            {/* Drawer Panel */}
+            <div
+                className={clsx(
+                    "relative bg-white shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col h-full border-l border-slate-200 animate-in slide-in-from-right duration-500 ease-out",
+                    isClosing && "animate-out slide-out-to-right duration-300"
+                )}
+                onClick={(e) => e.stopPropagation()}
+            >
+                {/* Header */}
+                <div className="px-6 py-4 bg-white border-b border-slate-100 flex items-center justify-between shrink-0">
+                    <div className="flex items-center gap-4">
+                        <div className="w-11 h-11 bg-primary/10 rounded-xl flex items-center justify-center text-primary shadow-sm border border-primary/10">
+                            <MonitorIcon className="w-6 h-6" />
                         </div>
-                        <button
-                            onClick={onClose}
-                            className="p-2 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 rounded-xl transition-all"
-                        >
-                            <X className="w-6 h-6" />
-                        </button>
+                        <div>
+                            <h3 className="text-[17px] font-black text-slate-900 uppercase tracking-tight leading-none mb-1.5">
+                                {isEdit ? 'Cập nhật thiết bị' : 'Thêm máy mới'}
+                            </h3>
+                            <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                                {isEdit ? `Serial: ${formData.serial_number}` : 'Thông tin cấu hình hệ thống'}
+                            </p>
+                        </div>
                     </div>
+                    <button
+                        onClick={handleClose}
+                        className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all shadow-sm bg-white border border-slate-100"
+                    >
+                        <X className="w-5 h-5" />
+                    </button>
+                </div>
 
-                    {/* Form Body */}
-                    <div className="p-5 sm:p-6 overflow-y-auto bg-slate-50 custom-scrollbar flex-1 min-h-0 pb-20 sm:pb-6">
-                        {errorMsg && (
-                            <div className="mb-4 p-3 bg-rose-50 border border-rose-200 rounded-xl text-[13px] font-semibold text-rose-600 flex items-center gap-2">
-                                <X className="w-5 h-5 shrink-0" />
-                                {errorMsg}
-                            </div>
-                        )}
+                {/* Form Body */}
+                <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar bg-slate-50/30">
+                    {errorMsg && (
+                        <div className="p-3.5 bg-red-50 border border-red-100 rounded-xl text-[13px] font-bold text-red-600 flex items-center gap-2 animate-shake">
+                            <X className="w-4 h-4 shrink-0" />
+                            {errorMsg}
+                        </div>
+                    )}
 
                         <form id="machineForm" onSubmit={handleSubmit} className="space-y-6">
                             {/* Section 1: Định danh thiết bị */}
-                            <div className="rounded-3xl border border-emerald-100 bg-white p-5 sm:p-6 space-y-5 shadow-sm [&_label]:text-emerald-700 [&_label_svg]:text-emerald-600">
-                                <h4 className="flex items-center gap-2.5 text-[18px] !font-extrabold !text-emerald-700 pb-3 border-b border-emerald-100">
-                                    <Hash className="w-4 h-4 text-emerald-600" /> Định danh thiết bị
+                            <div className="rounded-3xl border border-blue-100 bg-white p-5 sm:p-6 space-y-5 shadow-sm [&_label]:text-blue-700 [&_label_svg]:text-blue-600">
+                                <h4 className="flex items-center gap-2.5 text-[18px] !font-extrabold !text-blue-700 pb-3 border-b border-blue-100 uppercase tracking-tight">
+                                    <Hash className="w-5 h-5 text-blue-600" /> Định danh thiết bị
                                 </h4>
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                                     <div className="md:col-span-2 lg:col-span-1">
-                                        <label className="flex items-center gap-1.5 text-[14px] font-semibold mb-1.5"><ScanLine className="w-4 h-4" />Serial (Mã máy) <span className="text-red-500">*</span></label>
+                                        <label className="flex items-center gap-1.5 text-[12px] font-black uppercase tracking-wider mb-1.5"><ScanLine className="w-4 h-4" />Serial (Mã máy) <span className="text-red-500">*</span></label>
                                         <div className="relative flex items-center">
                                             <input
                                                 type="text"
                                                 name="serial_number"
                                                 value={formData.serial_number}
                                                 onChange={handleChange}
-                                                placeholder="PLT-25D1-50-TM"
-                                                className="w-full h-12 pl-4 pr-12 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-emerald-100 focus:border-emerald-400 focus:bg-white outline-none transition-all font-semibold text-slate-900"
+                                                placeholder="VD: PLT-25D1-50-TM"
+                                                className="w-full h-12 pl-4 pr-12 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-100 focus:border-blue-400 focus:bg-white outline-none transition-all font-bold text-slate-900"
                                                 required
                                             />
                                             <button
                                                 type="button"
-                                                onClick={startScanner}
-                                                className="absolute right-2 p-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-all flex items-center justify-center shadow-sm"
+                                                onClick={() => setIsScannerOpen(true)}
+                                                className="absolute right-2 p-2 bg-primary text-white rounded-lg hover:bg-blue-600 transition-all flex items-center justify-center shadow-sm"
                                                 title="Quét barcode"
                                             >
                                                 <ScanLine className="w-4 h-4" />
@@ -257,33 +278,33 @@ export default function MachineFormModal({ machine, onClose, onSuccess }) {
                                         </div>
                                     </div>
                                     <div>
-                                        <label className="flex items-center gap-1.5 text-[14px] font-semibold mb-1.5"><Hash className="w-4 h-4" />Tài khoản máy</label>
+                                        <label className="flex items-center gap-1.5 text-[12px] font-black uppercase tracking-wider mb-1.5"><Hash className="w-4 h-4" />Tài khoản máy</label>
                                         <input
                                             type="text"
                                             name="machine_account"
                                             value={formData.machine_account}
                                             disabled
-                                            className="w-full h-12 px-4 bg-slate-100 border border-slate-200 rounded-2xl font-semibold text-slate-400 cursor-not-allowed"
+                                            className="w-full h-12 px-4 bg-slate-100 border border-slate-200 rounded-2xl font-bold text-slate-400 cursor-not-allowed"
                                         />
                                     </div>
                                     <div>
-                                        <label className="flex items-center gap-1.5 text-[14px] font-semibold mb-1.5"><Activity className="w-4 h-4" />Trạng thái <span className="text-red-500">*</span></label>
+                                        <label className="flex items-center gap-1.5 text-[12px] font-black uppercase tracking-wider mb-1.5"><Activity className="w-4 h-4" />Trạng thái <span className="text-red-500">*</span></label>
                                         <select
                                             name="status"
                                             value={formData.status}
                                             onChange={handleChange}
-                                            className="w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-emerald-100 focus:border-emerald-400 focus:bg-white outline-none transition-all font-semibold text-slate-700 cursor-pointer"
+                                            className="w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-100 focus:border-blue-400 focus:bg-white outline-none transition-all font-bold text-slate-700 cursor-pointer"
                                         >
                                             {MACHINE_STATUSES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
                                         </select>
                                     </div>
                                     <div>
-                                        <label className="flex items-center gap-1.5 text-[14px] font-semibold mb-1.5"><MapPin className="w-4 h-4" />Kho quản lý</label>
+                                        <label className="flex items-center gap-1.5 text-[12px] font-black uppercase tracking-wider mb-1.5"><MapPin className="w-4 h-4" />Kho quản lý</label>
                                         <select
                                             name="warehouse"
                                             value={formData.warehouse || ''}
                                             onChange={handleChange}
-                                            className="w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-emerald-100 focus:border-emerald-400 focus:bg-white outline-none transition-all font-semibold text-slate-700 cursor-pointer"
+                                            className="w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-100 focus:border-blue-400 focus:bg-white outline-none transition-all font-bold text-slate-700 cursor-pointer"
                                         >
                                             <option value="">-- Chưa xác định --</option>
                                             {warehousesList.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
@@ -293,91 +314,93 @@ export default function MachineFormModal({ machine, onClose, onSuccess }) {
                             </div>
 
                             {/* Section 2: Cấu hình kỹ thuật */}
-                            <div className="rounded-3xl border border-green-100 bg-white p-5 sm:p-6 space-y-5 shadow-sm [&_label]:text-green-700 [&_label_svg]:text-green-600">
-                                <h4 className="flex items-center gap-2.5 text-[18px] !font-extrabold !text-green-700 pb-3 border-b border-green-100">
-                                    <MonitorIcon className="w-4 h-4 text-green-600" /> Cấu hình & thông số
+                            <div className="rounded-3xl border border-blue-100 bg-white p-5 sm:p-6 space-y-5 shadow-sm [&_label]:text-blue-700 [&_label_svg]:text-blue-600">
+                                <h4 className="flex items-center gap-2.5 text-[18px] !font-extrabold !text-blue-700 pb-3 border-b border-blue-100 uppercase tracking-tight">
+                                    <MonitorIcon className="w-5 h-5 text-blue-600" /> Cấu hình & thông số
                                 </h4>
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                     <div>
-                                        <label className="flex items-center gap-1.5 text-[14px] font-semibold mb-1.5"><Bluetooth className="w-4 h-4" />Bluetooth MAC</label>
+                                        <label className="flex items-center gap-1.5 text-[12px] font-black uppercase tracking-wider mb-1.5"><Bluetooth className="w-4 h-4" />Bluetooth MAC</label>
                                         <input
                                             type="text"
                                             name="bluetooth_mac"
                                             value={formData.bluetooth_mac}
                                             onChange={handleChange}
-                                            className="w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-green-100 focus:border-green-400 focus:bg-white outline-none transition-all font-semibold text-slate-900"
+                                            placeholder="VD: 00:1A:2B:3C:4D:5E"
+                                            className="w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-100 focus:border-blue-400 focus:bg-white outline-none transition-all font-bold text-slate-900"
                                         />
                                     </div>
                                     <div>
-                                        <label className="flex items-center gap-1.5 text-[14px] font-semibold mb-1.5"><Cpu className="w-4 h-4" />Loại máy <span className="text-red-500">*</span></label>
+                                        <label className="flex items-center gap-1.5 text-[12px] font-black uppercase tracking-wider mb-1.5"><Cpu className="w-4 h-4" />Loại máy <span className="text-red-500">*</span></label>
                                         <select
                                             name="machine_type"
                                             value={formData.machine_type}
                                             onChange={handleChange}
-                                            className="w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-green-100 focus:border-green-400 focus:bg-white outline-none transition-all font-semibold text-slate-700 cursor-pointer"
+                                            className="w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-100 focus:border-blue-400 focus:bg-white outline-none transition-all font-bold text-slate-700 cursor-pointer"
                                         >
                                             {MACHINE_TYPES.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
                                         </select>
                                     </div>
                                     <div>
-                                        <label className="flex items-center gap-1.5 text-[14px] font-semibold mb-1.5"><Hash className="w-4 h-4" />Phiên bản</label>
+                                        <label className="flex items-center gap-1.5 text-[12px] font-black uppercase tracking-wider mb-1.5"><Hash className="w-4 h-4" />Phiên bản</label>
                                         <input
                                             type="text"
                                             name="version"
                                             value={formData.version}
                                             onChange={handleChange}
-                                            className="w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-green-100 focus:border-green-400 focus:bg-white outline-none transition-all font-semibold text-slate-900"
+                                            placeholder="VD: v2.5.1"
+                                            className="w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-100 focus:border-blue-400 focus:bg-white outline-none transition-all font-bold text-slate-900"
                                         />
                                     </div>
                                 </div>
                             </div>
 
                             {/* Section 3: Phụ kiện */}
-                            <div className="rounded-3xl border border-emerald-100 bg-white p-5 sm:p-6 space-y-5 shadow-sm [&_label]:text-emerald-700 [&_label_svg]:text-emerald-600">
-                                <h4 className="flex items-center gap-2.5 text-[18px] !font-extrabold !text-emerald-700 pb-3 border-b border-emerald-100">
-                                    <Package className="w-4 h-4 text-emerald-600" /> Phụ kiện & bình khí
+                            <div className="rounded-3xl border border-blue-100 bg-white p-5 sm:p-6 space-y-5 shadow-sm [&_label]:text-blue-700 [&_label_svg]:text-blue-600">
+                                <h4 className="flex items-center gap-2.5 text-[18px] !font-extrabold !text-blue-700 pb-3 border-b border-blue-100 uppercase tracking-tight">
+                                    <Package className="w-5 h-5 text-blue-600" /> Phụ kiện & bình khí
                                 </h4>
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                                     <div>
-                                        <label className="flex items-center gap-1.5 text-[14px] font-semibold mb-1.5"><Package className="w-4 h-4" />Thể tích bình</label>
+                                        <label className="flex items-center gap-1.5 text-[12px] font-black uppercase tracking-wider mb-1.5"><Package className="w-4 h-4" />Thể tích bình</label>
                                         <select
                                             name="cylinder_volume"
                                             value={formData.cylinder_volume}
                                             onChange={handleChange}
-                                            className="w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-emerald-100 focus:border-emerald-400 focus:bg-white outline-none transition-all text-[14px] font-semibold text-slate-700 cursor-pointer"
+                                            className="w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-100 focus:border-blue-400 focus:bg-white outline-none transition-all text-[14px] font-bold text-slate-700 cursor-pointer"
                                         >
                                             {CYLINDER_VOLUMES.map(v => <option key={v.id} value={v.id}>{v.label}</option>)}
                                         </select>
                                     </div>
                                     <div>
-                                        <label className="flex items-center gap-1.5 text-[14px] font-semibold mb-1.5"><Wind className="w-4 h-4" />Loại khí</label>
+                                        <label className="flex items-center gap-1.5 text-[12px] font-black uppercase tracking-wider mb-1.5"><Wind className="w-4 h-4" />Loại khí</label>
                                         <select
                                             name="gas_type"
                                             value={formData.gas_type}
                                             onChange={handleChange}
-                                            className="w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-emerald-100 focus:border-emerald-400 focus:bg-white outline-none transition-all text-[14px] font-semibold text-slate-700 cursor-pointer"
+                                            className="w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-100 focus:border-blue-400 focus:bg-white outline-none transition-all text-[14px] font-bold text-slate-700 cursor-pointer"
                                         >
                                             {GAS_TYPES.map(g => <option key={g.id} value={g.id}>{g.label}</option>)}
                                         </select>
                                     </div>
                                     <div>
-                                        <label className="flex items-center gap-1.5 text-[14px] font-semibold mb-1.5"><Settings2 className="w-4 h-4" />Loại van</label>
+                                        <label className="flex items-center gap-1.5 text-[12px] font-black uppercase tracking-wider mb-1.5"><Settings2 className="w-4 h-4" />Loại van</label>
                                         <select
                                             name="valve_type"
                                             value={formData.valve_type}
                                             onChange={handleChange}
-                                            className="w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-emerald-100 focus:border-emerald-400 focus:bg-white outline-none transition-all text-[14px] font-semibold text-slate-700 cursor-pointer"
+                                            className="w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-100 focus:border-blue-400 focus:bg-white outline-none transition-all text-[14px] font-bold text-slate-700 cursor-pointer"
                                         >
                                             {VALVE_TYPES.map(v => <option key={v.id} value={v.id}>{v.label}</option>)}
                                         </select>
                                     </div>
                                     <div>
-                                        <label className="flex items-center gap-1.5 text-[14px] font-semibold mb-1.5"><Radio className="w-4 h-4" />Loại đầu phát</label>
+                                        <label className="flex items-center gap-1.5 text-[12px] font-black uppercase tracking-wider mb-1.5"><Radio className="w-4 h-4" />Loại đầu phát</label>
                                         <select
                                             name="emission_head_type"
                                             value={formData.emission_head_type}
                                             onChange={handleChange}
-                                            className="w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-emerald-100 focus:border-emerald-400 focus:bg-white outline-none transition-all text-[14px] font-semibold text-slate-700 cursor-pointer"
+                                            className="w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-100 focus:border-blue-400 focus:bg-white outline-none transition-all text-[14px] font-bold text-slate-700 cursor-pointer"
                                         >
                                             {EMISSION_HEAD_TYPES.map(h => <option key={h.id} value={h.id}>{h.label}</option>)}
                                         </select>
@@ -386,13 +409,13 @@ export default function MachineFormModal({ machine, onClose, onSuccess }) {
                             </div>
 
                             {/* Section 4: Thông tin sử dụng */}
-                            <div className="space-y-4">
-                                <h4 className="flex items-center gap-2 text-sm font-black text-slate-800 uppercase tracking-widest border-b border-slate-100 pb-2">
-                                    THÔNG TIN SỬ DỤNG
+                            <div className="bg-white rounded-3xl border border-blue-100 p-5 sm:p-6 space-y-5 shadow-sm [&_label]:text-blue-700 [&_label_svg]:text-blue-600">
+                                <h4 className="flex items-center gap-2.5 text-[18px] !font-extrabold !text-blue-700 pb-3 border-b border-blue-100 uppercase tracking-tight">
+                                    <MapPin className="w-5 h-5 text-blue-600" /> Thông tin sử dụng
                                 </h4>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div ref={customerDropdownRef} className="relative">
-                                        <label className="block text-xs font-bold text-slate-700 mb-1 uppercase tracking-wider">Khách hàng đang dùng</label>
+                                        <label className="flex items-center gap-1.5 text-[12px] font-black text-slate-700 mb-1.5 uppercase tracking-wider"><Search className="w-4 h-4" /> Khách hàng đang dùng</label>
                                         <div className="relative">
                                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                                             <input
@@ -401,19 +424,19 @@ export default function MachineFormModal({ machine, onClose, onSuccess }) {
                                                 onChange={handleCustomerSearchChange}
                                                 onFocus={() => setShowCustomerDropdown(true)}
                                                 placeholder="Tìm kiếm khách hàng..."
-                                                className="w-full pl-10 pr-10 py-3 bg-white border border-slate-200 rounded-xl focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 outline-none transition-all font-bold text-slate-900"
+                                                className="w-full h-12 pl-10 pr-10 bg-white border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all font-bold text-slate-900"
                                             />
                                             <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                                         </div>
                                         {showCustomerDropdown && (
-                                            <div className="absolute z-50 mt-1 w-full bg-white border border-slate-200 rounded-xl shadow-xl max-h-60 overflow-y-auto">
+                                            <div className="absolute z-50 mt-1 w-full bg-white border border-slate-100 rounded-2xl shadow-xl max-h-60 overflow-y-auto custom-scrollbar">
                                                 {filteredCustomers.length > 0 ? (
                                                     filteredCustomers.map((c, idx) => (
                                                         <button
                                                             key={idx}
                                                             type="button"
                                                             onClick={() => handleCustomerSelect(c.name)}
-                                                            className="w-full px-4 py-2.5 text-left text-[14px] font-semibold text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 transition-colors"
+                                                            className="w-full px-4 py-2.5 text-left text-[14px] font-bold text-slate-700 hover:bg-blue-50 hover:text-blue-700 transition-colors"
                                                         >
                                                             {c.name}
                                                         </button>
@@ -425,14 +448,14 @@ export default function MachineFormModal({ machine, onClose, onSuccess }) {
                                         )}
                                     </div>
                                     <div>
-                                        <label className="block text-xs font-bold text-slate-700 mb-1 uppercase tracking-wider">Đại lý</label>
+                                        <label className="flex items-center gap-1.5 text-[12px] font-black text-slate-700 mb-1.5 uppercase tracking-wider"><MonitorIcon className="w-4 h-4" />Đại lý / Phòng ban</label>
                                         <input
                                             type="text"
                                             name="department_in_charge"
                                             value={formData.department_in_charge}
                                             onChange={handleChange}
                                             placeholder="Tên đại lý/Đơn vị phụ trách..."
-                                            className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 outline-none transition-all font-bold text-slate-900"
+                                            className="w-full h-12 px-4 bg-white border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 outline-none transition-all font-bold text-slate-900"
                                         />
                                     </div>
                                 </div>
@@ -441,32 +464,34 @@ export default function MachineFormModal({ machine, onClose, onSuccess }) {
                     </div>
 
                     {/* Footer Actions */}
-                    <div className="px-4 py-3 bg-white border-t border-slate-200 shrink-0 flex items-center justify-end gap-3 sticky bottom-0 z-20">
+                    <div className="px-6 py-4 bg-white border-t border-slate-100 shrink-0 flex items-center justify-end gap-3 shadow-[0_-8px_20px_rgba(0,0,0,0.03)] z-20">
                         <button
                             type="button"
-                            onClick={onClose}
-                            className="px-4 py-2.5 rounded-xl border border-slate-300 bg-slate-100 text-slate-500 hover:text-slate-700 font-semibold text-[15px] transition-colors outline-none"
+                            onClick={handleClose}
+                            className="px-6 py-2.5 text-[13px] font-black text-slate-500 hover:text-slate-800 transition-colors uppercase tracking-widest"
                             disabled={isLoading}
                         >
-                            Hủy
+                            Hủy bỏ
                         </button>
                         <button
                             type="submit"
                             form="machineForm"
                             disabled={isLoading}
-                            className="px-8 py-2.5 bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-white text-[15px] font-bold rounded-2xl shadow-md shadow-emerald-200 transition-all flex items-center gap-2 border border-emerald-700/40 disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="min-w-[180px] h-12 px-8 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white text-[13px] font-black rounded-2xl shadow-lg shadow-blue-200 transition-all flex items-center justify-center gap-2 uppercase tracking-widest border border-blue-700/40 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             {isLoading ? (
                                 <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
                             ) : (
-                                <Save className="w-5 h-5" />
+                                <>
+                                    <Save className="w-5 h-5" />
+                                    {isEdit ? 'Lưu thay đổi' : 'Lưu hồ sơ máy'}
+                                </>
                             )}
-                            {isEdit ? 'Lưu thay đổi' : 'Lưu hồ sơ máy'}
                         </button>
                     </div>
-
-                </div>
             </div>
-        </>
+        </div>
     );
+
+    return createPortal(sideDrawerContent, document.body);
 }

@@ -1,5 +1,7 @@
+import { clsx } from 'clsx';
 import { ChevronDown, Clock, Edit3, Hash, MapPin, Package, Phone, Save, ScanLine, Search, User, X } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { toast } from 'react-toastify';
 import {
     CUSTOMER_CATEGORIES,
@@ -10,15 +12,25 @@ import usePermissions from '../../hooks/usePermissions';
 import { supabase } from '../../supabase/config';
 import BarcodeScanner from '../Common/BarcodeScanner';
 
-export default function OrderFormModal({ order, onClose, onSuccess }) {
+export default function OrderFormModal({ order, onClose, onSuccess, initialMode = 'edit' }) {
     const { role, user } = usePermissions();
     const isEdit = !!order;
+    const [mode, setMode] = useState(initialMode);
+    const isReadOnly = mode === 'view';
     const [isLoading, setIsLoading] = useState(false);
     const [isFetchingCustomers, setIsFetchingCustomers] = useState(false);
     const [errorMsg, setErrorMsg] = useState('');
     const [customers, setCustomers] = useState([]);
     const [shippersList, setShippersList] = useState([]);
     const [promotionsList, setPromotionsList] = useState([]);
+    const [isClosing, setIsClosing] = useState(false);
+
+    const handleClose = useCallback(() => {
+        setIsClosing(true);
+        setTimeout(() => {
+            onClose();
+        }, 300);
+    }, [onClose]);
 
     // Scanner states
     const [assignedCylinders, setAssignedCylinders] = useState([]);
@@ -30,6 +42,7 @@ export default function OrderFormModal({ order, onClose, onSuccess }) {
     useEffect(() => { assignedCylindersRef.current = assignedCylinders; }, [assignedCylinders]);
     const [showReasonModal, setShowReasonModal] = useState(false);
     const [editReason, setEditReason] = useState('');
+    const [reasonSource, setReasonSource] = useState('initial-edit'); // 'initial-edit' | 'submit'
 
     // Custom dropdown states
     const [isCustomerDropdownOpen, setIsCustomerDropdownOpen] = useState(false);
@@ -187,18 +200,19 @@ export default function OrderFormModal({ order, onClose, onSuccess }) {
         setFormData(prev => ({
             ...prev,
             customerId: customer.id,
-            recipientName: customer.recipient,
-            recipientAddress: customer.address,
-            recipientPhone: customer.phone,
-            customerCategory: customer.category
+            recipientName: customer.recipient || '',
+            recipientAddress: customer.address || '',
+            recipientPhone: customer.phone || '',
+            customerCategory: customer.category || 'TM'
         }));
         setIsCustomerDropdownOpen(false);
         setCustomerSearchTerm('');
     };
 
     const filteredCustomers = customers.filter(c => {
-        const categoryMatch = c.category === formData.customerCategory || (!c.category && formData.customerCategory === 'BV'); // fallback if c.category is missing
-        const searchMatch = c.name.toLowerCase().includes(customerSearchTerm.toLowerCase()) ||
+        const categoryMatch = !formData.customerCategory || formData.customerCategory === 'ALL' || c.category === formData.customerCategory;
+        const searchMatch = !customerSearchTerm ||
+            c.name?.toLowerCase().includes(customerSearchTerm.toLowerCase()) ||
             (c.phone && c.phone.includes(customerSearchTerm)) ||
             (c.recipient && c.recipient.toLowerCase().includes(customerSearchTerm.toLowerCase()));
         return categoryMatch && searchMatch;
@@ -224,14 +238,30 @@ export default function OrderFormModal({ order, onClose, onSuccess }) {
     };
 
     const handleCylinderSerialChange = (index, value) => {
+        const normalizedVal = value ? value.trim().toUpperCase() : '';
         setAssignedCylinders(prev => {
             const newArr = [...prev];
             const now = new Date();
             const timeStr = now.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', hour12: false });
 
+            // Warning for duplicates during typing
+            if (normalizedVal) {
+                const isDuplicate = newArr.some((s, idx) => {
+                    const existingSerial = (typeof s === 'string' ? s : s?.serial)?.trim().toUpperCase();
+                    return idx !== index && existingSerial === normalizedVal;
+                });
+                if (isDuplicate) {
+                    toast.warn(`Mã ${normalizedVal} đang bị trùng trong đơn hàng này!`, {
+                        toastId: `dup-${normalizedVal}`,
+                        position: 'top-center',
+                        autoClose: 2000
+                    });
+                }
+            }
+
             newArr[index] = {
-                serial: value,
-                scan_time: value ? (prev[index]?.scan_time || timeStr) : null
+                serial: normalizedVal,
+                scan_time: normalizedVal ? (prev[index]?.scan_time || timeStr) : null
             };
             return newArr;
         });
@@ -243,19 +273,27 @@ export default function OrderFormModal({ order, onClose, onSuccess }) {
 
         if (currentIdx === -1) return;
 
+        const normalizedText = decodedText.trim().toUpperCase();
+
+        // Skip if already in the list
+        if (currentArr.some(s => (typeof s === 'string' ? s : s?.serial)?.trim().toUpperCase() === normalizedText)) {
+            toast.info(`Mã ${normalizedText} đã được gán vào đơn hàng này rồi!`);
+            return;
+        }
+
         const now = new Date();
         const timeStr = now.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', hour12: false });
 
         setAssignedCylinders(prev => {
             const newArr = [...prev];
-            newArr[currentIdx] = { serial: decodedText, scan_time: timeStr };
+            newArr[currentIdx] = { serial: normalizedText, scan_time: timeStr };
             return newArr;
         });
 
         const updatedArr = [...currentArr];
-        updatedArr[currentIdx] = { serial: decodedText, scan_time: timeStr };
-        const nextEmpty = updatedArr.findIndex((s, i) => i > currentIdx && !s?.serial);
-        const fallbackEmpty = updatedArr.findIndex((s) => !s?.serial);
+        updatedArr[currentIdx] = { serial: normalizedText, scan_time: timeStr };
+        const nextEmpty = updatedArr.findIndex((s, i) => i > currentIdx && !(typeof s === 'string' ? s : s?.serial));
+        const fallbackEmpty = updatedArr.findIndex((s) => !(typeof s === 'string' ? s : s?.serial));
         const nextIdx = nextEmpty !== -1 ? nextEmpty : fallbackEmpty;
 
         if (nextIdx !== -1 && nextIdx !== currentIdx) {
@@ -263,6 +301,7 @@ export default function OrderFormModal({ order, onClose, onSuccess }) {
         } else {
             setIsScannerOpen(false);
             setScanTargetIndex(-1);
+            toast.success('Đã gán đủ mã bình!', { position: 'top-center' });
         }
     }, [scanTargetIndex]);
 
@@ -310,6 +349,7 @@ export default function OrderFormModal({ order, onClose, onSuccess }) {
         }
 
         if (isEdit && !editReason.trim()) {
+            setReasonSource('submit');
             setShowReasonModal(true);
             return;
         }
@@ -326,24 +366,34 @@ export default function OrderFormModal({ order, onClose, onSuccess }) {
             }
 
             const assignedSerials = formData.productType.startsWith('BINH')
-                ? assignedCylinders.map(c => typeof c === 'string' ? c : c.serial).filter(Boolean)
+                ? assignedCylinders.map(c => (typeof c === 'string' ? c : c?.serial)?.trim().toUpperCase()).filter(Boolean)
                 : [];
 
             // 1. VALIDATION: Check if cylinders exist and are in the correct warehouse
             if (assignedSerials.length > 0) {
+                // Check local duplicates first
+                const uniqueSerials = [...new Set(assignedSerials)];
+                if (uniqueSerials.length !== assignedSerials.length) {
+                    const counts = {};
+                    assignedSerials.forEach(s => counts[s] = (counts[s] || 0) + 1);
+                    const duplicates = Object.entries(counts).filter(([_, count]) => count > 1).map(([s]) => s);
+                    throw new Error(`Bạn đã nhập trùng mã bình: ${duplicates.join(', ')}. Mỗi mã bình chỉ được xuất hiện một lần trong một đơn hàng.`);
+                }
+
                 const { data: validCylinders, error: checkError } = await supabase
                     .from('cylinders')
                     .select('serial_number, warehouse_id, status')
-                    .in('serial_number', assignedSerials);
+                    .in('serial_number', uniqueSerials);
 
                 if (checkError) throw new Error('Lỗi kiểm tra mã bình: ' + checkError.message);
 
-                if (!validCylinders || validCylinders.length !== assignedSerials.length) {
-                    const foundSerials = validCylinders?.map(c => c.serial_number) || [];
-                    const missing = assignedSerials.filter(s => !foundSerials.includes(s));
+                if (!validCylinders || validCylinders.length !== uniqueSerials.length) {
+                    const foundSerials = validCylinders?.map(c => c.serial_number.toUpperCase()) || [];
+                    const missing = uniqueSerials.filter(s => !foundSerials.includes(s));
                     throw new Error(`Mã bình không tồn tại trong hệ thống: ${missing.join(', ')}`);
                 }
 
+                // Check warehouse consistency
                 const wrongWarehouse = validCylinders.filter(c => c.warehouse_id !== formData.warehouse);
                 if (wrongWarehouse.length > 0) {
                     throw new Error(`Mã bình sau không thuộc kho đã chọn: ${wrongWarehouse.map(c => c.serial_number).join(', ')}`);
@@ -351,6 +401,8 @@ export default function OrderFormModal({ order, onClose, onSuccess }) {
             }
 
             // 2. INVENTORY DEDUCTION (If direct DA_DUYET)
+            const customerNameWithDept = `${customerName}${formData.department ? ` / ${formData.department}` : ''}`;
+
             if (!isEdit && initialStatus === 'DA_DUYET') {
                 const productConfig = PRODUCT_TYPES.find(p => p.id === formData.productType);
                 const productLabel = productConfig ? productConfig.label : formData.productType;
@@ -370,7 +422,10 @@ export default function OrderFormModal({ order, onClose, onSuccess }) {
                 if (assignedSerials.length > 0) {
                     const { error: cylUpdErr } = await supabase
                         .from('cylinders')
-                        .update({ status: 'đang vận chuyển', customer_name: customerName })
+                        .update({ 
+                            status: 'đang vận chuyển', 
+                            customer_name: customerNameWithDept 
+                        })
                         .in('serial_number', assignedSerials);
                     if (cylUpdErr) throw new Error('Lỗi cập nhật trạng thái bình: ' + cylUpdErr.message);
                 }
@@ -460,11 +515,20 @@ export default function OrderFormModal({ order, onClose, onSuccess }) {
                 if (error) throw error;
 
                 if (inserted && inserted[0]) {
+                    const orderId = inserted[0].id;
                     await supabase.from('order_history').insert([{
-                        order_id: inserted[0].id,
+                        order_id: orderId,
                         action: 'CREATED',
                         new_status: initialStatus,
                         created_by: currentUser
+                    }]);
+
+                    // Create System Notification
+                    await supabase.from('notifications').insert([{
+                        title: `Đơn hàng mới: ${formData.orderCode}`,
+                        description: `Khách hàng ${customerName} đã được tạo bởi ${currentUser}.`,
+                        type: 'info',
+                        link: `/danh-sach-don-hang`
                     }]);
                 }
             }
@@ -478,32 +542,54 @@ export default function OrderFormModal({ order, onClose, onSuccess }) {
         }
     };
 
-    return (<>
-        <div className="fixed inset-0 bg-slate-900/55 backdrop-blur-sm flex items-stretch sm:items-center justify-center z-[100] p-0 sm:p-4 animate-in fade-in duration-200 [&_input]:!font-[600] [&_select]:!font-[600] [&_textarea]:!font-[600] [&_input]:!text-slate-800 [&_select]:!text-slate-800 [&_textarea]:!text-slate-800 [&_input::placeholder]:!text-slate-400 [&_textarea::placeholder]:!text-slate-400">
-            <div className="bg-slate-50 rounded-none sm:rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col h-[100dvh] sm:h-auto sm:max-h-[92vh] border-0 sm:border sm:border-slate-200">
+    return createPortal(
+        <>
+            <div className={clsx(
+                "fixed inset-0 z-[100005] flex justify-end transition-all duration-300",
+                isClosing ? "opacity-0 pointer-events-none" : "opacity-100"
+            )}>
+                {/* Backdrop */}
+                <div
+                    className={clsx(
+                        "absolute inset-0 bg-black/45 backdrop-blur-sm animate-in fade-in duration-300",
+                        isClosing && "animate-out fade-out duration-300"
+                    )}
+                    onClick={handleClose}
+                />
 
-                {/* Header */}
-                <div className="px-4 py-3.5 border-b border-slate-200 flex items-center justify-between shrink-0 bg-white sticky top-0 z-20">
-                    <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-600">
-                            {isEdit ? <Edit3 className="w-5 h-5" /> : <Package className="w-5 h-5" />}
+                {/* Panel */}
+                <div
+                    className={clsx(
+                        "relative bg-slate-50 shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col h-full border-l border-slate-200 animate-in slide-in-from-right duration-500",
+                        isClosing && "animate-out slide-out-to-right duration-300"
+                    )}
+                    onClick={(e) => e.stopPropagation()}
+                >
+
+                    {/* Header */}
+                    <div className="px-4 py-3.5 border-b border-slate-200 flex items-center justify-between shrink-0 bg-white sticky top-0 z-20">
+                        <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 bg-primary/10 rounded-full flex items-center justify-center text-primary">
+                                {isReadOnly ? <Package className="w-5 h-5" /> : isEdit ? <Edit3 className="w-5 h-5" /> : <Package className="w-5 h-5" />}
+                            </div>
+                            <div>
+                                <h3 className="text-[20px] leading-tight font-bold text-slate-900 tracking-tight">
+                                    {isReadOnly ? 'Chi tiết đơn hàng' : isEdit ? 'Chỉnh sửa đơn hàng' : 'Thêm đơn hàng'}
+                                </h3>
+                                <p className="text-slate-500 text-[12px] font-semibold mt-0.5">
+                                    Mã đơn: #{formData.orderCode}
+                                </p>
+                            </div>
                         </div>
-                        <div>
-                            <h3 className="text-[20px] leading-tight font-bold text-slate-900 tracking-tight">
-                                {isEdit ? 'Chỉnh sửa đơn hàng' : 'Thêm đơn hàng'}
-                            </h3>
-                            <p className="text-slate-500 text-[12px] font-semibold mt-0.5">
-                                Mã đơn: #{formData.orderCode}
-                            </p>
-                        </div>
+                        <button
+                            onClick={handleClose}
+                            className="p-2 text-primary hover:text-primary/90 hover:bg-primary/5 rounded-xl transition-all"
+                        >
+                            <X className="w-5 h-5" />
+                        </button>
                     </div>
-                    <button
-                        onClick={onClose}
-                        className="p-2 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 rounded-xl transition-all"
-                    >
-                        <X className="w-5 h-5" />
-                    </button>
-                </div>
+
+                    {/* Form Body - Rest of the component remains the same */}
 
                 {/* Form Body */}
                 <div className="p-5 sm:p-6 overflow-y-auto bg-slate-50 custom-scrollbar flex-1 min-h-0 pb-20 sm:pb-6">
@@ -515,15 +601,15 @@ export default function OrderFormModal({ order, onClose, onSuccess }) {
                     )}
 
                     <form id="orderForm" onSubmit={handleSubmit} className="space-y-6">
-                        <div className="rounded-3xl border border-emerald-100 bg-white p-5 sm:p-6 space-y-5 shadow-sm [&_label]:text-emerald-700 [&_label_svg]:text-emerald-600">
-                            <div className="flex items-center gap-2.5 pb-3 border-b border-emerald-100">
-                                <Package className="w-4 h-4 text-emerald-600" />
-                                <h4 className="text-[18px] !font-extrabold !text-emerald-700">Thông tin đơn hàng</h4>
+                        <div className="rounded-3xl border border-primary/20 bg-white p-5 sm:p-6 space-y-5 shadow-sm [&_label]:text-primary [&_label_svg]:text-primary/80">
+                            <div className="flex items-center gap-2.5 pb-3 border-b border-primary/10">
+                                <Package className="w-4 h-4 text-primary" />
+                                <h4 className="text-[18px] !font-extrabold !text-primary">Thông tin đơn hàng</h4>
                             </div>
 
                             <div className="space-y-4">
                                 <div className="space-y-1.5">
-                                    <label className="flex items-center gap-1.5 text-[14px] font-semibold text-slate-800"><Hash className="w-4 h-4 text-emerald-500" />Mã đơn hàng <span className="text-red-500">*</span></label>
+                                    <label className="flex items-center gap-1.5 text-[14px] font-semibold text-slate-800"><Hash className="w-4 h-4 text-primary/70" />Mã đơn hàng <span className="text-red-500">*</span></label>
                                     <input
                                         value={formData.orderCode}
                                         disabled
@@ -532,11 +618,11 @@ export default function OrderFormModal({ order, onClose, onSuccess }) {
                                 </div>
 
                                 <div className="space-y-1.5">
-                                    <label className="flex items-center gap-1.5 text-[14px] font-semibold text-slate-800"><User className="w-4 h-4 text-emerald-500" />Chọn khách hàng <span className="text-red-500">*</span></label>
+                                    <label className="flex items-center gap-1.5 text-[14px] font-semibold text-slate-800"><User className="w-4 h-4 text-primary/70" />Chọn khách hàng <span className="text-red-500">*</span></label>
                                     <div className="relative" ref={customerDropdownRef}>
                                         <div
-                                            className={`w-full h-12 px-4 border rounded-2xl text-[13px] transition-all cursor-pointer flex justify-between items-center ${isFetchingCustomers ? 'bg-slate-50 text-slate-400 border-slate-200 cursor-not-allowed' : 'bg-slate-50 border-slate-200 text-slate-900 hover:border-emerald-300'}`}
-                                            onClick={() => !isFetchingCustomers && setIsCustomerDropdownOpen(!isCustomerDropdownOpen)}
+                                            className={`w-full h-12 px-4 border rounded-2xl text-[13px] transition-all flex justify-between items-center ${isFetchingCustomers || isReadOnly ? 'bg-slate-50 text-slate-400 border-slate-200 cursor-not-allowed shadow-none' : 'bg-slate-50 border-slate-200 text-slate-900 hover:border-primary/40 cursor-pointer'}`}
+                                            onClick={() => !isFetchingCustomers && !isReadOnly && setIsCustomerDropdownOpen(!isCustomerDropdownOpen)}
                                         >
                                             <span className={formData.customerId ? 'font-semibold text-[13px]' : 'text-slate-500 font-semibold text-[13px]'}>
                                                 {isFetchingCustomers
@@ -545,13 +631,13 @@ export default function OrderFormModal({ order, onClose, onSuccess }) {
                                                         ? customers.find(c => c.id.toString() === formData.customerId.toString())?.name
                                                         : 'Chọn khách hàng trong hệ thống'}
                                             </span>
-                                            <ChevronDown className={`w-4 h-4 transition-transform ${isCustomerDropdownOpen ? 'rotate-180 text-emerald-600' : 'text-emerald-500'}`} />
+                                            {!isReadOnly && <ChevronDown className={`w-4 h-4 transition-transform ${isCustomerDropdownOpen ? 'rotate-180 text-primary' : 'text-primary/70'}`} />}
                                         </div>
 
                                         {isCustomerDropdownOpen && !isFetchingCustomers && (
                                             <div className="absolute z-50 w-full mt-1 bg-white border border-slate-300 shadow-xl max-h-64 overflow-hidden flex flex-col rounded-xl">
                                                 <div className="p-2 border-b border-slate-200 bg-slate-50 flex items-center gap-2 sticky top-0 z-10">
-                                                    <Search className="w-4 h-4 text-emerald-400" />
+                                                    <Search className="w-4 h-4 text-primary/50" />
                                                     <input
                                                         type="text"
                                                         className="w-full bg-transparent border-none outline-none text-sm font-semibold placeholder-slate-400 text-slate-700"
@@ -570,7 +656,7 @@ export default function OrderFormModal({ order, onClose, onSuccess }) {
                                                                 className={`px-4 py-2.5 cursor-pointer border-b border-slate-100 ${formData.customerId === customer.id ? 'bg-blue-50' : 'hover:bg-slate-50'}`}
                                                                 onClick={() => handleCustomerSelect(customer)}
                                                             >
-                                                                <div className={`font-semibold text-sm ${formData.customerId === customer.id ? 'text-blue-700' : 'text-slate-800'}`}>
+                                                                <div className={`font-semibold text-sm ${formData.customerId === customer.id ? 'text-primary' : 'text-slate-800'}`}>
                                                                     {customer.name}
                                                                 </div>
                                                                 <div className="text-xs text-slate-500 flex gap-3 mt-1">
@@ -589,47 +675,59 @@ export default function OrderFormModal({ order, onClose, onSuccess }) {
                                 </div>
 
                                 <div className="space-y-1.5">
-                                    <label className="flex items-center gap-1.5 text-[14px] font-semibold text-slate-800"><User className="w-4 h-4 text-emerald-500" />Tên người nhận <span className="text-red-500">*</span></label>
+                                    <label className="flex items-center gap-1.5 text-[14px] font-semibold text-slate-800"><User className="w-4 h-4 text-primary/70" />Tên người nhận <span className="text-red-500">*</span></label>
                                     <input
                                         name="recipientName"
                                         value={formData.recipientName}
                                         onChange={handleChange}
+                                        readOnly={isReadOnly}
                                         placeholder="Nhập tên người nhận"
-                                        className="w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-2xl text-[15px] font-semibold text-slate-800 focus:outline-none focus:ring-4 focus:ring-emerald-100 focus:border-emerald-400 focus:bg-white transition-all"
+                                        className={clsx(
+                                            "w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-2xl text-[15px] font-semibold transition-all",
+                                            isReadOnly ? "text-slate-500 cursor-default" : "text-slate-800 focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary/40 focus:bg-white"
+                                        )}
                                         required
                                     />
                                 </div>
 
                                 <div className="space-y-1.5">
-                                    <label className="flex items-center gap-1.5 text-[14px] font-semibold text-slate-800"><Phone className="w-4 h-4 text-emerald-500" />Số điện thoại <span className="text-red-500">*</span></label>
+                                    <label className="flex items-center gap-1.5 text-[14px] font-semibold text-slate-800"><Phone className="w-4 h-4 text-primary/70" />Số điện thoại <span className="text-red-500">*</span></label>
                                     <input
                                         name="recipientPhone"
                                         value={formData.recipientPhone}
                                         onChange={handleChange}
+                                        readOnly={isReadOnly}
                                         placeholder="09xxxxxxxx"
-                                        className="w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-2xl text-[15px] font-semibold text-slate-800 focus:outline-none focus:ring-4 focus:ring-emerald-100 focus:border-emerald-400 focus:bg-white transition-all"
+                                        className={clsx(
+                                            "w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-2xl text-[15px] font-semibold text-slate-800 transition-all",
+                                            isReadOnly ? "text-slate-500 cursor-default" : "focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary/40 focus:bg-white"
+                                        )}
                                         required
                                     />
                                 </div>
 
                                 <div className="space-y-1.5">
-                                    <label className="flex items-center gap-1.5 text-[14px] font-semibold text-slate-800"><MapPin className="w-4 h-4 text-emerald-500" />Địa chỉ giao hàng <span className="text-red-500">*</span></label>
+                                    <label className="flex items-center gap-1.5 text-[14px] font-semibold text-slate-800"><MapPin className="w-4 h-4 text-primary/70" />Địa chỉ giao hàng <span className="text-red-500">*</span></label>
                                     <input
                                         name="recipientAddress"
                                         value={formData.recipientAddress}
                                         onChange={handleChange}
+                                        readOnly={isReadOnly}
                                         placeholder="Nhập địa chỉ"
-                                        className="w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-2xl text-[15px] font-semibold text-slate-800 focus:outline-none focus:ring-4 focus:ring-emerald-100 focus:border-emerald-400 focus:bg-white transition-all"
+                                        className={clsx(
+                                            "w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-2xl text-[15px] font-semibold text-slate-800 transition-all",
+                                            isReadOnly ? "text-slate-500 cursor-default" : "focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary/40 focus:bg-white"
+                                        )}
                                         required
                                     />
                                 </div>
                             </div>
                         </div>
 
-                        <div className="rounded-3xl border border-green-100 bg-white p-5 sm:p-6 space-y-5 shadow-sm [&_label]:text-green-700 [&_label_svg]:text-green-600">
-                            <div className="flex items-center gap-2.5 pb-3 border-b border-green-100">
-                                <Edit3 className="w-4 h-4 text-green-600" />
-                                <h4 className="text-[18px] !font-extrabold !text-green-700">Vị trí & loại đơn</h4>
+                        <div className="rounded-3xl border border-primary/20 bg-white p-5 sm:p-6 space-y-5 shadow-sm [&_label]:text-primary [&_label_svg]:text-primary/80">
+                            <div className="flex items-center gap-2.5 pb-3 border-b border-primary/10">
+                                <Edit3 className="w-4 h-4 text-primary/80" />
+                                <h4 className="text-[18px] !font-extrabold !text-primary">Vị trí & loại đơn</h4>
                             </div>
 
                             <div className="space-y-4">
@@ -653,12 +751,16 @@ export default function OrderFormModal({ order, onClose, onSuccess }) {
                                             name="warehouse"
                                             value={formData.warehouse}
                                             onChange={handleChange}
-                                            className="w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-2xl font-semibold text-[15px] appearance-none focus:outline-none focus:ring-4 focus:ring-green-100 focus:border-green-400 focus:bg-white transition-all"
+                                            disabled={isReadOnly}
+                                            className={clsx(
+                                                "w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-2xl font-semibold text-[15px] appearance-none transition-all",
+                                                isReadOnly ? "text-slate-500 cursor-not-allowed" : "text-slate-800 focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary/40 focus:bg-white"
+                                            )}
                                         >
                                             <option value="">Chọn kho</option>
                                             {warehousesList.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
                                         </select>
-                                        <ChevronDown className="w-4 h-4 text-green-500 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                                        {!isReadOnly && <ChevronDown className="w-4 h-4 text-primary/70 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />}
                                     </div>
                                 </div>
 
@@ -669,11 +771,15 @@ export default function OrderFormModal({ order, onClose, onSuccess }) {
                                             name="productType"
                                             value={formData.productType}
                                             onChange={handleChange}
-                                            className="w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-2xl text-[15px] font-semibold text-slate-800 appearance-none focus:outline-none focus:ring-4 focus:ring-green-100 focus:border-green-400 focus:bg-white transition-all"
+                                            disabled={isReadOnly}
+                                            className={clsx(
+                                                "w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-2xl text-[15px] font-semibold appearance-none transition-all",
+                                                isReadOnly ? "text-slate-500 cursor-not-allowed" : "text-slate-800 focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary/40 focus:bg-white"
+                                            )}
                                         >
                                             {PRODUCT_TYPES.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}
                                         </select>
-                                        <ChevronDown className="w-4 h-4 text-green-500 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                                        {!isReadOnly && <ChevronDown className="w-4 h-4 text-primary/70 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />}
                                     </div>
                                 </div>
 
@@ -684,13 +790,17 @@ export default function OrderFormModal({ order, onClose, onSuccess }) {
                                             name="orderType"
                                             value={formData.orderType}
                                             onChange={handleChange}
-                                            className="w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-2xl text-[15px] font-semibold text-slate-800 appearance-none focus:outline-none focus:ring-4 focus:ring-green-100 focus:border-green-400 focus:bg-white transition-all"
+                                            disabled={isReadOnly}
+                                            className={clsx(
+                                                "w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-2xl text-[15px] font-semibold appearance-none transition-all",
+                                                isReadOnly ? "text-slate-500 cursor-not-allowed" : "text-slate-800 focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary/40 focus:bg-white"
+                                            )}
                                         >
                                             {ORDER_TYPES.map(item => (
                                                 <option key={item.id} value={item.id}>{item.label}</option>
                                             ))}
                                         </select>
-                                        <ChevronDown className="w-4 h-4 text-green-500 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                                        {!isReadOnly && <ChevronDown className="w-4 h-4 text-primary/70 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />}
                                     </div>
                                 </div>
 
@@ -701,16 +811,20 @@ export default function OrderFormModal({ order, onClose, onSuccess }) {
                                             type="text"
                                             value={formatNumber(formData.unitPrice)}
                                             onChange={handleUnitPriceChange}
-                                            className="w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-2xl text-[15px] font-semibold text-slate-800 focus:outline-none focus:ring-4 focus:ring-green-100 focus:border-green-400 focus:bg-white transition-all"
+                                            readOnly={isReadOnly}
+                                            className={clsx(
+                                                "w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-2xl text-[15px] font-semibold transition-all",
+                                                isReadOnly ? "text-slate-500 cursor-default" : "text-slate-800 focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary/40 focus:bg-white"
+                                            )}
                                         />
                                     </div>
                                     <div className="space-y-1.5">
-                                        <label className="text-[14px] font-semibold text-emerald-700">Thành tiền (VNĐ)</label>
+                                        <label className="text-[14px] font-semibold text-primary">Thành tiền (VNĐ)</label>
                                         <input
                                             type="text"
                                             disabled
                                             value={formatNumber(calculatedTotalAmount)}
-                                            className="w-full h-12 px-4 bg-emerald-50 border border-emerald-200 rounded-2xl text-[15px] font-semibold text-emerald-700 cursor-not-allowed"
+                                            className="w-full h-12 px-4 bg-primary/5 border border-primary/20 rounded-2xl text-[15px] font-semibold text-primary cursor-not-allowed"
                                         />
                                     </div>
                                 </div>
@@ -721,7 +835,11 @@ export default function OrderFormModal({ order, onClose, onSuccess }) {
                                         type="text"
                                         value={formatNumber(formData.quantity)}
                                         onChange={handleQuantityChange}
-                                        className="w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-2xl text-[15px] font-semibold text-slate-800 focus:outline-none focus:ring-4 focus:ring-green-100 focus:border-green-400 focus:bg-white transition-all"
+                                        readOnly={isReadOnly}
+                                        className={clsx(
+                                            "w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-2xl text-[15px] font-semibold transition-all",
+                                            isReadOnly ? "text-slate-500 cursor-default" : "text-slate-800 focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary/40 focus:bg-white"
+                                        )}
                                     />
                                 </div>
 
@@ -732,8 +850,12 @@ export default function OrderFormModal({ order, onClose, onSuccess }) {
                                             name="department"
                                             value={formData.department}
                                             onChange={handleChange}
+                                            readOnly={isReadOnly}
                                             placeholder="Ví dụ: Máy PlasmaRosy PR-01"
-                                            className="w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-2xl text-[15px] font-semibold text-slate-800 focus:outline-none focus:ring-4 focus:ring-green-100 focus:border-green-400 focus:bg-white transition-all"
+                                            className={clsx(
+                                                "w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-2xl text-[15px] font-semibold transition-all",
+                                                isReadOnly ? "text-slate-500 cursor-default" : "text-slate-800 focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary/40 focus:bg-white"
+                                            )}
                                         />
                                     </div>
                                 )}
@@ -745,7 +867,11 @@ export default function OrderFormModal({ order, onClose, onSuccess }) {
                                             name="promotion"
                                             value={formData.promotion}
                                             onChange={handleChange}
-                                            className="w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-2xl text-[15px] font-semibold text-slate-800 appearance-none focus:outline-none focus:ring-4 focus:ring-green-100 focus:border-green-400 focus:bg-white transition-all"
+                                            disabled={isReadOnly}
+                                            className={clsx(
+                                                "w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-2xl text-[15px] font-semibold appearance-none transition-all",
+                                                isReadOnly ? "text-slate-500 cursor-not-allowed" : "text-slate-800 focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary/40 focus:bg-white"
+                                            )}
                                         >
                                             <option value="">-- Không có mã khuyến mãi --</option>
                                             {promotionsList.map(p => (
@@ -754,7 +880,7 @@ export default function OrderFormModal({ order, onClose, onSuccess }) {
                                                 </option>
                                             ))}
                                         </select>
-                                        <ChevronDown className="w-4 h-4 text-green-500 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                                        {!isReadOnly && <ChevronDown className="w-4 h-4 text-primary/70 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />}
                                     </div>
                                     {freeCylinders > 0 && (
                                         <div className="mt-1 px-3 py-1.5 bg-orange-50 border border-orange-100 rounded-xl flex justify-between items-center text-[11px] font-bold text-orange-600">
@@ -765,18 +891,20 @@ export default function OrderFormModal({ order, onClose, onSuccess }) {
                                 </div>
 
                                 {formData.productType.startsWith('BINH') && formData.quantity > 0 && (
-                                    <div className="pt-3 mt-2 border-t border-emerald-100 space-y-4">
+                                    <div className="pt-3 mt-2 border-t border-primary/10 space-y-4">
                                         <div className="flex items-center justify-between">
-                                            <h5 className="text-[13px] !font-bold !text-emerald-700 flex items-center gap-2">
-                                                <ScanLine className="w-4 h-4 text-emerald-600" strokeWidth={2.5} /> Gán mã bình ({assignedCylinders.filter(c => typeof c === 'string' ? (c !== '') : (c?.serial !== '')).length}/{formData.quantity})
+                                            <h5 className="text-[13px] !font-bold !text-primary flex items-center gap-2">
+                                                <ScanLine className="w-4 h-4 text-primary/80" strokeWidth={2.5} /> Gán mã bình ({assignedCylinders.filter(c => typeof c === 'string' ? (c !== '') : (c?.serial !== '')).length}/{formData.quantity})
                                             </h5>
-                                            <button
-                                                type="button"
-                                                onClick={startScanAll}
-                                                className="px-3 py-1.5 bg-emerald-600 text-white text-[11px] font-bold rounded-lg hover:bg-emerald-700 transition-all flex items-center gap-1.5"
-                                            >
-                                                <ScanLine className="w-3.5 h-3.5 text-white" strokeWidth={2.5} /> Quét tất cả
-                                            </button>
+                                            {!isReadOnly && (
+                                                <button
+                                                    type="button"
+                                                    onClick={startScanAll}
+                                                    className="px-3 py-1.5 bg-primary text-white text-[11px] font-bold rounded-lg hover:bg-primary-700 transition-all flex items-center gap-1.5"
+                                                >
+                                                    <ScanLine className="w-3.5 h-3.5 text-white" strokeWidth={2.5} /> Quét tất cả
+                                                </button>
+                                            )}
                                         </div>
                                         <div className="space-y-3">
                                             {assignedCylinders.map((item, idx) => {
@@ -791,8 +919,9 @@ export default function OrderFormModal({ order, onClose, onSuccess }) {
                                                                 type="text"
                                                                 value={serial}
                                                                 onChange={(e) => handleCylinderSerialChange(idx, e.target.value)}
+                                                                readOnly={isReadOnly}
                                                                 onKeyDown={(e) => {
-                                                                    if (e.key === 'Enter' && e.target.value) {
+                                                                    if (!isReadOnly && e.key === 'Enter' && e.target.value) {
                                                                         const now = new Date();
                                                                         const timeStr = now.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', hour12: false });
                                                                         toast.success(`Đã nhận mã: ${e.target.value} (${timeStr})`, {
@@ -813,16 +942,21 @@ export default function OrderFormModal({ order, onClose, onSuccess }) {
                                                                     }
                                                                 }}
                                                                 placeholder={`Mã serial bình ${idx + 1}...`}
-                                                                className="flex-1 h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl font-semibold text-[13px] focus:outline-none focus:ring-2 focus:ring-emerald-100 focus:border-emerald-400 transition-all"
+                                                                className={clsx(
+                                                                    "flex-1 h-10 px-3 bg-slate-50 border border-slate-200 rounded-xl font-semibold text-[13px] transition-all",
+                                                                    isReadOnly ? "text-slate-500 cursor-default" : "focus:outline-none focus:ring-2 focus:ring-primary/10 focus:border-primary/40"
+                                                                )}
                                                             />
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => startScanner(idx)}
-                                                                className="p-2.5 bg-emerald-100 text-emerald-600 rounded-xl hover:bg-emerald-200 transition-all"
-                                                            >
-                                                                <ScanLine className="w-4 h-4 text-emerald-600" strokeWidth={2.5} />
-                                                            </button>
-                                                            {serial && (
+                                                            {!isReadOnly && (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => startScanner(idx)}
+                                                                    className="p-2.5 bg-primary/10 text-primary/80 rounded-xl hover:bg-primary/20 transition-all"
+                                                                >
+                                                                    <ScanLine className="w-4 h-4 text-primary/80" strokeWidth={2.5} />
+                                                                </button>
+                                                            )}
+                                                            {serial && !isReadOnly && (
                                                                 <button
                                                                     type="button"
                                                                     onClick={() => handleCylinderSerialChange(idx, '')}
@@ -834,7 +968,7 @@ export default function OrderFormModal({ order, onClose, onSuccess }) {
                                                         </div>
                                                         {scanTime && (
                                                             <div className="flex items-center gap-1 ml-7">
-                                                                <div className="flex items-center gap-1 px-2 py-0.5 bg-blue-500 rounded-md shadow-sm">
+                                                                <div className="flex items-center gap-1 px-2 py-0.5 bg-primary rounded-md shadow-sm">
                                                                     <Clock className="w-3 h-3 text-white" strokeWidth={2.5} />
                                                                     <span className="text-[10px] font-black tracking-wider text-white" style={{ color: 'white !important', WebkitTextFillColor: 'white' }}>
                                                                         ĐÃ QUÉT: {scanTime}
@@ -849,8 +983,8 @@ export default function OrderFormModal({ order, onClose, onSuccess }) {
                                     </div>
                                 )}
 
-                                <div className="pt-3 mt-2 border-t border-emerald-100 space-y-4 [&_label]:text-emerald-700 [&_label_svg]:text-emerald-600">
-                                    <h5 className="text-[13px] !font-bold !text-emerald-700">Phí giao hàng & đơn vị VC</h5>
+                                <div className="pt-3 mt-2 border-t border-primary/10 space-y-4 [&_label]:text-primary [&_label_svg]:text-primary/80">
+                                    <h5 className="text-[13px] !font-bold !text-primary">Phí giao hàng & đơn vị VC</h5>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                         <div className="space-y-1.5">
                                             <label className="text-[14px] font-semibold text-slate-800">Đơn vị vận chuyển</label>
@@ -859,14 +993,18 @@ export default function OrderFormModal({ order, onClose, onSuccess }) {
                                                     name="shipperId"
                                                     value={formData.shipperId}
                                                     onChange={handleChange}
-                                                    className="w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-2xl text-[15px] font-semibold text-slate-800 appearance-none focus:outline-none focus:ring-4 focus:ring-emerald-100 focus:border-emerald-400 focus:bg-white transition-all"
+                                                    disabled={isReadOnly}
+                                                    className={clsx(
+                                                        "w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-2xl text-[15px] font-semibold appearance-none transition-all",
+                                                        isReadOnly ? "text-slate-500 cursor-not-allowed" : "text-slate-800 focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary/40 focus:bg-white"
+                                                    )}
                                                 >
                                                     <option value="">Chọn đơn vị vận chuyển</option>
                                                     {shippersList.map(shipper => (
                                                         <option key={shipper.id} value={shipper.id}>{shipper.name}</option>
                                                     ))}
                                                 </select>
-                                                <ChevronDown className="w-4 h-4 text-emerald-500 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                                                {!isReadOnly && <ChevronDown className="w-4 h-4 text-primary/70 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />}
                                             </div>
                                         </div>
 
@@ -876,8 +1014,12 @@ export default function OrderFormModal({ order, onClose, onSuccess }) {
                                                 type="text"
                                                 value={formatNumber(formData.shippingFee)}
                                                 onChange={handleShippingFeeChange}
+                                                readOnly={isReadOnly}
                                                 placeholder="Nhập phí giao hàng"
-                                                className="w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-2xl text-[15px] font-semibold text-slate-800 focus:outline-none focus:ring-4 focus:ring-emerald-100 focus:border-emerald-400 focus:bg-white transition-all"
+                                                className={clsx(
+                                                    "w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-2xl text-[15px] font-semibold transition-all",
+                                                    isReadOnly ? "text-slate-500 cursor-default" : "text-slate-800 focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary/40 focus:bg-white"
+                                                )}
                                             />
                                         </div>
                                     </div>
@@ -889,9 +1031,13 @@ export default function OrderFormModal({ order, onClose, onSuccess }) {
                                         name="note"
                                         value={formData.note}
                                         onChange={handleChange}
+                                        readOnly={isReadOnly}
                                         rows={3}
                                         placeholder="Thông tin bổ sung"
-                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-[15px] font-semibold text-slate-800 resize-none focus:outline-none focus:ring-4 focus:ring-green-100 focus:border-green-400 focus:bg-white transition-all"
+                                        className={clsx(
+                                            "w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-[15px] font-semibold resize-none transition-all",
+                                            isReadOnly ? "text-slate-500 cursor-default" : "text-slate-800 focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary/40 focus:bg-white"
+                                        )}
                                     />
                                 </div>
                             </div>
@@ -903,75 +1049,113 @@ export default function OrderFormModal({ order, onClose, onSuccess }) {
                     <button
                         type="button"
                         onClick={onClose}
-                        className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-slate-300 bg-white text-slate-500 hover:text-slate-700 font-bold text-[15px] transition-colors outline-none"
+                        className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-slate-300 bg-white text-slate-500 hover:text-primary font-bold text-[15px] transition-colors outline-none"
                         disabled={isLoading}
                     >
                         Hủy
                     </button>
                     <button
-                        type="submit"
-                        form="orderForm"
+                        type={isReadOnly ? "button" : "submit"}
+                        form={isReadOnly ? undefined : "orderForm"}
                         disabled={isLoading}
-                        className="w-full md:flex-1 sm:w-auto px-6 py-3 bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-white text-[15px] font-bold rounded-xl shadow-lg shadow-emerald-200 transition-all flex items-center justify-center gap-2 border border-emerald-700/40 disabled:opacity-50"
+                        onClick={isReadOnly ? () => {
+                            setReasonSource('initial-edit');
+                            setShowReasonModal(true);
+                        } : undefined}
+                        className={clsx(
+                            "w-full md:flex-1 sm:w-auto px-6 py-3 font-bold text-[15px] rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 border disabled:opacity-50",
+                            isReadOnly 
+                                ? "bg-amber-500 text-white border-amber-600 hover:bg-amber-600 shadow-amber-200" 
+                                : "bg-primary text-white border-primary-700/40 hover:bg-primary-700 shadow-primary-200"
+                        )}
                     >
                         {isLoading ? (
                             <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
                         ) : (
-                            <Save className="w-4 h-4" />
+                            isReadOnly ? <Edit3 className="w-4 h-4" /> : <Save className="w-4 h-4" />
                         )}
-                        {isLoading ? 'Đang lưu đơn...' : isEdit ? 'Xác nhận cập nhật' : 'Xác nhận tạo đơn hàng'}
+                        {isLoading 
+                            ? 'Đang lưu đơn...' 
+                            : isReadOnly 
+                                ? 'Sửa đơn' 
+                                : isEdit ? 'Xác nhận cập nhật' : 'Xác nhận tạo đơn hàng'}
                     </button>
                 </div>
 
+                </div>
             </div>
-        </div>
 
-        {/* Edit Reason Modal */}
-        {
-            showReasonModal && (
-                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[200] flex items-center justify-center p-4">
-                    <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-4">
-                        <h3 className="text-lg font-black text-gray-900">📝 Lý do chỉnh sửa</h3>
-                        <p className="text-sm text-gray-500 font-semibold">Vui lòng nhập lý do chỉnh sửa đơn hàng.</p>
-                        <textarea
-                            rows="3"
-                            value={editReason}
-                            onChange={(e) => setEditReason(e.target.value)}
-                            placeholder="Ví dụ: Khách yêu cầu thay đổi..."
-                            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 font-semibold text-sm resize-none"
-                            autoFocus
-                        />
-                        <div className="flex gap-3 justify-end">
+            {/* Edit Reason Modal */}
+            {showReasonModal && (
+                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[110000] flex items-center justify-center p-4 animate-in fade-in duration-300">
+                    <div className="bg-white rounded-[2rem] shadow-2xl max-w-md w-full p-8 space-y-6 animate-in zoom-in-95 duration-300 border border-slate-100">
+                        <div className="flex flex-col items-center text-center space-y-4">
+                            <div className="w-16 h-16 bg-amber-50 rounded-2xl flex items-center justify-center text-amber-500 border border-amber-100 shadow-sm">
+                                <Edit3 className="w-8 h-8" />
+                            </div>
+                            <div className="space-y-1">
+                                <h3 className="text-xl font-black text-slate-900 tracking-tight">Lý do chỉnh sửa</h3>
+                                <p className="text-[13px] text-slate-500 font-bold leading-relaxed px-4">Để đảm bảo tính minh bạch, vui lòng nhập lý do bạn thực hiện thay đổi đơn hàng này.</p>
+                            </div>
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Nội dung thay đổi</label>
+                            <textarea
+                                rows="3"
+                                value={editReason}
+                                onChange={(e) => setEditReason(e.target.value)}
+                                placeholder="Ví dụ: Thay đổi số lượng theo yêu cầu khách, cập nhật địa chỉ mới..."
+                                className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary/40 font-bold text-[15px] text-slate-700 resize-none transition-all placeholder:text-slate-300"
+                                autoFocus
+                            />
+                        </div>
+
+                        <div className="flex gap-4 pt-2">
                             <button
                                 onClick={() => setShowReasonModal(false)}
-                                className="px-5 py-2.5 bg-gray-100 text-gray-600 rounded-xl font-bold text-sm hover:bg-gray-200 transition-colors"
+                                className="flex-1 px-6 py-3 bg-white text-slate-500 border border-slate-200 rounded-xl font-black text-[14px] uppercase tracking-wider hover:bg-slate-50 transition-all active:scale-95"
                             >
-                                Hủy
+                                Hủy bỏ
                             </button>
                             <button
                                 onClick={() => {
                                     if (!editReason.trim()) {
-                                        alert('Vui lòng nhập lý do!');
+                                        toast.warning('Vui lòng nhập lý do!', {
+                                            position: "top-center",
+                                            autoClose: 2000,
+                                            hideProgressBar: true,
+                                            theme: "colored"
+                                        });
                                         return;
                                     }
                                     setShowReasonModal(false);
-                                    document.getElementById('orderForm').requestSubmit();
+                                    if (reasonSource === 'initial-edit') {
+                                        setMode('edit');
+                                    } else {
+                                        // Use requestSubmit instead of submit to trigger HTML5 validation
+                                        document.getElementById('orderForm').requestSubmit();
+                                    }
                                 }}
-                                className="px-5 py-2.5 bg-blue-600 text-white rounded-xl font-bold text-sm hover:bg-blue-700 transition-colors"
+                                className="flex-1 px-6 py-3 bg-primary text-white rounded-xl font-black text-[14px] uppercase tracking-wider hover:bg-primary-700 shadow-lg shadow-primary/20 transition-all active:scale-95 flex items-center justify-center gap-2"
                             >
-                                Xác nhận & Lưu
+                                <Save className="w-4 h-4" />
+                                Lưu thay đổi
                             </button>
                         </div>
                     </div>
                 </div>
-            )
-        }
-        <BarcodeScanner
-            isOpen={isScannerOpen}
-            onScanSuccess={handleScanSuccess}
-            onClose={() => setIsScannerOpen(false)}
-            title={scanTargetIndex !== -1 ? `Quét mã bình #${scanTargetIndex + 1}` : 'Quét mã bình'}
-            scan_time={new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', hour12: false })}
-        />
-    </>);
+            )}
+
+            <BarcodeScanner
+                isOpen={isScannerOpen}
+                onScanSuccess={handleScanSuccess}
+                onClose={() => setIsScannerOpen(false)}
+                className="z-[110005]"
+                title={scanTargetIndexRef.current !== -1 ? `Quét mã bình #${scanTargetIndexRef.current + 1}` : 'Quét mã bình'}
+                scan_time={new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', hour12: false })}
+            />
+        </>,
+        document.body
+    );
 }

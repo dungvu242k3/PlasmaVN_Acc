@@ -189,7 +189,7 @@ textarea::placeholder {
   font-weight: 400 !important;
 }
 
-/* Specific Legibility for "Create/Add" forms - Labels and Headers */
+/* Optimized Legibility for "Create/Add" forms - Labels and Headers */
 label,
 h1,
 h2,
@@ -198,20 +198,20 @@ h4,
 h5,
 h6,
 [class*="tracking-"],
-[class*="uppercase"],
-.text-blue-600,
-.text-indigo-600,
-.text-blue-700,
-.text-slate-500,
-.text-slate-400,
-.text-gray-500,
-.text-gray-400 {
+[class*="uppercase"] {
   font-weight: 600 !important;
-  /* Bold for form headers and labels */
+  /* Default to black ONLY if no color class is present */
+}
+
+label:not([class*="text-"]),
+h1:not([class*="text-"]),
+h2:not([class*="text-"]),
+h3:not([class*="text-"]),
+h4:not([class*="text-"]),
+h5:not([class*="text-"]),
+h6:not([class*="text-"]) {
   color: #000000 !important;
   opacity: 1 !important;
-  letter-spacing: 0.05em !important;
-  /* Reduce excessive spacing for clarity */
 }
 
 @layer utilities {
@@ -557,4 +557,9 @@ h6,
     min-height: 280px;
     background: #000;
   }
+}
+
+/* Ensure Toasts are always on top of modals */
+.Toastify__toast-container {
+  z-index: 200000 !important;
 }

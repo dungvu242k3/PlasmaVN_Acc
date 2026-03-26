@@ -142,7 +142,7 @@ const dashboardModules = [
     icon: FileText,
     title: 'Tạo phiếu xuất trả',
     description: 'Lập phiếu xuất mới: chọn kho, NCC nhận và điền hàng hóa cần trả.',
-    href: '/tao-phieu-xuat',
+    href: '/xuat-tra-ncc',
     colorScheme: 'orange',
   },
   {

@@ -30,10 +30,10 @@ const ColumnToggle = ({ columns, visibleColumns, onToggle, onReset, visibleCount
             <button
                 onClick={() => setIsOpen(!isOpen)}
                 className={`flex items-center gap-2 px-4 py-3.5 rounded-2xl border text-sm font-bold transition-all outline-none ${isOpen
-                        ? 'bg-slate-800 text-white border-slate-800 shadow-xl'
-                        : allVisible
-                            ? 'bg-slate-50/50 text-slate-500 border-transparent hover:bg-slate-100 hover:text-slate-700 shadow-inner'
-                            : 'bg-blue-50 text-blue-600 border-blue-100 hover:bg-blue-100 shadow-sm'
+                    ? 'bg-slate-800 text-white border-slate-800 shadow-xl'
+                    : allVisible
+                        ? 'bg-slate-50/50 text-slate-500 border-transparent hover:bg-slate-100 hover:text-slate-700 shadow-inner'
+                        : 'bg-blue-50 text-blue-600 border-blue-100 hover:bg-blue-100 shadow-sm'
                     }`}
                 title="Chọn cột hiển thị"
             >
@@ -76,8 +76,8 @@ const ColumnToggle = ({ columns, visibleColumns, onToggle, onReset, visibleCount
                                         }`}
                                 >
                                     <div className={`w-5 h-5 rounded-lg border-2 flex items-center justify-center transition-all ${isVisible
-                                            ? 'bg-slate-800 border-slate-800'
-                                            : 'bg-white border-slate-200 group-hover:border-slate-400'
+                                        ? 'bg-slate-800 border-slate-800'
+                                        : 'bg-white border-slate-200 group-hover:border-slate-400'
                                         }`}>
                                         {isVisible && (
                                             <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>

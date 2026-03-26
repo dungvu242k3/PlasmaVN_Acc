@@ -557,10 +557,10 @@ const Suppliers = () => {
                                         setSelectedSupplier(null);
                                         setIsFormModalOpen(true);
                                     }}
-                                    className="flex items-center gap-2 px-6 py-1.5 rounded-xl bg-primary text-white text-[13px] font-bold hover:bg-primary/90 shadow-md shadow-primary/20 transition-all"
+                                    className="flex items-center gap-2 px-6 py-2 rounded-xl bg-gradient-to-r from-primary to-primary/80 text-white text-[13px] font-black tracking-wider hover:scale-[1.02] active:scale-95 shadow-lg shadow-primary/20 transition-all"
                                 >
                                     <Plus size={18} />
-                                    Thêm
+                                    Thêm NCC
                                 </button>
 
                                 {selectedIds.length > 0 && (
@@ -616,14 +616,14 @@ const Suppliers = () => {
                                         />
                                     </th>
                                     {visibleTableColumns.map(col => (
-                                        <th key={col.key} className={clsx('px-4 py-3.5 text-[12px] font-bold text-muted-foreground text-left uppercase tracking-wide', col.key === 'name' && 'border-r border-primary/30')}>
+                                        <th key={col.key} className={clsx('px-4 py-4 text-[10px] font-black text-muted-foreground text-left uppercase tracking-widest', col.key === 'name' && 'border-r border-primary/20')}>
                                             {col.label}
                                         </th>
                                     ))}
-                                    <th className="px-4 py-3.5 text-[12px] font-bold text-muted-foreground text-center uppercase tracking-wide border-l border-r border-primary/30">Thao tác</th>
+                                    <th className="px-4 py-4 text-[10px] font-black text-muted-foreground text-center uppercase tracking-widest border-l border-primary/20">Quản trị</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-primary/10">
+                            <tbody className="divide-y divide-primary/5">
                                 {isLoading ? (
                                     <tr>
                                         <td colSpan={visibleTableColumns.length + 1} className="px-4 py-16 text-center text-muted-foreground">
@@ -638,10 +638,10 @@ const Suppliers = () => {
                                     </tr>
                                 ) : filteredSuppliers.map((supplier) => (
                                     <tr key={supplier.id} className={clsx(
-                                        getRowStyle(),
-                                        selectedIds.includes(supplier.id) && "bg-primary/[0.04]"
+                                        "hover:bg-primary/[0.02] transition-colors group",
+                                        selectedIds.includes(supplier.id) && "bg-primary/[0.05]"
                                     )}>
-                                        <td className="w-12 px-4 py-4 text-center border-r border-primary/20">
+                                        <td className="w-12 px-4 py-4 text-center border-r border-primary/10">
                                             <input
                                                 type="checkbox"
                                                 checked={selectedIds.includes(supplier.id)}
@@ -649,20 +649,20 @@ const Suppliers = () => {
                                                 className="w-5 h-5 rounded-md border-border text-primary focus:ring-primary/20 transition-all cursor-pointer"
                                             />
                                         </td>
-                                        {isColumnVisible('name') && <td className={getNameCellClass()}>{supplier.name || '—'}</td>}
-                                        {isColumnVisible('phone') && <td className="px-4 py-4 text-sm text-muted-foreground">{supplier.phone || '—'}</td>}
-                                        {isColumnVisible('address') && <td className="px-4 py-4 text-sm text-muted-foreground">{supplier.address || '—'}</td>}
-                                        <td className="px-4 py-4 text-center border-l border-r border-primary/20">
-                                            <div className="flex items-center justify-center gap-3">
-                                                <button onClick={() => handleViewSupplier(supplier)} className="text-blue-600/80 hover:text-blue-700 transition-colors p-1 rounded hover:bg-blue-50" title="Xem chi tiết">
-                                                    <Eye className="w-4 h-4" />
+                                        {isColumnVisible('name') && <td className="px-4 py-4 text-[13px] font-black text-slate-800 border-r border-primary/10">{supplier.name || '—'}</td>}
+                                        {isColumnVisible('phone') && <td className="px-4 py-4 text-[13px] font-bold text-slate-500 tabular-nums">{supplier.phone || '—'}</td>}
+                                        {isColumnVisible('address') && <td className="px-4 py-4 text-[13px] font-bold text-slate-500">{supplier.address || '—'}</td>}
+                                        <td className="px-4 py-4 text-center border-l border-primary/10">
+                                            <div className="flex items-center justify-center gap-1.5 opacity-60 group-hover:opacity-100 transition-opacity">
+                                                <button onClick={() => handleViewSupplier(supplier)} className="w-9 h-9 rounded-xl flex items-center justify-center text-primary/80 hover:bg-primary/5 ring-1 ring-transparent hover:ring-primary/10 transition-all font-bold" title="Xem chi tiết">
+                                                    <Eye className="w-4.5 h-4.5" />
                                                 </button>
-                                                <button onClick={() => handleEditSupplier(supplier)} className="text-amber-600/80 hover:text-amber-700 transition-colors p-1 rounded hover:bg-amber-50" title="Chỉnh sửa">
-                                                    <Edit className="w-4 h-4" />
+                                                <button onClick={() => handleEditSupplier(supplier)} className="w-9 h-9 rounded-xl flex items-center justify-center text-amber-600/80 hover:bg-amber-50 ring-1 ring-transparent hover:ring-amber-200 transition-all font-bold" title="Chỉnh sửa">
+                                                    <Edit className="w-4.5 h-4.5" />
                                                 </button>
                                                 {(role === 'admin' || role === 'manager') && (
-                                                    <button onClick={() => handleDeleteSupplier(supplier.id, supplier.name)} className="text-red-600/80 hover:text-red-700 transition-colors p-1 rounded hover:bg-red-50" title="Xóa">
-                                                        <Trash2 className="w-4 h-4" />
+                                                    <button onClick={() => handleDeleteSupplier(supplier.id, supplier.name)} className="w-9 h-9 rounded-xl flex items-center justify-center text-rose-600/80 hover:bg-rose-50 ring-1 ring-transparent hover:ring-rose-200 transition-all font-bold" title="Xóa">
+                                                        <Trash2 className="w-4.5 h-4.5" />
                                                     </button>
                                                 )}
                                             </div>
@@ -728,14 +728,15 @@ const Suppliers = () => {
 
                         <div className="px-3 md:px-4 pt-4 md:pt-5 pb-5 md:pb-6 space-y-5">
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                                <div className="bg-blue-50 rounded-2xl p-3.5 md:p-5 shadow-sm col-span-1">
-                                    <div className="flex items-center justify-start gap-3 md:gap-4">
-                                        <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center shrink-0">
-                                            <Building2 className="w-5 h-5 md:w-6 md:h-6 text-blue-600" />
+                                <div className="bg-primary/5 rounded-2xl p-3.5 md:p-5 shadow-sm col-span-1 border border-primary/10 relative overflow-hidden group">
+                                    <div className="absolute top-0 right-0 w-24 h-24 bg-primary/10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2"></div>
+                                    <div className="flex items-center justify-start gap-3 md:gap-4 relative z-10">
+                                        <div className="w-12 h-12 bg-primary/20 rounded-2xl flex items-center justify-center shrink-0 border border-primary/20 shadow-sm">
+                                            <Building2 className="w-5 h-5 md:w-6 md:h-6 text-primary" />
                                         </div>
                                         <div>
-                                            <p className="text-[11px] font-semibold text-blue-600 uppercase tracking-wider">Tổng NCC</p>
-                                            <p className="text-[34px] md:text-3xl font-bold text-blue-900 mt-0.5 md:mt-1 leading-none">{formatNumber(filteredSuppliersCount)}</p>
+                                            <p className="text-[11px] font-black text-primary/70 uppercase tracking-wider">Tổng NCC</p>
+                                            <p className="text-[34px] md:text-3xl font-black text-slate-800 mt-0.5 md:mt-1 leading-none">{formatNumber(filteredSuppliersCount)}</p>
                                         </div>
                                     </div>
                                 </div>

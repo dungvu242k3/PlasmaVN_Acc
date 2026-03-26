@@ -15,6 +15,8 @@ const colorMap = {
   emerald: 'bg-emerald-500/10 text-emerald-500',
   amber: 'bg-amber-500/10 text-amber-500',
   slate: 'bg-slate-500/10 text-slate-500',
+  gray: 'bg-gray-500/10 text-gray-500',
+  yellow: 'bg-yellow-500/10 text-yellow-500',
 };
 
 export const ModuleCard = ({

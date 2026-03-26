@@ -415,7 +415,7 @@ const Promotions = () => {
     );
 
     const getCodeCellClass = (statusLabel) => clsx(
-        'px-4 py-4 text-sm font-semibold text-foreground border-r border-primary/20 border-l-4',
+        'px-4 py-3 text-sm font-black text-slate-800 border-r border-slate-100 border-l-4',
         statusLabel === 'Đang hoạt động' && 'border-l-emerald-400',
         statusLabel === 'Hết hạn' && 'border-l-rose-400',
         statusLabel === 'Vô hiệu' && 'border-l-slate-400',
@@ -752,11 +752,11 @@ const Promotions = () => {
                                         />
                                     </th>
                                     {visibleTableColumns.map(col => (
-                                        <th key={col.key} className={clsx('px-4 py-3.5 text-[12px] font-bold text-muted-foreground uppercase tracking-wide', col.key === 'content' || col.key === 'status' || col.key === 'active' ? 'text-center' : 'text-left', col.key === 'code' && 'border-l border-r border-primary/30')}>
+                                        <th key={col.key} className={clsx('px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]', col.key === 'content' || col.key === 'status' || col.key === 'active' ? 'text-center' : 'text-left')}>
                                             {col.label}
                                         </th>
                                     ))}
-                                    <th className="px-4 py-3.5 text-[12px] font-bold text-muted-foreground text-center uppercase tracking-wide border-l border-r border-primary/30">Thao tác</th>
+                                    <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] text-center border-l border-slate-100">Thao tác</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-primary/10">
@@ -785,28 +785,28 @@ const Promotions = () => {
                                                 />
                                             </td>
                                             {isColumnVisible('code') && <td className={getCodeCellClass(status.label)}>{promo.code}</td>}
-                                            {isColumnVisible('content') && <td className="px-4 py-4 text-sm font-semibold text-foreground text-center">+ {promo.free_cylinders || 0} bình khí</td>}
-                                            {isColumnVisible('period') && <td className="px-4 py-4 text-sm text-muted-foreground">{formatDate(promo.start_date)} — {formatDate(promo.end_date)}</td>}
-                                            {isColumnVisible('target') && <td className="px-4 py-4 text-sm text-muted-foreground">{promo.customer_type || '—'}</td>}
+                                            {isColumnVisible('content') && <td className="px-4 py-3 text-sm font-semibold text-foreground text-center">+ {promo.free_cylinders || 0} bình khí</td>}
+                                            {isColumnVisible('period') && <td className="px-4 py-3 text-sm text-slate-500 font-bold">{formatDate(promo.start_date)} — {formatDate(promo.end_date)}</td>}
+                                            {isColumnVisible('target') && <td className="px-4 py-3 text-sm text-slate-500 font-bold">{promo.customer_type || '—'}</td>}
                                             {isColumnVisible('status') && (
-                                                <td className="px-4 py-4 text-center">
-                                                    <span className={clsx('px-2.5 py-1 rounded-full text-[11px] font-bold border', status.style)}>{status.label}</span>
+                                                <td className="px-4 py-3 text-center">
+                                                    <span className={clsx('px-2.5 py-1 rounded-full text-[10px] font-black border uppercase tracking-wider', status.style)}>{status.label}</span>
                                                 </td>
                                             )}
                                             {isColumnVisible('active') && (
-                                                <td className="px-4 py-4 text-center">
+                                                <td className="px-4 py-3 text-center">
                                                     <label className="relative inline-flex items-center cursor-pointer">
                                                         <input type="checkbox" className="sr-only peer" checked={promo.is_active} onChange={() => handleToggleActive(promo.id, promo.is_active)} />
-                                                        <div className="w-11 h-6 bg-muted peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:border-border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                                                        <div className="w-10 h-5.5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:border-slate-300 after:rounded-full after:h-4.5 after:w-4.5 after:transition-all peer-checked:bg-primary"></div>
                                                     </label>
                                                 </td>
                                             )}
-                                            <td className="px-4 py-4 text-center border-l border-r border-primary/20">
+                                            <td className="px-4 py-3 text-center border-l border-slate-100">
                                                 <div className="flex items-center justify-center gap-3">
-                                                    <button onClick={() => handleEditPromo(promo)} className="text-amber-600/80 hover:text-amber-700 transition-colors p-1 rounded hover:bg-amber-50" title="Chỉnh sửa">
+                                                    <button onClick={() => handleEditPromo(promo)} className="text-primary hover:text-primary/70 transition-colors p-1.5 rounded-lg hover:bg-primary/5" title="Chỉnh sửa">
                                                         <Edit className="w-4 h-4" />
                                                     </button>
-                                                    <button onClick={() => handleDeletePromo(promo.id, promo.code)} className="text-red-600/80 hover:text-red-700 transition-colors p-1 rounded hover:bg-red-50" title="Xóa">
+                                                    <button onClick={() => handleDeletePromo(promo.id, promo.code)} className="text-red-500 hover:text-red-600 transition-colors p-1.5 rounded-lg hover:bg-red-50" title="Xóa">
                                                         <Trash2 className="w-4 h-4" />
                                                     </button>
                                                 </div>
@@ -850,7 +850,7 @@ const Promotions = () => {
             )}
 
             {activeView === 'stats' && (
-                <div className="bg-white rounded-2xl border border-border shadow-sm flex flex-col flex-1 min-h-0 w-full">
+                <div className="bg-white rounded-2xl border border-border shadow-sm flex flex-col w-full">
                     <div className="space-y-0">
                         <div className="md:hidden flex items-center gap-2 p-3 border-b border-border">
                             <button
@@ -985,40 +985,40 @@ const Promotions = () => {
                             </div>
                         </div>
 
-                        <div className="px-3 md:px-4 pt-4 md:pt-5 pb-5 md:pb-6 space-y-5">
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                                <div className="bg-blue-50 rounded-2xl p-3.5 md:p-5 shadow-sm col-span-1">
-                                    <div className="flex items-center justify-start gap-3 md:gap-4">
-                                        <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center shrink-0">
+                        <div className="w-full px-3 md:px-4 pt-4 md:pt-5 pb-5 md:pb-6 space-y-5">
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                <div className="bg-blue-50/70 border border-blue-100 rounded-2xl p-4 md:p-5 shadow-sm col-span-2 md:col-span-1">
+                                    <div className="flex flex-row md:flex-row items-center justify-center md:justify-start text-center md:text-left gap-3 md:gap-4">
+                                        <div className="w-10 h-10 md:w-12 md:h-12 bg-blue-100/80 rounded-full flex items-center justify-center shrink-0 ring-1 ring-blue-200/70">
                                             <Gift className="w-5 h-5 md:w-6 md:h-6 text-blue-600" />
                                         </div>
                                         <div>
-                                            <p className="text-[11px] font-semibold text-blue-600 uppercase tracking-wider">Tổng KM</p>
-                                            <p className="text-[34px] md:text-3xl font-bold text-blue-900 mt-0.5 md:mt-1 leading-none">{formatNumber(filteredPromotionsCount)}</p>
+                                            <p className="text-[10px] md:text-[11px] font-semibold text-blue-600 uppercase tracking-wider">Tổng KM</p>
+                                            <p className="text-2xl md:text-3xl font-bold text-foreground mt-0.5 md:mt-1 leading-none">{formatNumber(filteredPromotionsCount)}</p>
                                         </div>
                                     </div>
                                 </div>
 
-                                <div className="bg-green-50 rounded-2xl p-3.5 md:p-5 shadow-sm col-span-1">
-                                    <div className="flex items-center justify-start gap-3 md:gap-4">
-                                        <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center shrink-0">
+                                <div className="bg-green-50/70 border border-green-100 rounded-2xl p-4 md:p-5 shadow-sm">
+                                    <div className="flex flex-col md:flex-row items-center md:items-center justify-center md:justify-start text-center md:text-left gap-3 md:gap-4">
+                                        <div className="w-10 h-10 md:w-12 md:h-12  bg-green-100/80 rounded-full flex items-center justify-center shrink-0 ring-1 ring-green-200/70">
                                             <BarChart2 className="w-5 h-5 md:w-6 md:h-6 text-green-600" />
                                         </div>
                                         <div>
-                                            <p className="text-[11px] font-semibold text-green-600 uppercase tracking-wider">Hoạt động</p>
-                                            <p className="text-[34px] md:text-3xl font-bold text-green-900 mt-0.5 md:mt-1 leading-none">{formatNumber(activeCount)}</p>
+                                            <p className="text-[10px] md:text-[11px] font-semibold text-green-600 uppercase tracking-wider">Hoạt động</p>
+                                            <p className="text-2xl md:text-3xl font-bold text-foreground mt-0.5 md:mt-1 leading-none">{formatNumber(activeCount)}</p>
                                         </div>
                                     </div>
                                 </div>
 
-                                <div className="bg-orange-50 rounded-2xl p-3.5 md:p-5 shadow-sm col-span-1">
-                                    <div className="flex items-center justify-start gap-3 md:gap-4">
-                                        <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center shrink-0">
-                                            <Filter className="w-5 h-5 md:w-6 md:h-6 text-orange-600" />
+                                <div className="bg-amber-50/70 border border-amber-100 rounded-2xl p-4 md:p-5 shadow-sm">
+                                    <div className="flex flex-col md:flex-row items-center md:items-center justify-center md:justify-start text-center md:text-left gap-3 md:gap-4">
+                                        <div className="w-10 h-10 md:w-12 md:h-12  bg-amber-100/80 rounded-full flex items-center justify-center shrink-0 ring-1 ring-amber-200/70">
+                                            <Filter className="w-5 h-5 md:w-6 md:h-6 text-amber-600" />
                                         </div>
                                         <div>
-                                            <p className="text-[11px] font-semibold text-orange-600 uppercase tracking-wider">Hết hạn / Vô hiệu</p>
-                                            <p className="text-[34px] md:text-3xl font-bold text-orange-900 mt-0.5 md:mt-1 leading-none">{formatNumber(expiredCount)}</p>
+                                            <p className="text-[10px] md:text-[11px] font-semibold text-amber-600 uppercase tracking-wider">Khác</p>
+                                            <p className="text-2xl md:text-3xl font-bold text-foreground mt-0.5 md:mt-1 leading-none">{formatNumber(expiredCount)}</p>
                                         </div>
                                     </div>
                                 </div>

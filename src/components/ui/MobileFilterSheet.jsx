@@ -93,7 +93,7 @@ const MobileFilterSheet = ({
   };
 
   return createPortal(
-    <div className={clsx('fixed inset-0 z-9999 flex flex-col justify-end', !showDesktop && 'md:hidden')}>
+    <div className={clsx('fixed inset-0 z-[100005] flex flex-col justify-end', !showDesktop && 'md:hidden')}>
       <div
         className={clsx('absolute inset-0 bg-black/25 transition-opacity duration-300', isClosing ? 'opacity-0' : 'opacity-100')}
         onClick={onClose}

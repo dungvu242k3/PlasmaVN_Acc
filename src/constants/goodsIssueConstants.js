@@ -21,6 +21,7 @@ export const ISSUE_TABLE_COLUMNS = [
     { key: 'supplier_id', label: 'Đơn vị nhận (NCC)' },
     { key: 'warehouse_id', label: 'Từ kho' },
     { key: 'total_items', label: 'Khối lượng/Số lượng' },
+    { key: 'notes', label: 'Ghi chú' },
     { key: 'created_by', label: 'Người tạo' },
     { key: 'status', label: 'Trạng thái' },
 ];

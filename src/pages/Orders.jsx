@@ -934,7 +934,7 @@ const Orders = () => {
                             <button
                                 onClick={() => {
                                     setOrderToEdit(null);
-                                    navigate('/tao-don-hang');
+                                    setIsFormModalOpen(true);
                                 }}
                                 className="flex items-center gap-2 px-6 py-1.5 rounded-xl bg-primary text-white text-[13px] font-bold hover:bg-primary/90 shadow-md shadow-primary/20 transition-all"
                             >
@@ -1155,7 +1155,7 @@ const Orders = () => {
                                         {col.label}
                                     </th>
                                 ))}
-                                <th className="sticky right-0 z-[9999] bg-[#F1F5FF] px-4 py-3.5 text-[12px] font-bold text-muted-foreground text-center uppercase tracking-wide shadow-[-6px_0_10px_-8px_rgba(15,23,42,0.35)] before:content-[''] before:absolute before:left-0 before:top-0 before:bottom-0 before:w-[3px] before:bg-slate-300">Thao tác</th>
+                                <th className="sticky right-0 z-30 bg-[#F1F5FF] px-4 py-3.5 text-[12px] font-bold text-muted-foreground text-center uppercase tracking-wide shadow-[-6px_0_10px_-8px_rgba(15,23,42,0.35)] before:content-[''] before:absolute before:left-0 before:top-0 before:bottom-0 before:w-[3px] before:bg-slate-300">Thao tác</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-primary/10">
@@ -1325,7 +1325,7 @@ const Orders = () => {
             )}
 
             {activeView === 'stats' && (
-                <div className="bg-white rounded-2xl border border-border shadow-sm flex flex-col flex-1 min-h-0 w-full">
+                <div className="bg-white rounded-2xl border border-border shadow-sm flex flex-col w-full">
                     <div className="space-y-0">
                         {/* Mobile Header */}
                         <div className="md:hidden flex items-center gap-2 p-3 border-b border-border">
@@ -1536,7 +1536,7 @@ const Orders = () => {
                             </div>
                         </div>
 
-                        <div className="px-3 md:px-4 pt-4 md:pt-5 pb-5 md:pb-6 space-y-5">
+                        <div className="w-full px-3 md:px-4 pt-4 md:pt-5 pb-5 md:pb-6 space-y-5">
                         {/* Stats Cards */}
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                             <div className="bg-blue-50/70 border border-blue-100 rounded-2xl p-5 shadow-sm">
@@ -1781,7 +1781,7 @@ const Orders = () => {
             )}
 
             {/* ── MOBILE FILTER BOTTOM SHEET ── */}
-            {showMobileFilter && (
+            {showMobileFilter && createPortal(
                 <MobileFilterSheet
                     isOpen={showMobileFilter}
                     isClosing={mobileFilterClosing}
@@ -1829,11 +1829,12 @@ const Orders = () => {
                             onSelectionChange: setPendingCustomers,
                         },
                     ]}
-                />
+                />,
+                document.body
             )}
 
             {/* ACTION MODAL */}
-            {isActionModalOpen && (
+            {isActionModalOpen && createPortal(
                 <OrderStatusUpdater
                     order={selectedOrder}
                     warehouseName={getLabel(warehousesList, selectedOrder?.warehouse)}
@@ -1843,12 +1844,13 @@ const Orders = () => {
                         fetchOrders();
                         setIsActionModalOpen(false);
                     }}
-                />
+                />,
+                document.body
             )}
 
             {/* SERIALS VIEW MODAL */}
-            {serialsModalOrder && (
-                <div className="fixed inset-0 bg-black/45 backdrop-blur-sm flex items-center justify-center z-[100] p-4 animate-in fade-in duration-200">
+            {serialsModalOrder && createPortal(
+                <div className="fixed inset-0 bg-black/45 backdrop-blur-sm flex items-center justify-center z-[100002] p-4 animate-in fade-in duration-200">
                     <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-sm overflow-hidden flex flex-col max-h-[80vh] border border-border">
                         <div className="p-6 border-b border-border flex items-center justify-between shrink-0 bg-white">
                             <div>
@@ -1877,16 +1879,18 @@ const Orders = () => {
                             </button>
                         </div>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
 
             {/* Form Modal */}
-            {isFormModalOpen && (
+            {isFormModalOpen && createPortal(
                 <OrderFormModal
                     order={orderToEdit}
                     onClose={() => setIsFormModalOpen(false)}
                     onSuccess={handleFormSubmitSuccess}
-                />
+                />,
+                document.body
             )}
 
             {/* Hidden Print Template — rendered via Portal directly under <body> to bypass #root hiding */}

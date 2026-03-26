@@ -287,7 +287,7 @@ const Customers = () => {
         'inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase border',
         categoryId === 'BV' && 'bg-blue-50 text-blue-700 border-blue-200',
         categoryId === 'TM' && 'bg-pink-50 text-pink-700 border-pink-200',
-        categoryId === 'PK' && 'bg-emerald-50 text-emerald-700 border-emerald-200',
+        categoryId === 'PK' && 'bg-primary/10 text-primary hover:bg-primary/20 transition-all shadow-md shadow-primary/10',
         categoryId === 'NG' && 'bg-violet-50 text-violet-700 border-violet-200',
         categoryId === 'SP' && 'bg-amber-50 text-amber-700 border-amber-200',
         !categoryId && 'bg-muted text-muted-foreground border-border'
@@ -1175,7 +1175,7 @@ const Customers = () => {
             )}
 
             {activeView === 'stats' && (
-                <div className="bg-white rounded-2xl border border-border shadow-sm flex flex-col flex-1 min-h-0 w-full">
+                <div className="bg-white rounded-2xl border border-border shadow-sm flex flex-col w-full">
                     <div className="space-y-0">
                         <div className="md:hidden flex items-center gap-2 p-3 border-b border-border">
                             <button
@@ -1307,40 +1307,40 @@ const Customers = () => {
                             </div>
                         </div>
 
-                        <div className="px-3 md:px-4 pt-4 md:pt-5 pb-5 md:pb-6 space-y-5">
-                            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                                <div className="bg-blue-50 rounded-2xl p-3.5 md:p-5 shadow-sm col-span-2 md:col-span-1">
-                                    <div className="flex items-center justify-start gap-3 md:gap-4">
-                                        <div className="w-12 h-12  bg-blue-100 rounded-full flex items-center justify-center shrink-0">
-                                            <Users className="w-5 h-5 md:w-6 md:h-6 text-blue-600" />
+                        <div className="w-full px-3 md:px-4 pt-4 md:pt-5 pb-5 md:pb-6 space-y-5">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                <div className="bg-blue-50/70 border border-blue-100 rounded-2xl p-5 shadow-sm">
+                                    <div className="flex items-center justify-start gap-4">
+                                        <div className="w-12 h-12 bg-blue-100/80 rounded-full flex items-center justify-center shrink-0 ring-1 ring-blue-200/70">
+                                            <Users className="w-6 h-6 text-blue-600" />
                                         </div>
                                         <div>
                                             <p className="text-[11px] font-semibold text-blue-600 uppercase tracking-wider">Tổng khách hàng</p>
-                                            <p className="text-[34px] md:text-3xl font-bold text-blue-900 mt-0.5 md:mt-1 leading-none">{formatNumber(filteredCustomersCount)}</p>
+                                            <p className="text-3xl font-bold text-foreground mt-1 leading-none">{formatNumber(filteredCustomersCount)}</p>
                                         </div>
                                     </div>
                                 </div>
 
-                                <div className="bg-green-50 rounded-2xl p-3.5 md:p-5 shadow-sm">
-                                    <div className="flex items-center justify-start gap-3 md:gap-4">
-                                        <div className="w-12 h-12  bg-green-100 rounded-full flex items-center justify-center shrink-0">
-                                            <BarChart2 className="w-5 h-5 md:w-6 md:h-6 text-green-600" />
+                                <div className="bg-green-50/70 border border-green-100 rounded-2xl p-5 shadow-sm">
+                                    <div className="flex items-center justify-start gap-4">
+                                        <div className="w-12 h-12  bg-green-100/80 rounded-full flex items-center justify-center shrink-0 ring-1 ring-green-200/70">
+                                            <BarChart2 className="w-6 h-6 text-green-600" />
                                         </div>
                                         <div>
                                             <p className="text-[11px] font-semibold text-green-600 uppercase tracking-wider">Tổng vỏ bình</p>
-                                            <p className="text-[34px] md:text-3xl font-bold text-green-900 mt-0.5 md:mt-1 leading-none">{formatNumber(totalCylinders)}</p>
+                                            <p className="text-3xl font-bold text-foreground mt-1 leading-none">{formatNumber(totalCylinders)}</p>
                                         </div>
                                     </div>
                                 </div>
 
-                                <div className="bg-orange-50 rounded-2xl p-3.5 md:p-5 shadow-sm">
-                                    <div className="flex items-center justify-start gap-3 md:gap-4">
-                                        <div className="w-12 h-12  bg-orange-100 rounded-full flex items-center justify-center shrink-0">
-                                            <BarChart2 className="w-5 h-5 md:w-6 md:h-6 text-orange-600" />
+                                <div className="bg-amber-50/70 border border-amber-100 rounded-2xl p-5 shadow-sm">
+                                    <div className="flex items-center justify-start gap-4">
+                                        <div className="w-12 h-12  bg-amber-100/80 rounded-full flex items-center justify-center shrink-0 ring-1 ring-amber-200/70">
+                                            <BarChart2 className="w-6 h-6 text-amber-600" />
                                         </div>
                                         <div>
-                                            <p className="text-[11px] font-semibold text-orange-600 uppercase tracking-wider">Tổng máy</p>
-                                            <p className="text-[34px] md:text-3xl font-bold text-orange-900 mt-0.5 md:mt-1 leading-none">{formatNumber(totalMachines)}</p>
+                                            <p className="text-[11px] font-semibold text-amber-600 uppercase tracking-wider">Tổng máy</p>
+                                            <p className="text-3xl font-bold text-foreground mt-1 leading-none">{formatNumber(totalMachines)}</p>
                                         </div>
                                     </div>
                                 </div>
@@ -1478,7 +1478,7 @@ const Customers = () => {
                         {
                             id: 'categories',
                             label: 'Loại khách',
-                            icon: <Users size={16} className="text-emerald-600" />,
+                            icon: <Users size={16} className="text-primary" />,
                             options: categoryOptions,
                             selectedValues: pendingCategories,
                             onSelectionChange: setPendingCategories,
@@ -1486,7 +1486,7 @@ const Customers = () => {
                         {
                             id: 'managedBy',
                             label: 'Nhân viên phụ trách',
-                            icon: <User size={16} className="text-violet-600" />,
+                            icon: <User size={16} className="text-primary" />,
                             options: managedByOptions,
                             selectedValues: pendingManagedBy,
                             onSelectionChange: setPendingManagedBy,
@@ -1494,7 +1494,7 @@ const Customers = () => {
                         {
                             id: 'careBy',
                             label: 'KD chăm sóc',
-                            icon: <User size={16} className="text-cyan-600" />,
+                            icon: <User size={16} className="text-primary" />,
                             options: careByOptions,
                             selectedValues: pendingCareBy,
                             onSelectionChange: setPendingCareBy,

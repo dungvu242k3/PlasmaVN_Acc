@@ -1,11 +1,14 @@
 import { Building2, MapPin, Phone, Save, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { clsx } from 'clsx';
 import { supabase } from '../../supabase/config';
 
 export default function SupplierFormModal({ supplier, onClose, onSuccess }) {
     const isEdit = !!supplier;
     const [isLoading, setIsLoading] = useState(false);
     const [errorMsg, setErrorMsg] = useState('');
+    const [isClosing, setIsClosing] = useState(false);
 
     const defaultState = {
         name: '',
@@ -24,6 +27,11 @@ export default function SupplierFormModal({ supplier, onClose, onSuccess }) {
             });
         }
     }, [supplier, isEdit]);
+
+    const handleClose = () => {
+        setIsClosing(true);
+        setTimeout(onClose, 300);
+    };
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -62,7 +70,11 @@ export default function SupplierFormModal({ supplier, onClose, onSuccess }) {
                 if (error) throw error;
             }
 
-            onSuccess();
+            // Trigger slide-out animation on success
+            setIsClosing(true);
+            setTimeout(() => {
+                onSuccess();
+            }, 300);
         } catch (error) {
             console.error('Error saving supplier:', error);
             setErrorMsg(error.message || 'Có lỗi xảy ra khi lưu nhà cung cấp.');
@@ -71,92 +83,109 @@ export default function SupplierFormModal({ supplier, onClose, onSuccess }) {
         }
     };
 
-    return (
-        <div className="fixed inset-0 bg-slate-900/55 backdrop-blur-sm flex items-stretch sm:items-center justify-center z-[100] p-0 sm:p-4 animate-in fade-in duration-200 [&_input]:!font-[600] [&_select]:!font-[600] [&_textarea]:!font-[600] [&_input]:!text-slate-800 [&_select]:!text-slate-800 [&_textarea]:!text-slate-800 [&_input::placeholder]:!text-slate-400 [&_textarea::placeholder]:!text-slate-400">
-            <div className="bg-slate-50 rounded-none sm:rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col h-[100dvh] sm:h-auto sm:max-h-[92vh] border-0 sm:border sm:border-slate-200">
+    const drawerContent = (
+        <div className={clsx(
+            "fixed inset-0 z-[100005] flex justify-end",
+            isClosing ? "pointer-events-none" : ""
+        )}>
+            {/* Backdrop */}
+            <div 
+                className={clsx(
+                    "absolute inset-0 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-300",
+                    isClosing && "animate-out fade-out duration-300"
+                )}
+                onClick={handleClose}
+            />
 
-                <div className="px-4 py-3.5 border-b border-slate-200 flex items-center justify-between shrink-0 bg-white sticky top-0 z-20">
+            {/* Drawer Panel */}
+            <div className={clsx(
+                "relative h-full w-full max-w-[550px] bg-slate-50 shadow-2xl flex flex-col animate-in slide-in-from-right duration-500",
+                isClosing && "animate-out slide-out-to-right duration-300",
+                "[&_input]:!font-semibold [&_textarea]:!font-semibold [&_input]:!text-slate-800 [&_textarea]:!text-slate-800 [&_input::placeholder]:!text-slate-400 [&_textarea::placeholder]:!text-slate-400"
+            )}>
+
+                <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between shrink-0 bg-white sticky top-0 z-20">
                     <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-600">
-                            <Building2 className="w-5 h-5" />
+                        <div className="w-10 h-10 bg-primary/10 rounded-2xl flex items-center justify-center text-primary shadow-sm border border-primary/20">
+                            <Building2 className="w-5 h-5 transition-transform group-hover:scale-110" />
                         </div>
                         <div>
-                            <h3 className="text-[20px] leading-tight font-bold text-slate-900 tracking-tight">
-                                {isEdit ? 'Chỉnh sửa nhà cung cấp' : 'Thêm nhà cung cấp'}
+                            <h3 className="text-lg font-black text-slate-900 tracking-tight leading-none mb-1">
+                                {isEdit ? 'Chỉnh sửa nhà cung cấp' : 'Thêm nhà cung cấp mới'}
                             </h3>
-                            <p className="text-slate-500 text-[12px] font-semibold mt-0.5">
-                                {isEdit ? supplier.name : 'Khởi tạo hồ sơ đối tác cung ứng vật tư'}
+                            <p className="text-slate-500 text-[11px] font-bold uppercase tracking-wider">
+                                {isEdit ? supplier.name : 'Khởi tạo hồ sơ đối tác cung ứng'}
                             </p>
                         </div>
                     </div>
                     <button
-                        onClick={onClose}
-                        className="p-2 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 rounded-xl transition-all"
+                        onClick={handleClose}
+                        className="p-2 text-slate-400 hover:text-primary hover:bg-primary/5 rounded-xl transition-all border border-transparent hover:border-primary/10 hover:shadow-sm"
                     >
                         <X className="w-5 h-5" />
                     </button>
                 </div>
 
-                <div className="p-5 sm:p-6 overflow-y-auto bg-slate-50 custom-scrollbar flex-1 min-h-0 pb-20 sm:pb-6">
+                <div className="p-6 overflow-y-auto bg-slate-50/50 flex-1 min-h-0 custom-scrollbar">
                     {errorMsg && (
-                        <div className="mb-4 p-3 bg-rose-50 border border-rose-200 rounded-xl text-[13px] font-semibold text-rose-600 flex items-center gap-2">
-                            <X className="w-4 h-4 shrink-0" />
+                        <div className="mb-6 p-4 bg-rose-50 border border-rose-200 rounded-2xl text-[13px] font-bold text-rose-600 flex items-center gap-3 animate-in shake duration-500">
+                            <X className="w-4 h-4 shrink-0 p-0.5 bg-rose-100 rounded-full" />
                             {errorMsg}
                         </div>
                     )}
 
                     <form id="supplierForm" onSubmit={handleSubmit} className="space-y-6">
-                        <div className="rounded-3xl border border-emerald-100 bg-white p-5 sm:p-6 space-y-5 shadow-sm [&_label]:text-emerald-700 [&_label_svg]:text-emerald-600">
-                            <div className="flex items-center gap-2.5 pb-3 border-b border-emerald-100">
-                                <Building2 className="w-4 h-4 text-emerald-600" />
-                                <h4 className="text-[18px] !font-extrabold !text-emerald-700">Thông tin nhà cung cấp</h4>
+                        <div className="rounded-3xl border border-primary/10 bg-white p-6 space-y-6 shadow-sm">
+                            <div className="flex items-center gap-2.5 pb-4 border-b border-primary/5">
+                                <Building2 className="w-4 h-4 text-primary" />
+                                <h4 className="text-[15px] font-black text-slate-800 uppercase tracking-tight">Thông tin định danh</h4>
                             </div>
 
-                            <div className="space-y-4">
-                                <div className="space-y-1.5">
-                                    <label className="flex items-center gap-1.5 text-[14px] font-semibold text-slate-800">
-                                        <Building2 className="w-4 h-4 text-emerald-500" />
-                                        Tên nhà cung cấp <span className="text-red-500">*</span>
+                            <div className="space-y-5">
+                                <div className="space-y-2">
+                                    <label className="flex items-center gap-2 text-[12px] font-black text-slate-500 uppercase tracking-widest pl-1">
+                                        <Building2 className="w-3.5 h-3.5 text-primary" />
+                                        Tên nhà cung cấp <span className="text-rose-500">*</span>
                                     </label>
                                     <input
                                         type="text"
                                         name="name"
                                         value={formData.name}
                                         onChange={handleChange}
-                                        placeholder="VD: Công ty TNHH Oxy Việt Nam, Nhà máy cơ khí..."
-                                        className="w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-2xl text-[15px] font-semibold text-slate-800 focus:outline-none focus:ring-4 focus:ring-emerald-100 focus:border-emerald-400 focus:bg-white transition-all"
+                                        placeholder="VD: Công ty TNHH Oxy Việt Nam..."
+                                        className="w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-2xl text-[14px] focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary focus:bg-white transition-all shadow-sm"
                                         required
                                     />
                                 </div>
 
-                                <div className="space-y-1.5">
-                                    <label className="flex items-center gap-1.5 text-[14px] font-semibold text-slate-800">
-                                        <Phone className="w-4 h-4 text-emerald-500" />
-                                        Số điện thoại liên hệ <span className="text-red-500">*</span>
+                                <div className="space-y-2">
+                                    <label className="flex items-center gap-2 text-[12px] font-black text-slate-500 uppercase tracking-widest pl-1">
+                                        <Phone className="w-3.5 h-3.5 text-primary" />
+                                        Số điện thoại liên hệ <span className="text-rose-500">*</span>
                                     </label>
                                     <input
                                         type="text"
                                         name="phone"
                                         value={formData.phone}
                                         onChange={handleChange}
-                                        placeholder="024xxxxxxxx..."
-                                        className="w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-2xl text-[15px] font-semibold text-slate-800 focus:outline-none focus:ring-4 focus:ring-emerald-100 focus:border-emerald-400 focus:bg-white transition-all"
+                                        placeholder="VD: 024.1234.5678"
+                                        className="w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-2xl text-[14px] focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary focus:bg-white transition-all shadow-sm"
                                         required
                                     />
                                 </div>
 
-                                <div className="space-y-1.5">
-                                    <label className="flex items-center gap-1.5 text-[14px] font-semibold text-slate-800">
-                                        <MapPin className="w-4 h-4 text-emerald-500" />
+                                <div className="space-y-2">
+                                    <label className="flex items-center gap-2 text-[12px] font-black text-slate-500 uppercase tracking-widest pl-1">
+                                        <MapPin className="w-3.5 h-3.5 text-primary" />
                                         Địa chỉ trụ sở / Kho bãi
                                     </label>
                                     <textarea
                                         name="address"
                                         value={formData.address}
                                         onChange={handleChange}
-                                        rows="3"
-                                        placeholder="Số nhà, đường, quận/huyện, tỉnh/thành..."
-                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-[15px] font-semibold text-slate-800 resize-none focus:outline-none focus:ring-4 focus:ring-emerald-100 focus:border-emerald-400 focus:bg-white transition-all"
+                                        rows="4"
+                                        placeholder="Số nhà, tên đường, khu vực..."
+                                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-[14px] resize-none focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary focus:bg-white transition-all shadow-sm"
                                     />
                                 </div>
                             </div>
@@ -164,30 +193,34 @@ export default function SupplierFormModal({ supplier, onClose, onSuccess }) {
                     </form>
                 </div>
 
-                <div className="px-4 py-3 bg-white border-t border-slate-200 shrink-0 flex items-center justify-between gap-3 sticky bottom-0 z-20">
+                <div className="px-6 py-4 bg-white border-t border-slate-200 shrink-0 flex items-center justify-between gap-4 sticky bottom-0 z-20">
                     <button
                         type="button"
-                        onClick={onClose}
-                        className="px-4 py-2.5 rounded-xl border border-slate-300 bg-slate-100 text-slate-500 hover:text-slate-700 font-semibold text-[15px] transition-colors outline-none"
+                        onClick={handleClose}
+                        className="px-6 py-3 rounded-2xl border border-slate-200 bg-white text-slate-500 hover:text-slate-700 hover:bg-slate-50 font-black text-[13px] uppercase tracking-wider transition-all shadow-sm"
                         disabled={isLoading}
                     >
-                        Hủy
+                        Hủy bỏ
                     </button>
                     <button
                         type="submit"
                         form="supplierForm"
                         disabled={isLoading}
-                        className="flex-1 sm:flex-none px-6 py-3 bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-white text-[15px] font-bold rounded-2xl shadow-md shadow-emerald-200 transition-all flex items-center justify-center gap-2 border border-emerald-700/40 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="flex-1 px-8 py-3 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary text-white text-[13px] font-black uppercase tracking-widest rounded-2xl shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all flex items-center justify-center gap-3 border border-primary/20 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         {isLoading ? (
-                            <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
                         ) : (
-                            <Save className="w-4 h-4" />
+                            <>
+                                <Save className="w-4 h-4" />
+                                {isEdit ? 'Lưu thay đổi' : 'Xác nhận thêm'}
+                            </>
                         )}
-                        {isEdit ? 'Lưu thay đổi' : 'Thêm mới'}
                     </button>
                 </div>
             </div>
         </div>
     );
+
+    return createPortal(drawerContent, document.body);
 }

@@ -1,15 +1,18 @@
 import {
     CheckCircle2,
     Edit,
+    Plus,
     Search,
     ShieldCheck,
     Trash2,
     UserCircle,
     Users,
+    X,
     XCircle
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { clsx } from 'clsx';
 import PermissionFormModal from '../components/Permissions/PermissionFormModal';
 import { ACTION_TYPES, MODULE_PERMISSIONS } from '../constants/permissionConstants';
 import { supabase } from '../supabase/config';
@@ -141,57 +144,82 @@ const Permissions = () => {
     );
 
     return (
-        <div className="p-4 md:p-8 max-w-[1600px] mx-auto font-sans bg-[#F8FAFC] min-h-screen noise-bg">
-            {/* Decorative Background Blobs */}
-            <div className="blob blob-indigo w-[500px] h-[500px] -top-20 -left-20 opacity-20"></div>
-            <div className="blob blob-violet w-[400px] h-[400px] top-1/2 -right-20 opacity-10"></div>
-            <div className="blob blob-blue w-[300px] h-[300px] bottom-10 left-1/4 opacity-10"></div>
+        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 w-full flex-1 flex flex-col mt-1 min-h-0 px-1 md:px-1.5 font-sans">
+            {/* Top Navigation Style Tabs */}
+            <div className="flex items-center gap-1 mb-3 mt-1">
+                <button
+                    onClick={() => setActiveTab('roles')}
+                    className={clsx(
+                        "flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-bold transition-all",
+                        activeTab === 'roles'
+                            ? "bg-white text-primary shadow-sm ring-1 ring-border"
+                            : "text-muted-foreground hover:text-foreground"
+                    )}
+                >
+                    <Users size={14} />
+                    Phân cấp Nhóm
+                </button>
+                <button
+                    onClick={() => setActiveTab('users')}
+                    className={clsx(
+                        "flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-bold transition-all",
+                        activeTab === 'users'
+                            ? "bg-white text-primary shadow-sm ring-1 ring-border"
+                            : "text-muted-foreground hover:text-foreground"
+                    )}
+                >
+                    <UserCircle size={14} />
+                    Định danh Cá nhân
+                </button>
+            </div>
 
-            {/* Header Section */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-4">
-                <div className="hover-lift">
-                    <h1 className="text-4xl font-black text-slate-800 flex items-center gap-4 tracking-tight">
-                        <div className="w-14 h-14 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-blue-100 transition-transform hover:rotate-3 duration-300">
-                            <ShieldCheck className="w-8 h-8" />
+            <div className="bg-white rounded-2xl border border-border shadow-sm flex flex-col flex-1 min-h-0 w-full overflow-hidden">
+                {/* ── TOOLBAR ── */}
+                <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 p-4 border-b border-border bg-slate-50/30">
+                    <div className="flex items-center gap-4">
+                        <div className="hover-lift flex items-center gap-3">
+                            <div className="w-10 h-10 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-blue-100/50 transition-transform hover:rotate-3 duration-300">
+                                <ShieldCheck className="w-6 h-6" />
+                            </div>
+                            <div>
+                                <h1 className="text-xl font-black text-slate-800 tracking-tight leading-none uppercase">Ma trận Quyền</h1>
+                                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-[0.1em] mt-1">Hệ thống phân cấp truy cập</p>
+                            </div>
                         </div>
-                        Ma trận Phân quyền
-                    </h1>
-                    <p className="text-slate-500 mt-2 font-bold uppercase tracking-widest text-[10px]">Thiết lập luồng truy cập (Xem, Thêm, Sửa, Xóa) cho từng nhóm tài khoản</p>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                        <div className="relative group min-w-[300px]">
+                            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+                            <input
+                                type="text"
+                                placeholder={activeTab === 'roles' ? "Tìm nhóm quyền..." : "Tìm nhân sự..."}
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="w-full pl-10 pr-10 py-2.5 bg-white border border-slate-200 focus:border-blue-500 rounded-xl focus:ring-4 focus:ring-blue-50 outline-none transition-all text-[13px] font-bold text-slate-600"
+                            />
+                            {searchTerm && (
+                                <button 
+                                    onClick={() => setSearchTerm('')} 
+                                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                                >
+                                    <X size={14} />
+                                </button>
+                            )}
+                        </div>
+                        <button
+                            onClick={handleCreateNew}
+                            className="flex items-center justify-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-[13px] font-black transition-all shadow-lg shadow-blue-200 border border-blue-700 active:scale-95"
+                        >
+                            <Plus size={18} />
+                            Thêm mới
+                        </button>
+                    </div>
                 </div>
 
-            </div>
+                {/* List Container */}
+                <div className="flex-1 overflow-y-auto p-4 md:p-6 bg-[#F8FAFC]">
 
-            {/* Filters Section */}
-            <div className="bg-white p-8 rounded-[2.5rem] shadow-premium border border-slate-50 mb-8 space-y-8 glass">
-                {/* Tabs */}
-                <div className="flex items-center gap-2 bg-slate-50 p-1.5 rounded-2xl w-max shadow-inner">
-                    <button
-                        onClick={() => setActiveTab('roles')}
-                        className={`flex items-center gap-3 px-8 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all duration-300 ${activeTab === 'roles' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
-                    >
-                        <Users className="w-4 h-4" />
-                        Phân cấp Nhóm ({roles.length})
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('users')}
-                        className={`flex items-center gap-3 px-8 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all duration-300 ${activeTab === 'users' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
-                    >
-                        <UserCircle className="w-4 h-4" />
-                        Định danh Cá nhân ({usersList.length})
-                    </button>
-                </div>
-
-                <div className="relative group w-full">
-                    <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
-                    <input
-                        type="text"
-                        placeholder={activeTab === 'roles' ? "Truy tìm nhóm quyền..." : "Truy tìm hồ sơ nhân sự..."}
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full pl-14 pr-6 py-4 bg-slate-50/50 border border-transparent focus:bg-white focus:border-blue-100 rounded-2xl focus:ring-4 focus:ring-blue-50 outline-none transition-all text-sm font-bold text-slate-600 shadow-inner"
-                    />
-                </div>
-            </div>
 
             {/* List Section */}
             {loading ? (
@@ -210,43 +238,43 @@ const Permissions = () => {
             ) : (
                 <div className="space-y-8 pb-10">
                     {(activeTab === 'roles' ? filteredRoles : filteredUsers).map((item) => (
-                        <div key={item.id} className="bg-white rounded-[2.5rem] shadow-premium border border-slate-50 overflow-hidden group transition-all duration-300 hover:shadow-2xl hover:shadow-indigo-100/50 glass">
-                            <div className="bg-slate-50/30 px-8 py-6 border-b border-slate-50 flex items-center justify-between group-hover:bg-white transition-colors duration-300">
-                                <div className="flex items-center gap-5">
-                                    <div className="w-12 h-12 bg-white text-indigo-600 rounded-2xl flex items-center justify-center shadow-sm border border-slate-100 group-hover:scale-110 transition-transform duration-300">
-                                        {activeTab === 'roles' ? <ShieldCheck className="w-6 h-6" /> : <UserCircle className="w-6 h-6" />}
+                        <div key={item.id} className="bg-white rounded-[1.5rem] shadow-sm border border-slate-100 overflow-hidden group transition-all duration-300 hover:shadow-md hover:border-blue-100">
+                            <div className="bg-slate-50/50 px-6 py-4 border-b border-slate-100 flex items-center justify-between group-hover:bg-white transition-colors duration-300">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-10 h-10 bg-white text-blue-600 rounded-xl flex items-center justify-center shadow-sm border border-slate-100 group-hover:scale-105 transition-transform duration-300">
+                                        {activeTab === 'roles' ? <ShieldCheck className="w-5 h-5" /> : <UserCircle className="w-5 h-5" />}
                                     </div>
                                     <div>
-                                        <h3 className="text-2xl font-black text-black group-hover:text-indigo-600 transition-colors uppercase tracking-tight">{item.name}</h3>
-                                        {activeTab === 'users' && <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mt-1 ml-0.5 opacity-60">ID định danh: @{item.username}</p>}
+                                        <h3 className="text-xl font-black text-slate-800 group-hover:text-blue-600 transition-colors uppercase tracking-tight">{item.name}</h3>
+                                        {activeTab === 'users' && <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5 ml-0.5 opacity-60">ID: @{item.username}</p>}
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-3">
+                                <div className="flex items-center gap-2">
                                     {activeTab === 'users' && (
-                                        <span className="text-[9px] font-black bg-amber-50 text-amber-600 px-4 py-2 rounded-xl border border-amber-100 uppercase tracking-widest">
-                                            Quyền Ưu tiên (Ghi đè)
+                                        <span className="text-[8px] font-bold bg-amber-50 text-amber-600 px-3 py-1.5 rounded-lg border border-amber-100 uppercase tracking-widest mr-2">
+                                            Ghi đè
                                         </span>
                                     )}
                                     <button
                                         onClick={() => handleEditRole(item, activeTab === 'users')}
-                                        className="text-slate-400 hover:text-slate-900 transition-all outline-none"
+                                        className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all outline-none"
                                         title="Chỉnh sửa"
                                     >
-                                        <Edit className="w-5 h-5" />
+                                        <Edit className="w-4 h-4" />
                                     </button>
                                     <button
                                         onClick={() => handleDeleteRole(item.id, item.name)}
-                                        className="text-slate-400 hover:text-slate-900 transition-all outline-none"
+                                        className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all outline-none"
                                         title="Xóa"
                                     >
-                                        <Trash2 className="w-5 h-5" />
+                                        <Trash2 className="w-4 h-4" />
                                     </button>
                                 </div>
                             </div>
 
                             {/* Khung hiển thị tóm tắt quyền */}
-                            <div className="p-8 w-full overflow-x-auto custom-scrollbar">
-                                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                            <div className="p-6 w-full overflow-x-auto custom-scrollbar">
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                                     {MODULE_PERMISSIONS.map(module => {
                                         const modulePerms = item.permissions ? item.permissions[module.id] : {};
                                         return (
@@ -255,14 +283,14 @@ const Permissions = () => {
                                                     <span className="font-black text-slate-500 text-[10px] uppercase tracking-widest opacity-60">Phân hệ:</span>
                                                     <div className="w-1.5 h-1.5 rounded-full bg-slate-300" />
                                                 </div>
-                                                <span className="font-black text-black text-lg mb-6 leading-tight group-hover:text-indigo-600 transition-colors">{module.label}</span>
+                                                <span className="font-black text-black text-lg mb-6 leading-tight group-hover:text-blue-600 transition-colors">{module.label}</span>
                                                 <div className="flex items-center gap-2 flex-wrap mt-auto pt-4 border-t border-slate-100/50">
                                                     {ACTION_TYPES.map(action => (
                                                         <div
                                                             key={action.id}
                                                             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest border transition-all
                                                             ${modulePerms?.[action.id]
-                                                                    ? `${action.colorClass.replace('bg-', 'bg-').replace('text-', 'text-')} border-transparent shadow-sm translate-y-0 opacity-100`
+                                                                    ? `${action.colorClass.replace('bg-', 'bg-').replace('text-', 'text-')} border-transparent shadow-sm translate-y-0 opacity-100 shadow-blue-100/50`
                                                                     : 'bg-slate-100/30 text-slate-300 border-slate-100 opacity-40 line-through'}`}
                                                         >
                                                             {modulePerms?.[action.id] ? <CheckCircle2 className="w-3 h-3" /> : <XCircle className="w-3 h-3 grayscale" />}
@@ -279,6 +307,8 @@ const Permissions = () => {
                     ))}
                 </div>
             )}
+                </div>
+            </div>
 
             {/* Modal */}
             {isFormModalOpen && (

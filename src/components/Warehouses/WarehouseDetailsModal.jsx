@@ -1,54 +1,79 @@
 import {
-    ActivitySquare,
-    LogIn,
-    LogOut,
+    Activity,
+    Box,
+    Building2,
+    Calendar,
+    ChevronDown,
+    ChevronUp,
+    Clock,
+    History,
     MapPin,
     Package,
+    Shield,
+    Truck,
     Warehouse,
-    X,
-    Database,
-    History
+    X
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
+import clsx from 'clsx';
 import { supabase } from '../../supabase/config';
 
 export default function WarehouseDetailsModal({ warehouse, onClose }) {
     const [loading, setLoading] = useState(true);
-    const [orders, setOrders] = useState([]);
+    const [stats, setStats] = useState({
+        total_items: 0,
+        active_orders: 0,
+        recent_receipts: 0,
+        available_capacity: 0
+    });
     const [inventory, setInventory] = useState([]);
-    const [activeTab, setActiveTab] = useState('history');
+    const [recentLogs, setRecentLogs] = useState([]);
+    const [showFullInventory, setShowFullInventory] = useState(false);
+    const [isClosing, setIsClosing] = useState(false);
 
     useEffect(() => {
         if (!warehouse) return;
-        fetchWarehouseHistory();
+        fetchWarehouseData();
     }, [warehouse]);
 
-    const fetchWarehouseHistory = async () => {
+    const handleClose = useCallback(() => {
+        setIsClosing(true);
+        setTimeout(() => onClose(), 300);
+    }, [onClose]);
+
+    const fetchWarehouseData = async () => {
         setLoading(true);
         try {
-            // Lấy các Đơn hàng (Orders) có đề cập đến Kho này
-            const { data: ordersData, error: ordersError } = await supabase
-                .from('orders')
-                .select('*')
-                .eq('warehouse', warehouse.id)
-                .order('created_at', { ascending: false });
-
-            if (ordersError) throw ordersError;
-            setOrders(ordersData || []);
-
-            // Lấy thông tin Tồn Kho
-            const { data: invData, error: invError } = await supabase
-                .from('inventory')
+            // 1. Get Inventory
+            const { data: invData } = await supabase
+                .from('cylinders')
                 .select('*')
                 .eq('warehouse_id', warehouse.id)
-                .order('item_type', { ascending: true })
-                .order('item_name', { ascending: true });
+                .order('serial_number', { ascending: true });
 
-            if (invError) throw invError;
             setInventory(invData || []);
+
+            // 2. Get Recent Logs
+            const { data: logData } = await supabase
+                .from('cylinder_logs')
+                .select('*')
+                .eq('warehouse_id', warehouse.id)
+                .order('created_at', { ascending: false })
+                .limit(10);
+
+            setRecentLogs(logData || []);
+
+            // 3. Calc Stats
+            setStats({
+                total_items: invData?.length || 0,
+                active_orders: 0, // Placeholder
+                recent_receipts: 0, // Placeholder
+                available_capacity: 1000 - (invData?.length || 0) // Assume capacity = 1000
+            });
+
         } catch (error) {
-            console.error('Error fetching warehouse details:', error);
-            alert('Lỗi tải dữ liệu chi tiết kho hàng!');
+            console.error('Error fetching warehouse data:', error);
         } finally {
             setLoading(false);
         }
@@ -56,195 +81,189 @@ export default function WarehouseDetailsModal({ warehouse, onClose }) {
 
     const formatDate = (dateStr) => {
         if (!dateStr) return '—';
-        return new Date(dateStr).toLocaleDateString('vi-VN');
+        return new Date(dateStr).toLocaleString('vi-VN', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
     };
 
-    const getStatusStyle = (status) => {
-        if (['DA_DUYET', 'HOAN_THANH'].includes(status)) {
-            return 'bg-emerald-50 text-emerald-600 border-emerald-200';
-        }
-        if (['HUY_DON', 'DOI_SOAT_THAT_BAI'].includes(status)) {
-            return 'bg-rose-50 text-rose-600 border-rose-200';
-        }
-        return 'bg-amber-50 text-amber-600 border-amber-200';
-    };
+    const displayedInventory = showFullInventory ? inventory : inventory.slice(0, 5);
 
-    return (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4 animate-in fade-in duration-200">
-            <div className="bg-slate-50 rounded-[2rem] shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col h-[80vh] mt-12">
+    const content = (
+        <div className="flex flex-col h-full bg-[#f8fafc]">
+            {/* Header Profile */}
+            <div className="bg-white px-4 md:px-8 py-4 md:py-6 border-b border-slate-200 shrink-0 relative overflow-hidden sticky top-0 z-20">
+                <div className="absolute top-0 right-0 w-40 h-40 md:w-64 md:h-64 bg-primary/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 opacity-60 pointer-events-none"></div>
 
-                {/* Header Profile */}
-                <div className="bg-white px-8 py-6 border-b border-slate-200 shrink-0 relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-64 h-64 bg-orange-50 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3 opacity-60 pointer-events-none"></div>
-
-                    <div className="flex items-start justify-between relative z-10">
-                        <div className="flex items-center gap-5">
-                            <div className="w-16 h-16 bg-gradient-to-br from-amber-500 to-orange-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-orange-200">
-                                <Warehouse className="w-8 h-8" />
-                            </div>
-                            <div>
-                                <h2 className="text-2xl font-black text-slate-900 mb-1 tracking-tight flex items-center gap-3">
-                                    Kho {warehouse.name}
-                                </h2>
-                                <div className="flex items-center gap-4 text-sm font-bold text-slate-500">
-                                    <span className="flex items-center gap-1.5"><ActivitySquare className="w-4 h-4 text-slate-400" /> {warehouse.manager_name || 'Không rõ Quản lý'}</span>
-                                    {warehouse.capacity && <span className="flex items-center gap-1.5 px-2 py-0.5 bg-slate-100 rounded-md text-slate-600">Sức chứa: {warehouse.capacity}</span>}
-                                    <span className="flex items-center gap-1.5 text-orange-600"><MapPin className="w-4 h-4 text-orange-400" /> {warehouse.address || '—'}</span>
-                                </div>
+                <div className="flex items-start justify-between gap-3 relative z-10">
+                    <div className="flex items-start md:items-center gap-3 md:gap-5 min-w-0">
+                        <div className="w-12 h-12 md:w-16 md:h-16 bg-gradient-to-br from-primary to-blue-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-primary/10 shrink-0">
+                            <Warehouse className="w-6 h-6 md:w-8 md:h-8" />
+                        </div>
+                        <div className="min-w-0">
+                            <h2 className="text-xl md:text-2xl font-black text-slate-900 mb-1 tracking-tight flex items-center gap-2 md:gap-3 truncate text-primary">
+                                {warehouse.warehouse_name || 'Kho hàng'}
+                            </h2>
+                            <div className="flex flex-wrap items-center gap-2 md:gap-4 text-xs md:text-sm font-bold text-slate-500">
+                                <span className="flex items-center gap-1.5"><MapPin className="w-4 h-4 text-slate-400" /> {warehouse.location || '—'}</span>
+                                <span className="flex items-center gap-1.5 px-2 py-0.5 bg-slate-100 rounded-md text-slate-600">{warehouse.id}</span>
+                                <span className="flex items-center gap-1.5 text-primary"><Shield className="w-4 h-4 text-primary/60" /> {warehouse.status || 'Hoạt động'}</span>
                             </div>
                         </div>
-                        <button onClick={onClose} className="p-2.5 bg-slate-100 text-slate-400 hover:text-slate-900 hover:bg-slate-200 rounded-xl transition-colors">
-                            <X className="w-6 h-6" />
-                        </button>
                     </div>
-
-                    <div className="flex items-center gap-8 mt-8 border-b border-slate-200 relative z-10">
-                        <button
-                            onClick={() => setActiveTab('history')}
-                            className={`pb-4 px-2 text-sm font-black uppercase tracking-wider border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'history' ? 'text-blue-600 border-blue-600' : 'text-slate-400 border-transparent hover:text-slate-600'}`}
-                        >
-                            <History className="w-4 h-4" />
-                            Lịch sử Nhập / Xuất
-                        </button>
-                        <button
-                            onClick={() => setActiveTab('inventory')}
-                            className={`pb-4 px-2 text-sm font-black uppercase tracking-wider border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'inventory' ? 'text-emerald-600 border-emerald-600' : 'text-slate-400 border-transparent hover:text-slate-600'}`}
-                        >
-                            <Database className="w-4 h-4" />
-                            Tồn Kho Hiện Tại
-                            {inventory.length > 0 && (
-                                <span className={`py-0.5 px-2 rounded-full text-[10px] ml-1 ${activeTab === 'inventory' ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-500'}`}>
-                                    {inventory.reduce((sum, item) => sum + (item.quantity || 0), 0)}
-                                </span>
-                            )}
-                        </button>
-                    </div>
+                    <button onClick={handleClose} className="p-2 md:p-2.5 bg-slate-100 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all shrink-0">
+                        <X className="w-5 h-5 md:w-6 md:h-6" />
+                    </button>
                 </div>
 
-                {/* Body Details - Split View */}
-                <div className="flex-1 overflow-hidden relative flex flex-col md:flex-row bg-[#F8FAFC]">
-                    {loading ? (
-                        <div className="flex flex-col flex-1 items-center justify-center h-40 space-y-4">
-                            <div className="w-10 h-10 border-4 border-orange-100 border-t-orange-600 rounded-full animate-spin"></div>
-                            <p className="text-sm font-bold text-slate-400 animate-pulse">Đang tải biểu đồ nhập xuất...</p>
-                        </div>
-                    ) : (
-                        <>
-                            {activeTab === 'history' ? (
-                                <>
-                                    {/* Cột 1: Xuất Kho */}
-                                    <div className="flex-1 p-6 overflow-y-auto border-r border-slate-200 custom-scrollbar">
-                                        <div className="flex items-center justify-between mb-4">
-                                            <h3 className="text-sm font-black text-rose-600 uppercase tracking-widest flex items-center gap-2"><LogOut className="w-4 h-4" /> Đơn Xuất Kho / Bán / Cho Thuê</h3>
-                                            <span className="bg-rose-100 text-rose-600 py-0.5 px-2 rounded-full text-[10px] font-bold">
-                                                {orders.filter(o => o.order_type?.toLowerCase().includes('thuê') || o.order_type?.toLowerCase().includes('bán') || o.order_type?.toLowerCase().includes('giao')).length}
-                                            </span>
-                                        </div>
-                                        <div className="space-y-4">
-                                            {orders.filter(o => o.order_type?.toLowerCase().includes('thuê') || o.order_type?.toLowerCase().includes('bán') || o.order_type?.toLowerCase().includes('giao')).length === 0 ? (
-                                                <div className="p-10 text-center flex flex-col items-center border border-dashed border-slate-200 rounded-3xl bg-white">
-                                                    <Package className="w-10 h-10 text-slate-200 mb-3" />
-                                                    <p className="text-slate-400 font-bold text-sm">Chưa có giao dịch xuất kho</p>
-                                                </div>
-                                            ) : (
-                                                orders.filter(o => o.order_type?.toLowerCase().includes('thuê') || o.order_type?.toLowerCase().includes('bán') || o.order_type?.toLowerCase().includes('giao')).map(o => (
-                                                    <div key={o.id} className="bg-white p-5 rounded-2xl border border-rose-100 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
-                                                        <div className="absolute top-0 left-0 w-1 h-full bg-rose-400"></div>
-                                                        <div className="flex justify-between items-start mb-3">
-                                                            <div>
-                                                                <span className="text-[10px] font-black text-slate-400 bg-slate-100 px-2 py-1 rounded-md uppercase tracking-wider">{o.order_code}</span>
-                                                                <div className="text-[10px] font-bold text-slate-400 mt-2">{formatDate(o.created_at)}</div>
-                                                            </div>
-                                                            <span className={`px-2 py-0.5 text-[9px] font-black tracking-widest uppercase rounded flex items-center gap-1 ${getStatusStyle(o.status)}`}>
-                                                                {o.status}
-                                                            </span>
-                                                        </div>
-                                                        <h4 className="font-black text-slate-800 text-base mb-1">{o.customer_name}</h4>
-                                                        <p className="text-xs font-bold text-rose-500 uppercase tracking-wider">{o.order_type} - {o.product_type}</p>
-                                                    </div>
-                                                ))
-                                            )}
-                                        </div>
-                                    </div>
+                {/* Quick Stats */}
+                {!loading && (
+                    <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4 relative z-10">
+                        {[
+                            { label: 'Tổng số bình', value: stats.total_items, icon: Package, color: 'text-primary' },
+                            { label: 'Sức chứa còn', value: stats.available_capacity, icon: Box, color: 'text-emerald-500' },
+                            { label: 'Yêu cầu chờ', value: stats.active_orders, icon: Clock, color: 'text-amber-500' },
+                            { label: 'Đang vận chuyển', value: stats.recent_receipts, icon: Truck, color: 'text-blue-500' }
+                        ].map((stat, idx) => (
+                            <div key={idx} className="bg-white px-3 md:px-4 py-3 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:border-primary/20 transition-all group">
+                                <div className="flex items-center gap-2 mb-1">
+                                    <stat.icon className={clsx("w-3.5 h-3.5", stat.color)} />
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{stat.label}</p>
+                                </div>
+                                <p className="font-black text-slate-800 text-lg md:text-xl">{stat.value}</p>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
 
-                                    {/* Cột 2: Nhập Kho */}
-                                    <div className="flex-1 p-6 overflow-y-auto custom-scrollbar">
-                                        <div className="flex items-center justify-between mb-4">
-                                            <h3 className="text-sm font-black text-teal-600 uppercase tracking-widest flex items-center gap-2"><LogIn className="w-4 h-4" /> Đơn Nhập Kho / Thu Hồi</h3>
-                                            <span className="bg-teal-100 text-teal-600 py-0.5 px-2 rounded-full text-[10px] font-bold">
-                                                {orders.filter(o => o.order_type?.toLowerCase().includes('thu hồi') || o.order_type?.toLowerCase().includes('trả') || o.order_type?.toLowerCase().includes('nhập')).length}
-                                            </span>
-                                        </div>
-                                        <div className="space-y-4">
-                                            {orders.filter(o => o.order_type?.toLowerCase().includes('thu hồi') || o.order_type?.toLowerCase().includes('trả') || o.order_type?.toLowerCase().includes('nhập')).length === 0 ? (
-                                                <div className="p-10 text-center flex flex-col items-center border border-dashed border-slate-200 rounded-3xl bg-white">
-                                                    <Package className="w-10 h-10 text-slate-200 mb-3" />
-                                                    <p className="text-slate-400 font-bold text-sm">Chưa có giao dịch nhập kho</p>
-                                                </div>
-                                            ) : (
-                                                orders.filter(o => o.order_type?.toLowerCase().includes('thu hồi') || o.order_type?.toLowerCase().includes('trả') || o.order_type?.toLowerCase().includes('nhập')).map(o => (
-                                                    <div key={o.id} className="bg-white p-5 rounded-2xl border border-teal-100 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
-                                                        <div className="absolute top-0 left-0 w-1 h-full bg-teal-400"></div>
-                                                        <div className="flex justify-between items-start mb-3">
-                                                            <div>
-                                                                <span className="text-[10px] font-black text-slate-400 bg-slate-100 px-2 py-1 rounded-md uppercase tracking-wider">{o.order_code}</span>
-                                                                <div className="text-[10px] font-bold text-slate-400 mt-2">{formatDate(o.created_at)}</div>
-                                                            </div>
-                                                            <span className={`px-2 py-0.5 text-[9px] font-black tracking-widest uppercase rounded flex items-center gap-1 ${getStatusStyle(o.status)}`}>
-                                                                {o.status}
-                                                            </span>
-                                                        </div>
-                                                        <h4 className="font-black text-slate-800 text-base mb-1">{o.customer_name}</h4>
-                                                        <p className="text-xs font-bold text-teal-500 uppercase tracking-wider">{o.order_type} - {o.product_type}</p>
-                                                    </div>
-                                                ))
-                                            )}
-                                        </div>
-                                    </div>
-                                </>
+            {/* Body */}
+            <div className="flex-1 overflow-y-auto custom-scrollbar">
+                {loading ? (
+                    <div className="flex flex-col flex-1 items-center justify-center h-40 space-y-4 py-16">
+                        <div className="w-10 h-10 border-4 border-primary/10 border-t-primary rounded-full animate-spin"></div>
+                        <p className="text-sm font-bold text-slate-400 animate-pulse uppercase tracking-widest italic">Đang tải dữ liệu kho...</p>
+                    </div>
+                ) : (
+                    <div className="p-4 md:p-8 space-y-8">
+                        {/* Current Inventory Section */}
+                        <section>
+                            <div className="flex items-center justify-between gap-3 mb-6">
+                                <h3 className="text-sm font-black text-slate-700 uppercase tracking-widest flex items-center gap-2 min-w-0">
+                                    <Box className="w-4 h-4 text-primary" />
+                                    Tồn kho hiện tại ({inventory.length})
+                                </h3>
+                                {inventory.length > 5 && (
+                                    <button
+                                        onClick={() => setShowFullInventory(!showFullInventory)}
+                                        className="shrink-0 flex items-center gap-1.5 text-xs font-bold text-primary hover:text-white bg-primary/10 hover:bg-primary px-3 py-1.5 rounded-lg transition-all"
+                                    >
+                                        {showFullInventory ? (
+                                            <><ChevronUp className="w-3.5 h-3.5" /> Thu gọn</>
+                                        ) : (
+                                            <><ChevronDown className="w-3.5 h-3.5" /> Xem tất cả</>
+                                        )}
+                                    </button>
+                                )}
+                            </div>
+
+                            {inventory.length === 0 ? (
+                                <div className="p-12 text-center border-2 border-dashed border-slate-200 rounded-[2rem] bg-white">
+                                    <Package className="w-12 h-12 text-slate-200 mx-auto mb-4" />
+                                    <p className="text-slate-400 font-bold">Kho hiện đang trống</p>
+                                </div>
                             ) : (
-                                <div className="flex-1 overflow-y-auto p-6 lg:p-8 custom-scrollbar bg-white">
-                                    <div className="flex items-center gap-3 mb-6">
-                                        <Database className="w-6 h-6 text-emerald-500" />
-                                        <h3 className="text-lg font-black text-slate-800 tracking-tight">Chi tiết Tồn Kho</h3>
-                                    </div>
-                                    
-                                    {inventory.length === 0 ? (
-                                        <div className="p-12 text-center flex flex-col items-center border-2 border-dashed border-slate-100 rounded-3xl">
-                                            <Package className="w-12 h-12 text-slate-200 mb-4" />
-                                            <p className="text-slate-500 font-bold text-base">Kho hiện đang trống</p>
-                                            <p className="text-slate-400 font-medium text-sm mt-1">Chưa có mặt hàng nào được nhập vào kho này.</p>
-                                        </div>
-                                    ) : (
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            {inventory.map(item => (
-                                                <div key={item.id} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between hover:border-emerald-300 transition-colors group">
-                                                    <div className="flex items-center gap-4">
-                                                        <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center font-bold">
-                                                            <Package className="w-6 h-6" />
-                                                        </div>
-                                                        <div>
-                                                            <h4 className="font-black text-slate-800 text-base">{item.item_name}</h4>
-                                                            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider mt-1">{item.item_type}</p>
-                                                        </div>
-                                                    </div>
-                                                    <div className="text-right">
-                                                        <div className="text-2xl font-black text-emerald-600 leading-none">
-                                                            {item.quantity}
-                                                        </div>
-                                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Hàng có sẵn</p>
-                                                    </div>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    {displayedInventory.map((item) => (
+                                        <div key={item.id} className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:border-primary/20 transition-all group overflow-hidden relative">
+                                            <div className="absolute top-0 right-0 w-24 h-24 bg-primary/5 rounded-full -translate-y-1/2 translate-x-1/2 group-hover:bg-primary/10 transition-colors"></div>
+                                            <div className="flex items-center gap-3 mb-3 relative z-10">
+                                                <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-black group-hover:scale-110 transition-transform">
+                                                    {item.volume || '—'}
                                                 </div>
-                                            ))}
+                                                <div className="min-w-0 flex-1">
+                                                    <h4 className="font-black text-slate-800 truncate mb-0.5">{item.serial_number}</h4>
+                                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{item.category || 'Vỏ bình'}</p>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center justify-between relative z-10">
+                                                <span className="text-[10px] font-black text-slate-400 bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-100">
+                                                    OK
+                                                </span>
+                                                <span className="text-[10px] font-black text-primary px-2 py-0.5">
+                                                    {item.status}
+                                                </span>
+                                            </div>
                                         </div>
-                                    )}
+                                    ))}
                                 </div>
                             )}
-                        </>
-                    )}
-                </div>
+                        </section>
 
+                        {/* Recent Activity Section */}
+                        <section>
+                            <h3 className="text-sm font-black text-slate-700 uppercase tracking-widest flex items-center gap-2 mb-6">
+                                <History className="w-4 h-4 text-emerald-500" />
+                                Hoạt động gần đây
+                            </h3>
+                            <div className="space-y-4">
+                                {recentLogs.length === 0 ? (
+                                    <div className="p-10 text-center border border-dashed border-slate-200 rounded-2xl bg-white/50">
+                                        <Clock className="w-10 h-10 text-slate-200 mx-auto mb-3" />
+                                        <p className="text-slate-400 font-bold text-xs uppercase">Chưa có hoạt động</p>
+                                    </div>
+                                ) : (
+                                    recentLogs.map((log) => (
+                                        <div key={log.id} className="flex items-start gap-4 relative group">
+                                            <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-400 flex items-center justify-center shrink-0 border border-slate-200 group-hover:bg-primary/10 group-hover:text-primary group-hover:border-primary/20 transition-all">
+                                                <Activity className="w-5 h-5" />
+                                            </div>
+                                            <div className="flex-1 min-w-0 bg-white p-4 rounded-2xl border border-slate-100 shadow-sm group-hover:shadow-md group-hover:border-primary/20 transition-all">
+                                                <div className="flex items-center justify-between gap-2 mb-1">
+                                                    <p className="text-xs font-black text-slate-800">{log.action || 'Di chuyển bình'}</p>
+                                                    <span className="text-[10px] font-bold text-slate-400 shrink-0">{formatDate(log.created_at)}</span>
+                                                </div>
+                                                <p className="text-xs font-bold text-slate-500 truncate">{log.description || `Bình ${log.serial_number} được xử lý tại kho`}</p>
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        </section>
+                    </div>
+                )}
             </div>
         </div>
+    );
+
+    return createPortal(
+        <div className={clsx(
+            "fixed inset-0 z-[100005] flex justify-end transition-all duration-300",
+            isClosing ? "opacity-0 pointer-events-none" : "opacity-100"
+        )}>
+            {/* Backdrop */}
+            <div 
+                className={clsx(
+                    "absolute inset-0 bg-black/45 backdrop-blur-sm animate-in fade-in duration-300",
+                    isClosing && "animate-out fade-out duration-300"
+                )}
+                onClick={handleClose}
+            />
+
+            {/* Panel */}
+            <div 
+                className={clsx(
+                    "relative bg-white shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col h-full border-l border-slate-200 animate-in slide-in-from-right duration-500",
+                    isClosing && "animate-out slide-out-to-right duration-300"
+                )}
+                onClick={(e) => e.stopPropagation()}
+            >
+                {content}
+            </div>
+        </div>,
+        document.body
     );
 }

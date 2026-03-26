@@ -683,7 +683,7 @@ const Machines = () => {
     };
 
     const getSerialCellClass = (status) => clsx(
-        'px-4 py-4 text-sm font-semibold text-foreground font-mono border-r border-primary/20 border-l-4',
+        'px-4 py-3 text-sm font-semibold text-foreground font-mono border-r border-slate-100 border-l-4',
         status === 'sẵn sàng' && 'border-l-emerald-400',
         status === 'thuộc khách hàng' && 'border-l-blue-400',
         (status === 'kiểm tra' || status === 'bảo trì') && 'border-l-amber-400',
@@ -1140,7 +1140,7 @@ const Machines = () => {
                         </div>
                     </div>
 
-                    <div className="hidden md:block flex-1 overflow-x-auto bg-white">
+                    <div className="hidden md:block flex-1 overflow-x-auto bg-white border-t border-primary/20">
                         <table className="w-full border-collapse">
                             <thead className="bg-primary/5">
                                 <tr>
@@ -1156,14 +1156,14 @@ const Machines = () => {
                                         <th
                                             key={col.key}
                                             className={clsx(
-                                                'px-4 py-3.5 text-[12px] font-bold text-muted-foreground text-left uppercase tracking-wide',
-                                                col.key === 'serial_number' && 'border-l border-r border-primary/30'
+                                                'px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] text-left',
+                                                col.key === 'serial_number' && 'border-l border-r border-slate-100'
                                             )}
                                         >
                                             {col.label}
                                         </th>
                                     ))}
-                                    <th className="px-4 py-3.5 text-[12px] font-bold text-muted-foreground text-center uppercase tracking-wide border-l border-r border-primary/30">Thao tác</th>
+                                    <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] text-center border-l border-slate-100">Thao tác</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-primary/10">
@@ -1257,7 +1257,7 @@ const Machines = () => {
             )}
 
             {activeView === 'stats' && (
-                <div className="bg-white rounded-2xl border border-border shadow-sm flex flex-col flex-1 min-h-0 w-full">
+                <div className="bg-white rounded-2xl border border-border shadow-sm flex flex-col w-full">
                     <div className="space-y-0">
                         <div className="md:hidden flex items-center gap-2 p-3 border-b border-border">
                             <button
@@ -1445,52 +1445,52 @@ const Machines = () => {
                             </div>
                         </div>
 
-                        <div className="px-3 md:px-4 pt-4 md:pt-5 pb-5 md:pb-6 space-y-5">
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                                <div className="bg-blue-50 rounded-2xl p-3.5 md:p-5 shadow-sm">
-                                    <div className="flex items-center justify-start gap-3 md:gap-4">
-                                        <div className="w-10 h-10 md:w-12 md:h-12 bg-blue-100 rounded-full flex items-center justify-center shrink-0">
+                        <div className="w-full px-3 md:px-4 pt-4 md:pt-5 pb-5 md:pb-6 space-y-5">
+                            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                                <div className="bg-blue-50/70 border border-blue-100 rounded-2xl p-4 md:p-5 shadow-sm">
+                                    <div className="flex flex-col md:flex-row items-center md:items-center justify-center md:justify-start text-center md:text-left gap-3 md:gap-4">
+                                        <div className="w-10 h-10 md:w-12 md:h-12 bg-blue-100/80 rounded-full flex items-center justify-center shrink-0 ring-1 ring-blue-200/70">
                                             <Activity className="w-5 h-5 md:w-6 md:h-6 text-blue-600" />
                                         </div>
                                         <div>
-                                            <p className="text-[11px] font-semibold text-blue-600 uppercase tracking-wider">Tổng máy</p>
-                                            <p className="text-[34px] md:text-3xl font-bold text-blue-900 mt-0.5 md:mt-1 leading-none">{formatNumber(filteredMachinesCount)}</p>
+                                            <p className="text-[10px] md:text-[11px] font-semibold text-blue-600 uppercase tracking-wider">Tổng máy</p>
+                                            <p className="text-2xl md:text-3xl font-bold text-foreground mt-0.5 md:mt-1 leading-none">{formatNumber(filteredMachinesCount)}</p>
                                         </div>
                                     </div>
                                 </div>
 
-                                <div className="bg-green-50 rounded-2xl p-3.5 md:p-5 shadow-sm">
-                                    <div className="flex items-center justify-start gap-3 md:gap-4">
-                                        <div className="w-10 h-10 md:w-12 md:h-12 bg-green-100 rounded-full flex items-center justify-center shrink-0">
+                                <div className="bg-green-50/70 border border-green-100 rounded-2xl p-4 md:p-5 shadow-sm">
+                                    <div className="flex flex-col md:flex-row items-center md:items-center justify-center md:justify-start text-center md:text-left gap-3 md:gap-4">
+                                        <div className="w-10 h-10 md:w-12 md:h-12  bg-green-100/80 rounded-full flex items-center justify-center shrink-0 ring-1 ring-green-200/70">
                                             <BarChart2 className="w-5 h-5 md:w-6 md:h-6 text-green-600" />
                                         </div>
                                         <div>
-                                            <p className="text-[11px] font-semibold text-green-600 uppercase tracking-wider">Sẵn sàng</p>
-                                            <p className="text-[34px] md:text-3xl font-bold text-green-900 mt-0.5 md:mt-1 leading-none">{formatNumber(readyCount)}</p>
+                                            <p className="text-[10px] md:text-[11px] font-semibold text-green-600 uppercase tracking-wider">Sẵn sàng</p>
+                                            <p className="text-2xl md:text-3xl font-bold text-foreground mt-0.5 md:mt-1 leading-none">{formatNumber(readyCount)}</p>
                                         </div>
                                     </div>
                                 </div>
 
-                                <div className="bg-orange-50 rounded-2xl p-3.5 md:p-5 shadow-sm">
-                                    <div className="flex items-center justify-start gap-3 md:gap-4">
-                                        <div className="w-10 h-10 md:w-12 md:h-12 bg-orange-100 rounded-full flex items-center justify-center shrink-0">
-                                            <BarChart2 className="w-5 h-5 md:w-6 md:h-6 text-orange-600" />
+                                <div className="bg-indigo-50/70 border border-indigo-100 rounded-2xl p-4 md:p-5 shadow-sm">
+                                    <div className="flex flex-col md:flex-row items-center md:items-center justify-center md:justify-start text-center md:text-left gap-3 md:gap-4">
+                                        <div className="w-10 h-10 md:w-12 md:h-12  bg-indigo-100/80 rounded-full flex items-center justify-center shrink-0 ring-1 ring-indigo-200/70">
+                                            <BarChart2 className="w-5 h-5 md:w-6 md:h-6 text-indigo-600" />
                                         </div>
                                         <div>
-                                            <p className="text-[11px] font-semibold text-orange-600 uppercase tracking-wider">Đang dùng</p>
-                                            <p className="text-[34px] md:text-3xl font-bold text-orange-900 mt-0.5 md:mt-1 leading-none">{formatNumber(inUseCount)}</p>
+                                            <p className="text-[10px] md:text-[11px] font-semibold text-indigo-600 uppercase tracking-wider">Đang dùng</p>
+                                            <p className="text-2xl md:text-3xl font-bold text-foreground mt-0.5 md:mt-1 leading-none">{formatNumber(inUseCount)}</p>
                                         </div>
                                     </div>
                                 </div>
 
-                                <div className="bg-rose-50 rounded-2xl p-3.5 md:p-5 shadow-sm">
-                                    <div className="flex items-center justify-start gap-3 md:gap-4">
-                                        <div className="w-10 h-10 md:w-12 md:h-12 bg-rose-100 rounded-full flex items-center justify-center shrink-0">
-                                            <Wrench className="w-5 h-5 md:w-6 md:h-6 text-rose-600" />
+                                <div className="bg-amber-50/70 border border-amber-100 rounded-2xl p-4 md:p-5 shadow-sm">
+                                    <div className="flex flex-col md:flex-row items-center md:items-center justify-center md:justify-start text-center md:text-left gap-3 md:gap-4">
+                                        <div className="w-10 h-10 md:w-12 md:h-12  bg-amber-100/80 rounded-full flex items-center justify-center shrink-0 ring-1 ring-amber-200/70">
+                                            <Wrench className="w-5 h-5 md:w-6 md:h-6 text-amber-600" />
                                         </div>
                                         <div>
-                                            <p className="text-[11px] font-semibold text-rose-600 uppercase tracking-wider">Bảo trì</p>
-                                            <p className="text-[34px] md:text-3xl font-bold text-rose-900 mt-0.5 md:mt-1 leading-none">{formatNumber(maintenanceCount)}</p>
+                                            <p className="text-[10px] md:text-[11px] font-semibold text-amber-600 uppercase tracking-wider">Bảo trì</p>
+                                            <p className="text-2xl md:text-3xl font-bold text-foreground mt-0.5 md:mt-1 leading-none">{formatNumber(maintenanceCount)}</p>
                                         </div>
                                     </div>
                                 </div>

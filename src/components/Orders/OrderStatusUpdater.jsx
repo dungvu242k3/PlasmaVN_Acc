@@ -1,5 +1,7 @@
-import { AlertCircle, AlertTriangle, CheckCircle, Clock, Plus, ScanBarcode, Truck, UploadCloud } from 'lucide-react';
+import { AlertCircle, AlertTriangle, ArrowRightCircle, Camera, CheckCircle, CheckCircle2, Clock, CloudUpload, Plus, ScanBarcode, Truck, X, XCircle } from 'lucide-react';
+import clsx from 'clsx';
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { ORDER_STATE_TRANSITIONS, PRODUCT_TYPES } from '../../constants/orderConstants';
 import { supabase } from '../../supabase/config';
 import BarcodeScanner from '../Common/BarcodeScanner';
@@ -15,6 +17,24 @@ export default function OrderStatusUpdater({ order, warehouseName, userRole, onC
     const [shippers, setShippers] = useState([]);
     const [adjustedQuantity, setAdjustedQuantity] = useState(order?.quantity || 0);
     const [isScannerOpen, setIsScannerOpen] = useState(false);
+    const [isClosing, setIsClosing] = useState(false);
+
+    const STATUS_TRANSITIONS_METADATA = [
+        { nextStatus: 'DIEU_CHINH', icon: AlertTriangle },
+        { nextStatus: 'KHO_XU_LY', icon: Truck },
+        { nextStatus: 'CHO_GIAO_HANG', icon: Truck },
+        { nextStatus: 'DA_DUYET', icon: CheckCircle2 },
+        { nextStatus: 'DANG_GIAO_HANG', icon: Truck },
+        { nextStatus: 'CHO_DOI_SOAT', icon: Clock },
+        { nextStatus: 'HOAN_THANH', icon: CheckCircle },
+        { nextStatus: 'HUY_DON', icon: XCircle },
+        { nextStatus: 'DOI_SOAT_THAT_BAI', icon: AlertCircle },
+    ];
+
+    const handleClose = () => {
+        setIsClosing(true);
+        setTimeout(onClose, 300);
+    };
 
     const handleScanSuccess = (decodedText) => {
         setScannedSerials(prev => {
@@ -297,237 +317,270 @@ export default function OrderStatusUpdater({ order, warehouseName, userRole, onC
         }
     };
 
-    return (
-        <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4 animate-in fade-in duration-200">
-            <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-md overflow-hidden flex flex-col max-h-[90vh]">
-                <div className="p-6 border-b border-gray-100 flex items-center gap-3 shrink-0">
-                    <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center text-blue-600">
-                        <AlertCircle className="w-6 h-6" />
+    return createPortal(
+        <div className={clsx(
+            "fixed inset-0 z-[100005] flex justify-end transition-all duration-300",
+            isClosing ? "opacity-0 pointer-events-none" : "opacity-100"
+        )}>
+            {/* Backdrop */}
+            <div 
+                className={clsx(
+                    "absolute inset-0 bg-black/45 backdrop-blur-sm animate-in fade-in duration-300",
+                    isClosing && "animate-out fade-out duration-300"
+                )}
+                onClick={handleClose}
+            />
+
+            {/* Panel */}
+            <div 
+                className={clsx(
+                    "relative bg-white shadow-2xl w-full max-w-md overflow-hidden flex flex-col h-full border-l border-slate-200 animate-in slide-in-from-right duration-500",
+                    isClosing && "animate-out slide-out-to-right duration-300"
+                )}
+                onClick={(e) => e.stopPropagation()}
+            >
+                <div className="p-6 border-b border-gray-100 flex items-center justify-between shrink-0 bg-white sticky top-0 z-20">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center text-primary">
+                            <AlertCircle className="w-6 h-6" />
+                        </div>
+                        <div>
+                            <h3 className="text-xl font-black text-gray-900 tracking-tight leading-nonde uppercase mb-1">Thao tác đơn hàng</h3>
+                            <p className="text-sm font-bold text-gray-400 uppercase tracking-widest">Mã: #{order.order_code}</p>
+                        </div>
                     </div>
-                    <div>
-                        <h3 className="text-xl font-black text-gray-900">Thao tác đơn hàng</h3>
-                        <p className="text-sm font-medium text-gray-500">Mã: #{order.order_code}</p>
-                    </div>
+                    <button onClick={handleClose} className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all">
+                        <X className="w-6 h-6" />
+                    </button>
                 </div>
 
-                <div className="p-6 space-y-4 overflow-y-auto">
+                <div className="p-6 space-y-6 overflow-y-auto flex-1 custom-scrollbar">
                     {/* Order Summary */}
-                    <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 space-y-2 text-sm">
-                        <div className="flex justify-between"><span className="text-gray-500 font-medium">Khách hàng:</span><span className="font-bold text-gray-900">{order.customer_name || '—'}</span></div>
-                        <div className="flex justify-between"><span className="text-gray-500 font-medium">Hàng hóa:</span><span className="font-bold text-gray-900">{PRODUCT_TYPES.find(p => p.id === order.product_type)?.label || order.product_type || '—'}</span></div>
-                        <div className="flex justify-between"><span className="text-gray-500 font-medium">Số lượng:</span><span className="font-bold text-gray-900">{order.quantity || 0}</span></div>
+                    <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200/60 space-y-2 text-sm shadow-sm">
+                        <div className="flex justify-between"><span className="text-slate-500 font-bold uppercase text-[11px]">Khách hàng:</span><span className="font-black text-slate-900">{order.customer_name || '—'}</span></div>
+                        <div className="flex justify-between"><span className="text-slate-500 font-bold uppercase text-[11px]">Hàng hóa:</span><span className="font-black text-slate-900">{PRODUCT_TYPES.find(p => p.id === order.product_type)?.label || order.product_type || '—'}</span></div>
+                        <div className="flex justify-between"><span className="text-slate-500 font-bold uppercase text-[11px]">Số lượng:</span><span className="font-black text-slate-900">{order.quantity || 0}</span></div>
                         {order.department && (
-                            <div className="flex justify-between"><span className="text-gray-500 font-medium">Mã máy:</span><span className="font-bold text-blue-700">{order.department}</span></div>
+                            <div className="flex justify-between"><span className="text-slate-500 font-bold uppercase text-[11px]">Cơ sở / Phòng:</span><span className="font-black text-primary">{order.department}</span></div>
                         )}
                         {order.warehouse && (
-                            <div className="flex justify-between"><span className="text-gray-500 font-medium">Kho xuất:</span><span className="font-bold text-gray-900">{warehouseName || order.warehouse}</span></div>
+                            <div className="flex justify-between"><span className="text-slate-500 font-bold uppercase text-[11px]">Kho xuất:</span><span className="font-black text-slate-900">{warehouseName || order.warehouse}</span></div>
                         )}
                     </div>
 
                     {/* Tabs */}
-                    <div className="flex gap-2 border-b border-gray-100 pb-3">
+                    <div className="flex gap-4 border-b border-slate-200">
                         <button
                             onClick={() => setActiveTab('actions')}
-                            className={`px-4 py-2 text-xs font-black uppercase tracking-wider rounded-lg transition-all ${activeTab === 'actions' ? 'bg-blue-50 text-blue-700' : 'text-gray-400 hover:text-gray-600'}`}
+                            className={`pb-3 text-xs font-black uppercase tracking-wider transition-all border-b-2 ${activeTab === 'actions' ? 'border-primary text-primary' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
                         >
                             Thao tác
                         </button>
                         <button
                             onClick={() => setActiveTab('history')}
-                            className={`px-4 py-2 text-xs font-black uppercase tracking-wider rounded-lg transition-all flex items-center gap-1.5 ${activeTab === 'history' ? 'bg-blue-50 text-blue-700' : 'text-gray-400 hover:text-gray-600'}`}
+                            className={`pb-3 text-xs font-black uppercase tracking-wider transition-all border-b-2 flex items-center gap-1.5 ${activeTab === 'history' ? 'border-primary text-primary' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
                         >
-                            <Clock className="w-3.5 h-3.5" /> Lịch sử
+                            <Clock className="w-4 h-4" /> Lịch sử
                         </button>
                     </div>
 
                     {activeTab === 'history' && (
-                        <OrderHistoryTimeline orderId={order.id} />
+                        <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+                            <OrderHistoryTimeline orderId={order.id} />
+                        </div>
                     )}
 
-                    {activeTab === 'actions' && (<>
-                        {/* Quantity Adjustment + RFID Scanner for Warehouse */}
-                        {(order.status === 'KHO_XU_LY') && (
-                            <div className="space-y-4">
-                                <div>
-                                    <label className="block text-sm font-bold text-gray-700 mb-1">
-                                        Số lượng duyệt xuất kho
-                                    </label>
-                                    <input
-                                        type="number"
-                                        min="1"
-                                        className="w-full px-4 py-2 border border-gray-200 rounded-lg font-medium outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-50 transition-all"
-                                        value={adjustedQuantity}
-                                        onChange={e => setAdjustedQuantity(Math.max(1, parseInt(e.target.value) || 1))}
-                                    />
-                                    {adjustedQuantity !== order.quantity && (
-                                        <p className="text-xs text-orange-600 mt-1 font-semibold">* Số lượng đã điều chỉnh. Tổng tiền của đơn sẽ được tính toán lại sau khi lưu.</p>
+                    {activeTab === 'actions' && (
+                        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                            {/* Quantity Adjustment + RFID Scanner for Warehouse */}
+                            {(order.status === 'KHO_XU_LY') && (
+                                <div className="space-y-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                                    <div className="space-y-1.5">
+                                        <label className="block text-xs font-black text-slate-500 uppercase tracking-widest">
+                                            Số lượng duyệt xuất kho
+                                        </label>
+                                        <input
+                                            type="number"
+                                            min="1"
+                                            className="w-full h-11 px-4 bg-slate-50 border border-slate-200 rounded-xl font-black text-slate-800 outline-none focus:border-primary/40 focus:ring-4 focus:ring-primary/5 transition-all"
+                                            value={adjustedQuantity}
+                                            onChange={e => setAdjustedQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+                                        />
+                                        {adjustedQuantity !== order.quantity && (
+                                            <p className="text-[11px] text-orange-600 font-bold italic">* Số lượng đã điều chỉnh.</p>
+                                        )}
+                                    </div>
+
+                                    {order.product_type?.startsWith('BINH') && (
+                                        <div className="space-y-3 pt-3 border-t border-slate-100">
+                                            <div className="flex items-center justify-between">
+                                                <label className="flex items-center gap-1.5 text-xs font-black text-slate-500 uppercase tracking-widest">
+                                                    <ScanBarcode className="w-4 h-4 text-primary" />
+                                                    <span>Mã vỏ bình RFID ({adjustedQuantity})</span>
+                                                </label>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setIsScannerOpen(true)}
+                                                    className="px-3 py-1.5 bg-primary/10 text-primary text-[10px] font-black rounded-lg hover:bg-primary/20 transition-all flex items-center gap-1.5 uppercase tracking-wider"
+                                                >
+                                                    <Camera className="w-3.5 h-3.5" /> Quét ảnh
+                                                </button>
+                                            </div>
+                                            <textarea
+                                                placeholder="Nhập mã hoặc dùng máy quét..."
+                                                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800 outline-none focus:border-primary/40 focus:ring-4 focus:ring-primary/5 min-h-[100px] transition-all resize-none"
+                                                value={scannedSerials}
+                                                onChange={e => setScannedSerials(e.target.value)}
+                                            />
+                                        </div>
                                     )}
                                 </div>
+                            )}
 
-                                {order.product_type?.startsWith('BINH') && (
-                                    <div>
-                                        <div className="flex items-center justify-between mb-1">
-                                            <label className="flex items-center gap-1.5 text-sm font-bold text-gray-700">
-                                                <ScanBarcode className="w-5 h-5 text-blue-600 shrink-0" />
-                                                <span>Quét mã vỏ bình RFID (Đúng <span className="text-blue-600">{adjustedQuantity}</span> bình)</span>
+                            {/* RFID Scanner for Shipper */}
+                            {((order.status === 'CHO_GIAO_HANG' || order.status === 'DANG_GIAO_HANG') &&
+                                order.product_type?.startsWith('BINH') &&
+                                (!order.assigned_cylinders || order.assigned_cylinders.length < order.quantity)) && (
+                                    <div className="bg-orange-50/50 p-5 rounded-2xl border border-orange-100 space-y-4 shadow-sm">
+                                        <div className="flex items-center justify-between">
+                                            <label className="flex items-center gap-1.5 text-xs font-black text-orange-600 uppercase tracking-widest">
+                                                <AlertTriangle className="w-4 h-4" /> 
+                                                <span>Quét gán {order.quantity} bình:</span>
                                             </label>
                                             <button
                                                 type="button"
                                                 onClick={() => setIsScannerOpen(true)}
-                                                className="px-3 py-1.5 bg-blue-600 text-white text-xs font-bold rounded-lg hover:bg-blue-700 transition-all flex items-center gap-1.5 shadow-sm ml-2 shrink-0"
+                                                className="px-3 py-1.5 bg-orange-600 text-white text-[10px] font-black rounded-lg hover:bg-orange-700 transition-all flex items-center gap-1.5 uppercase tracking-wider shadow-sm"
                                             >
-                                                <ScanBarcode className="w-4 h-4" /> Bật Camera quét
+                                                <Camera className="w-3.5 h-3.5" /> Quét ảnh
                                             </button>
                                         </div>
                                         <textarea
-                                            placeholder="Nhập mã hoặc dùng máy quét RFID, mỗi mã một dòng..."
-                                            className="w-full px-4 py-3 border border-gray-200 rounded-lg font-medium outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-50 min-h-[100px] shadow-sm transition-all"
+                                            placeholder="Quét mã RFID..."
+                                            className="w-full px-4 py-3 bg-white border border-orange-200 rounded-xl font-bold text-slate-800 outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-50 min-h-[100px] transition-all resize-none"
                                             value={scannedSerials}
                                             onChange={e => setScannedSerials(e.target.value)}
                                         />
-                                        <p className="text-xs text-gray-500 mt-1 font-medium italic">* Có thể bỏ trống nếu để cho Đơn vị vận chuyển tự quét (Không khuyến khích).</p>
+                                    </div>
+                                )}
+
+                            {/* Options */}
+                            <div className="space-y-4">
+                                {(order.status === 'KHO_XU_LY' || order.status === 'DA_DUYET' || order.status === 'CHO_GIAO_HANG' || order.status === 'DANG_GIAO_HANG') && (
+                                    <div className="space-y-1.5">
+                                        <label className="block text-xs font-black text-slate-500 uppercase tracking-widest">
+                                            Đơn vị vận chuyển {order.status === 'KHO_XU_LY' && <span className="text-red-500">*</span>}
+                                        </label>
+                                        <div className="relative">
+                                            <Truck className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                                            <select
+                                                className="w-full h-11 pl-10 pr-4 bg-white border border-slate-200 rounded-xl font-bold text-slate-800 outline-none focus:border-primary/40 focus:ring-4 focus:ring-primary/5 appearance-none cursor-pointer transition-all shadow-sm"
+                                                value={deliveryUnit}
+                                                onChange={e => setDeliveryUnit(e.target.value)}
+                                                disabled={order.status !== 'KHO_XU_LY' && order.status !== 'DA_DUYET' && order.status !== 'CHO_GIAO_HANG'}
+                                            >
+                                                <option value="">-- Chọn đơn vị vận chuyển --</option>
+                                                {shippers.map(s => (
+                                                    <option key={s.id} value={s.name}>{s.name}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {(order.status === 'DANG_GIAO_HANG' || order.status === 'CHO_DOI_SOAT' || order.status === 'HOAN_THANH') && (
+                                    <div className="space-y-3">
+                                        <label className="block text-xs font-black text-slate-500 uppercase tracking-widest">
+                                            Ảnh chứng từ giao hàng
+                                        </label>
+
+                                        {order.delivery_image_url && !selectedFile ? (
+                                            <div className="p-3 bg-emerald-50 border border-emerald-100 rounded-xl flex items-center justify-between shadow-sm">
+                                                <div className="flex items-center gap-2">
+                                                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                                                    <span className="text-[12px] font-bold text-emerald-700">Đã có chứng từ</span>
+                                                </div>
+                                                <a href={order.delivery_image_url} target="_blank" rel="noreferrer" className="text-[10px] font-black text-primary hover:underline hover:text-primary/80 uppercase tracking-wider">Xem ảnh</a>
+                                            </div>
+                                        ) : null}
+
+                                        {order.status === 'DANG_GIAO_HANG' && (
+                                            <label className="flex flex-col items-center justify-center w-full h-32 bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl cursor-pointer hover:bg-slate-100 hover:border-primary/40 transition-all group">
+                                                <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                                                    <CloudUpload className="w-8 h-8 text-slate-400 group-hover:text-primary transition-colors mb-2" />
+                                                    <p className="text-[12px] font-bold text-slate-500 group-hover:text-slate-700">
+                                                        {selectedFile ? selectedFile.name : 'Upload ảnh chứng từ'}
+                                                    </p>
+                                                </div>
+                                                <input
+                                                    type="file"
+                                                    accept="image/*"
+                                                    className="hidden"
+                                                    onChange={e => setSelectedFile(e.target.files[0])}
+                                                />
+                                            </label>
+                                        )}
                                     </div>
                                 )}
                             </div>
-                        )}
 
-                        {/* RFID Scanner for Shipper (Nếu Kho chưa gán) */}
-                        {((order.status === 'CHO_GIAO_HANG' || order.status === 'DANG_GIAO_HANG') &&
-                            order.product_type?.startsWith('BINH') &&
-                            (!order.assigned_cylinders || order.assigned_cylinders.length < order.quantity)) && (
-                                <div>
-                                    <div className="flex items-center justify-between mb-1">
-                                        <label className="flex items-center gap-1.5 text-sm font-bold text-orange-600">
-                                            <AlertTriangle className="w-4 h-4 shrink-0" />
-                                            <span>Kho chưa gán mã. Bạn cần quét đúng {order.quantity} vỏ bình:</span>
-                                        </label>
-                                        <button
-                                            type="button"
-                                            onClick={() => setIsScannerOpen(true)}
-                                            className="px-3 py-1.5 bg-orange-600 text-white text-xs font-bold rounded-lg hover:bg-orange-700 transition-all flex items-center gap-1.5 shadow-sm ml-2 shrink-0"
-                                        >
-                                            <ScanBarcode className="w-4 h-4" /> Bật Camera quét
-                                        </button>
-                                    </div>
-                                    <textarea
-                                        placeholder="Quét mã RFID vào đây..."
-                                        className="w-full px-4 py-3 border border-orange-200 rounded-lg font-medium outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-50 min-h-[100px] shadow-sm transition-all"
-                                        value={scannedSerials}
-                                        onChange={e => setScannedSerials(e.target.value)}
-                                    />
+                            {errorMsg && (
+                                <div className="p-4 bg-rose-50 border border-rose-100 rounded-2xl text-[13px] font-bold text-rose-600 flex items-center gap-2 animate-in fade-in slide-in-from-top-2">
+                                    <XCircle className="w-4 h-4 shrink-0" />
+                                    {errorMsg}
                                 </div>
                             )}
 
-                        {/* Only show Shipper field if moving to Delivery or already in it and lacking one. Or show for KHO_XU_LY so warehouse can select early */}
-                        {(order.status === 'KHO_XU_LY' || order.status === 'DA_DUYET' || order.status === 'CHO_GIAO_HANG' || order.status === 'DANG_GIAO_HANG') && (
-                            <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-1">
-                                    Đơn vị Vận Chuyển {order.status === 'KHO_XU_LY' && <span className="text-red-500">*</span>}
-                                </label>
-                                <div className="relative">
-                                    <Truck className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                                    <select
-                                        className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg font-medium outline-none focus:border-blue-500 appearance-none bg-white cursor-pointer"
-                                        value={deliveryUnit}
-                                        onChange={e => setDeliveryUnit(e.target.value)}
-                                        disabled={order.status !== 'KHO_XU_LY' && order.status !== 'DA_DUYET' && order.status !== 'CHO_GIAO_HANG'}
-                                    >
-                                        <option value="">-- Chọn đơn vị vận chuyển --</option>
-                                        {shippers.map(s => (
-                                            <option key={s.id} value={s.name}>{s.name}</option>
-                                        ))}
-                                    </select>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Image upload field if Shipper drops it off */}
-                        {(order.status === 'DANG_GIAO_HANG' || order.status === 'CHO_DOI_SOAT' || order.status === 'HOAN_THANH') && (
-                            <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-1">
-                                    Ảnh chứng từ (Đối soát với khách)
-                                </label>
-
-                                {order.delivery_image_url && !selectedFile ? (
-                                    <div className="mt-2 text-sm text-green-600 font-medium break-all border p-2 rounded-lg bg-green-50 mb-4 flex items-center gap-2">
-                                        <CheckCircle className="w-4 h-4 shrink-0" /> Đã có ảnh chứng từ: <a href={order.delivery_image_url} target="_blank" rel="noreferrer" className="underline font-bold text-blue-600">Xem ảnh</a>
+                            {/* Final Actions */}
+                            <div className="pt-4 border-t border-slate-100 space-y-3">
+                                <label className="block text-[10px] font-black text-primary uppercase tracking-widest mb-4">Các thao tác khả dụng</label>
+                                {availableActions.length === 0 ? (
+                                    <div className="p-8 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                                        <p className="text-sm font-bold text-slate-400 italic">Không có quyền thao tác</p>
                                     </div>
-                                ) : null}
+                                ) : (
+                                    <div className="grid grid-cols-1 gap-3">
+                                        {availableActions.map(action => {
+                                            const metadata = STATUS_TRANSITIONS_METADATA.find(t => t.nextStatus === action.nextStatus);
+                                            const ActionIcon = metadata?.icon || ArrowRightCircle;
+                                            
+                                            let actionStyle = "bg-white text-slate-700 hover:bg-slate-50 border-slate-200 hover:border-primary/30";
+                                            if (action.nextStatus === 'HUY_DON' || action.nextStatus === 'DOI_SOAT_THAT_BAI') {
+                                                actionStyle = "bg-rose-50 text-rose-600 hover:bg-rose-100 border-rose-200 hover:border-rose-300";
+                                            } else {
+                                                actionStyle = "bg-primary text-white hover:bg-primary/90 border-transparent shadow-lg shadow-primary/20";
+                                            }
 
-                                {order.status === 'DANG_GIAO_HANG' && (
-                                    <label className="mt-2 flex items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:bg-gray-50 transition-colors">
-                                        <div className="text-center">
-                                            <UploadCloud className="w-8 h-8 text-blue-500 mx-auto mb-2" />
-                                            <span className="text-sm font-bold text-gray-600">
-                                                {selectedFile ? selectedFile.name : 'Chạm để Upload ảnh lên'}
-                                            </span>
-                                        </div>
-                                        <input
-                                            type="file"
-                                            accept="image/*"
-                                            className="hidden"
-                                            onChange={e => setSelectedFile(e.target.files[0])}
-                                        />
-                                    </label>
+                                            return (
+                                                <button
+                                                    key={action.nextStatus}
+                                                    onClick={() => handleUpdateStatus(action)}
+                                                    disabled={isLoading}
+                                                    className={`w-full p-4 flex items-center justify-center gap-3 font-black rounded-2xl transition-all border uppercase tracking-wider text-[13px] ${actionStyle} ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                >
+                                                    {isLoading ? (
+                                                        <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+                                                    ) : (
+                                                        <ActionIcon className={`w-5 h-5 ${action.nextStatus === 'HUY_DON' || action.nextStatus === 'DOI_SOAT_THAT_BAI' ? 'rotate-12' : ''}`} />
+                                                    )}
+                                                    {action.label}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
                                 )}
                             </div>
-                        )}
-
-                        {errorMsg && (
-                            <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600 font-medium whitespace-pre-line">
-                                {errorMsg}
-                            </div>
-                        )}
-
-                        {availableActions.length === 0 ? (
-                            <div className="p-4 bg-gray-50 rounded-xl text-center text-sm font-medium text-gray-500 border border-gray-200">
-                                Tài khoản của bạn ({userRole}) không có quyền thay đổi trạng thái hiện tại hoặc không có hành động nào tiếp theo.
-                            </div>
-                        ) : (
-                            <div className="space-y-2 pt-2">
-                                {availableActions.map(action => {
-                                    let styleClass = "bg-gray-50 text-gray-700 hover:bg-gray-100 border-gray-200";
-                                    let Icon = CheckCircle;
-
-                                    if (action.nextStatus === 'DA_DUYET' || action.nextStatus === 'HOAN_THANH') {
-                                        styleClass = "bg-green-50 text-green-700 hover:bg-green-100 border-green-200 shadow-sm shadow-green-100/50";
-                                    } else if (action.nextStatus === 'DIEU_CHINH') {
-                                        styleClass = "bg-orange-50 text-orange-700 hover:bg-orange-100 border-orange-200 shadow-sm shadow-orange-100/50";
-                                        Icon = AlertTriangle;
-                                    } else if (action.nextStatus === 'HUY_DON' || action.nextStatus === 'DOI_SOAT_THAT_BAI') {
-                                        styleClass = "bg-red-50 text-red-600 hover:bg-red-100 border-red-200 shadow-sm shadow-red-100/50";
-                                        Icon = Plus; // cross
-                                    } else {
-                                        styleClass = "bg-blue-50 text-blue-700 hover:bg-blue-100 border-blue-200 shadow-sm shadow-blue-100/50";
-                                    }
-
-                                    return (
-                                        <button
-                                            key={action.nextStatus}
-                                            onClick={() => handleUpdateStatus(action)}
-                                            disabled={isLoading}
-                                            className={`w-full p-4 flex items-center justify-center gap-3 font-bold rounded-xl transition-all border ${styleClass} ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                        >
-                                            {isLoading ? (
-                                                <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
-                                            ) : (
-                                                <Icon className={`w-5 h-5 ${action.nextStatus === 'HUY_DON' || action.nextStatus === 'DOI_SOAT_THAT_BAI' ? 'rotate-45' : ''}`} />
-                                            )}
-                                            {action.label}
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                        )}
-                    </>)}
+                        </div>
+                    )}
                 </div>
-                <div className="p-4 bg-gray-50 border-t border-gray-100 mt-auto shrink-0 space-y-2">
+
+                <div className="p-4 bg-slate-50 border-t border-slate-200 shrink-0 flex items-center justify-center px-6">
                     <button
-                        onClick={onClose}
+                        onClick={handleClose}
                         disabled={isLoading}
-                        className="w-full py-3 text-gray-500 font-bold text-sm bg-white hover:bg-gray-50 transition-colors rounded-lg border border-gray-200 shadow-sm"
+                        className="w-full py-3 text-slate-500 font-black text-[11px] uppercase tracking-widest bg-white hover:bg-slate-100 transition-all rounded-xl border border-slate-200 shadow-sm"
                     >
-                        Trở quay lại bảng
+                        Quay lại bảng điều khiển
                     </button>
                 </div>
             </div>
@@ -536,11 +589,12 @@ export default function OrderStatusUpdater({ order, warehouseName, userRole, onC
                 isOpen={isScannerOpen}
                 onClose={() => setIsScannerOpen(false)}
                 onScanSuccess={handleScanSuccess}
-                title={`Quét mã RFID (${order.status === 'KHO_XU_LY' ? 'Xuất kho' : 'Giao hàng'})`}
+                title={`Quét RFID (${order.status === 'KHO_XU_LY' ? 'Xuất kho' : 'Giao hàng'})`}
                 allowDuplicateScans={false}
                 currentCount={scannedSerials.split(/[\n, ]+/).map(s => s.trim()).filter(Boolean).length}
                 totalCount={order.status === 'KHO_XU_LY' ? adjustedQuantity : order.quantity}
             />
-        </div>
+        </div>,
+        document.body
     );
 }

@@ -74,7 +74,7 @@ const BarcodeScanner = ({
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-[99999] bg-black flex flex-col w-screen h-[100dvh] overflow-hidden">
+        <div className="fixed inset-0 z-[100010] bg-black flex flex-col w-screen h-[100dvh] overflow-hidden">
             {/* Header: Fixed at top using Flex */}
             <div className="flex-none bg-black/80 backdrop-blur-md p-4 flex items-center justify-between text-white border-b border-white/10 z-50 shadow-md">
                 <div className="flex items-center gap-3">
