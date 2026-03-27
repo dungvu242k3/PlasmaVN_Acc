@@ -36,7 +36,7 @@ import {
 import { useEffect, useRef, useState } from 'react';
 import * as XLSX from 'xlsx';
 import { Bar as BarChartJS, Pie as PieChartJS } from 'react-chartjs-2';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { clsx } from 'clsx';
 import CustomerDetailsModal from '../components/Customers/CustomerDetailsModal';
 import CustomerFormModal from '../components/Customers/CustomerFormModal';
@@ -61,6 +61,7 @@ ChartJS.register(
 
 const Customers = () => {
     const { role } = usePermissions();
+    const location = useLocation();
     const navigate = useNavigate();
     const [activeView, setActiveView] = useState('list');
     const [searchTerm, setSearchTerm] = useState('');
@@ -74,6 +75,7 @@ const Customers = () => {
     const [selectedCategories, setSelectedCategories] = useState([]);
     const [selectedManagedBy, setSelectedManagedBy] = useState([]);
     const [selectedCareBy, setSelectedCareBy] = useState([]);
+    const [selectedStatuses, setSelectedStatuses] = useState([]);
     const [uniqueManagedBy, setUniqueManagedBy] = useState([]);
     const [uniqueCareBy, setUniqueCareBy] = useState([]);
     const [warehousesList, setWarehousesList] = useState([]);
@@ -84,6 +86,7 @@ const Customers = () => {
     const [pendingCategories, setPendingCategories] = useState([]);
     const [pendingManagedBy, setPendingManagedBy] = useState([]);
     const [pendingCareBy, setPendingCareBy] = useState([]);
+    const [pendingStatuses, setPendingStatuses] = useState([]);
     const [showMoreActions, setShowMoreActions] = useState(false);
     const [isSearchExpanded, setIsSearchExpanded] = useState(false);
     const searchInputRef = useRef(null);
@@ -106,6 +109,7 @@ const Customers = () => {
         { key: 'borrowed_cylinders', label: 'Vỏ bình đang mượn' },
         { key: 'machines_in_use', label: 'Mã máy đang sử dụng' },
         { key: 'care_by', label: 'KD chăm sóc' },
+        { key: 'status', label: 'Trạng thái' },
         { key: 'invoice_email', label: 'Email hóa đơn' },
     ];
 
@@ -214,6 +218,7 @@ const Customers = () => {
         setPendingCategories(selectedCategories);
         setPendingManagedBy(selectedManagedBy);
         setPendingCareBy(selectedCareBy);
+        setPendingStatuses(selectedStatuses);
         setShowMobileFilter(true);
     };
 
@@ -221,6 +226,7 @@ const Customers = () => {
         setSelectedCategories(pendingCategories);
         setSelectedManagedBy(pendingManagedBy);
         setSelectedCareBy(pendingCareBy);
+        setSelectedStatuses(pendingStatuses);
         closeMobileFilter();
     };
 
@@ -344,6 +350,9 @@ const Customers = () => {
         !categoryId && 'border-l-transparent'
     );
 
+    const searchParams = new URLSearchParams(location.search);
+    const filterType = searchParams.get('filter') || (location.pathname === '/khach-hang-lead' ? 'lead' : null);
+
     const filteredCustomers = customers.filter(c => {
         const search = searchTerm.toLowerCase();
         const matchesSearch = (
@@ -356,8 +365,14 @@ const Customers = () => {
         const matchesCategory = selectedCategories.length === 0 || selectedCategories.includes(c.category);
         const matchesManagedBy = selectedManagedBy.length === 0 || selectedManagedBy.includes(c.managed_by);
         const matchesCareBy = selectedCareBy.length === 0 || selectedCareBy.includes(c.care_by);
+        const matchesStatus = selectedStatuses.length === 0 || selectedStatuses.includes(c.status);
 
-        return matchesSearch && matchesCategory && matchesManagedBy && matchesCareBy;
+        let matchesLeadFilter = true;
+        if (filterType === 'lead') {
+            matchesLeadFilter = c.status === 'Thành công';
+        }
+
+        return matchesSearch && matchesCategory && matchesManagedBy && matchesCareBy && matchesStatus && matchesLeadFilter;
     });
 
     const filteredCustomersCount = filteredCustomers.length;
@@ -365,8 +380,8 @@ const Customers = () => {
     const totalMachines = filteredCustomers.reduce((sum, c) => sum + (c.current_machines || 0), 0);
     const totalBorrowed = filteredCustomers.reduce((sum, c) => sum + (c.borrowed_cylinders || 0), 0);
 
-    const hasActiveFilters = selectedCategories.length > 0 || selectedManagedBy.length > 0 || selectedCareBy.length > 0;
-    const totalActiveFilters = selectedCategories.length + selectedManagedBy.length + selectedCareBy.length;
+    const hasActiveFilters = selectedCategories.length > 0 || selectedManagedBy.length > 0 || selectedCareBy.length > 0 || selectedStatuses.length > 0;
+    const totalActiveFilters = selectedCategories.length + selectedManagedBy.length + selectedCareBy.length + selectedStatuses.length;
 
     const categoryOptions = CUSTOMER_CATEGORIES.map(c => ({
         id: c.id,
@@ -385,6 +400,11 @@ const Customers = () => {
         label: name,
         count: customers.filter(x => x.care_by === name).length
     }));
+
+    const statusOptions = [
+        { id: 'Thành công', label: 'Thành công', count: customers.filter(x => x.status === 'Thành công').length },
+        { id: 'Chưa thành công', label: 'Chưa thành công', count: customers.filter(x => x.status === 'Chưa thành công').length },
+    ];
 
     const handleEditCustomer = (customer) => {
         setSelectedCustomer(customer);
@@ -418,6 +438,23 @@ const Customers = () => {
     const handleFormSubmitSuccess = () => {
         fetchCustomers();
         setIsFormModalOpen(false);
+    };
+
+    const handleStatusChange = async (id, newStatus) => {
+        try {
+            const { error } = await supabase
+                .from('customers')
+                .update({ status: newStatus })
+                .eq('id', id);
+
+            if (error) throw error;
+            
+            // Cập nhật state local để UI phản hồi nhanh
+            setCustomers(prev => prev.map(c => c.id === id ? { ...c, status: newStatus } : c));
+        } catch (error) {
+            console.error('Error updating status:', error);
+            alert('❌ Không thể cập nhật trạng thái: ' + error.message);
+        }
     };
 
     const handleRepairSubmitSuccess = () => {
@@ -749,6 +786,7 @@ const Customers = () => {
         setSelectedCategories([]);
         setSelectedManagedBy([]);
         setSelectedCareBy([]);
+        setSelectedStatuses([]);
     };
 
     return (
@@ -1180,28 +1218,29 @@ const Customers = () => {
 
                             <div className="relative">
                                 <button
-                                    onClick={() => setActiveDropdown(activeDropdown === 'careBy' ? null : 'careBy')}
+                                    onClick={() => setActiveDropdown(activeDropdown === 'status' ? null : 'status')}
                                     className={clsx(
                                         'flex items-center gap-2.5 px-4 py-2 rounded-xl border text-[13px] font-bold transition-all',
-                                        getFilterButtonClass('careBy', activeDropdown === 'careBy' || selectedCareBy.length > 0)
+                                        getFilterButtonClass('status', activeDropdown === 'status' || selectedStatuses.length > 0)
                                     )}
                                 >
-                                    <User size={14} className={getFilterIconClass('careBy', activeDropdown === 'careBy' || selectedCareBy.length > 0)} />
-                                    KD chăm sóc
-                                    {selectedCareBy.length > 0 && (
-                                        <span className={clsx('px-1.5 py-0.5 rounded-full text-[10px] font-bold', getFilterCountBadgeClass('careBy'))}>
-                                            {selectedCareBy.length}
+                                    <List size={14} className={getFilterIconClass('status', activeDropdown === 'status' || selectedStatuses.length > 0)} />
+                                    Trạng thái
+                                    {selectedStatuses.length > 0 && (
+                                        <span className={clsx('px-1.5 py-0.5 rounded-full text-[10px] font-bold', getFilterCountBadgeClass('status'))}>
+                                            {selectedStatuses.length}
                                         </span>
                                     )}
-                                    <ChevronDown size={14} className={clsx('transition-transform', activeDropdown === 'careBy' ? 'rotate-180' : '')} />
+                                    <ChevronDown size={14} className={clsx('transition-transform', activeDropdown === 'status' ? 'rotate-180' : '')} />
                                 </button>
-                                {activeDropdown === 'careBy' && (
+                                {activeDropdown === 'status' && (
                                     <FilterDropdown
-                                        options={careByOptions}
-                                        selected={selectedCareBy}
-                                        setSelected={setSelectedCareBy}
+                                        options={statusOptions}
+                                        selected={selectedStatuses}
+                                        setSelected={setSelectedStatuses}
                                         filterSearch={filterSearch}
                                         setFilterSearch={setFilterSearch}
+                                        showSearch={false}
                                     />
                                 )}
                             </div>
@@ -1287,6 +1326,24 @@ const Customers = () => {
                                         {isColumnVisible('machines_in_use') && <td className="px-4 py-4 text-sm text-muted-foreground">{c.machines_in_use || '—'}</td>}
                                         {isColumnVisible('care_by') && <td className="px-4 py-4 text-sm text-muted-foreground">{c.care_by || '—'}</td>}
                                         {isColumnVisible('invoice_email') && <td className="px-4 py-4 text-sm text-muted-foreground">{c.invoice_email || '—'}</td>}
+                                        {isColumnVisible('status') && (
+                                            <td className="px-4 py-4 text-sm">
+                                                <select
+                                                    value={c.status || ''}
+                                                    onChange={(e) => handleStatusChange(c.id, e.target.value)}
+                                                    className={clsx(
+                                                        "px-2 py-1 rounded-lg text-[11px] font-black uppercase tracking-wider border-none focus:ring-2 focus:ring-primary/20 outline-none cursor-pointer transition-all",
+                                                        c.status === 'Thành công' 
+                                                            ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200" 
+                                                            : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                                                    )}
+                                                >
+                                                    <option value="" disabled>-- Chọn --</option>
+                                                    <option value="Thành công">Thành công</option>
+                                                    <option value="Chưa thành công">Chưa thành công</option>
+                                                </select>
+                                            </td>
+                                        )}
                                         <td className="px-4 py-4 text-center border-l border-r border-primary/20">
                                             <div className="flex items-center justify-center gap-3">
                                                 <button onClick={() => { setSelectedCustomer(c); setIsRepairModalOpen(true); }} className="text-amber-600/80 hover:text-amber-700 transition-colors p-1 rounded hover:bg-amber-50" title="Báo hỏng">
@@ -1665,6 +1722,14 @@ const Customers = () => {
                             options: careByOptions,
                             selectedValues: pendingCareBy,
                             onSelectionChange: setPendingCareBy,
+                        },
+                        {
+                            id: 'status',
+                            label: 'Trạng thái',
+                            icon: <List size={16} className="text-primary" />,
+                            options: statusOptions,
+                            selectedValues: pendingStatuses,
+                            onSelectionChange: setPendingStatuses,
                         },
                     ]}
                 />

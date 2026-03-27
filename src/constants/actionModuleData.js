@@ -46,6 +46,13 @@ export const actionModuleGroups = [
         colorScheme: 'blue',
       },
       {
+        icon: Users,
+        title: 'Danh sách lead khách hàng',
+        description: 'Quản lý khách hàng tiềm năng chưa phát sinh hoạt động.',
+        href: '/khach-hang-lead',
+        colorScheme: 'amber',
+      },
+      {
         icon: Gift,
         title: 'Danh sách Khuyến mãi',
         description: 'Quản lý mã khuyến mãi, khấu trừ bình cho khách hàng và đại lý.',

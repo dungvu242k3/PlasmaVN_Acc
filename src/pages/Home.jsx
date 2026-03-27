@@ -42,6 +42,13 @@ const dashboardModules = [
   },
   {
     icon: Users,
+    title: 'Danh sách lead khách hàng',
+    description: 'Quản lý khách hàng tiềm năng chưa phát sinh hoạt động.',
+    href: '/khach-hang-lead',
+    colorScheme: 'amber',
+  },
+  {
+    icon: Users,
     title: 'Thêm khách hàng',
     description: 'Tạo hồ sơ khách hàng, đối tác mới vào cơ sở dữ liệu.',
     href: '/tao-khach-hang',

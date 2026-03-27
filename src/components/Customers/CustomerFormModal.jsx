@@ -38,7 +38,8 @@ export default function CustomerFormModal({ customer, onClose, onSuccess, catego
         tax_code: '',
         invoice_company_name: '',
         invoice_address: '',
-        invoice_email: ''
+        invoice_email: '',
+        status: ''
     });
 
     useEffect(() => {
@@ -59,7 +60,8 @@ export default function CustomerFormModal({ customer, onClose, onSuccess, catego
                 tax_code: customer.tax_code || '',
                 invoice_company_name: customer.invoice_company_name || '',
                 invoice_address: customer.invoice_address || '',
-                invoice_email: customer.invoice_email || ''
+                invoice_email: customer.invoice_email || '',
+                status: customer.status || 'Chưa thành công'
             });
         } else {
             // Auto generate CODE
@@ -303,6 +305,20 @@ export default function CustomerFormModal({ customer, onClose, onSuccess, catego
                                     >
                                         <option value="">-- Chọn Kho --</option>
                                         {warehouses && warehouses.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
+                                    </select>
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="flex items-center gap-1.5 text-[14px] font-semibold mb-1.5 ml-1 text-slate-600"><Building className="w-4 h-4" /> Trạng thái *</label>
+                                    <select
+                                        name="status"
+                                        required
+                                        value={formData.status}
+                                        onChange={handleChange}
+                                        className="w-full h-12 px-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-primary/10 focus:border-primary/40 focus:bg-white outline-none transition-all font-semibold text-slate-900 cursor-pointer"
+                                    >
+                                        <option value="" disabled>-- Chọn trạng thái --</option>
+                                        <option value="Thành công">Thành công</option>
+                                        <option value="Chưa thành công">Chưa thành công</option>
                                     </select>
                                 </div>
                             </div>

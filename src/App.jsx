@@ -122,6 +122,7 @@ function App() {
               <Route path="/kho/danh-sach" element={<Warehouses />} />
               <Route path="/kho/tao" element={<Warehouses />} />
               <Route path="/khach-hang" element={<Customers />} />
+              <Route path="/khach-hang-lead" element={<Customers />} />
               <Route path="/khach-hang/tao" element={<Customers />} />
               <Route path="/don-vi-van-chuyen" element={<Shippers />} />
               <Route path="/don-vi-van-chuyen/tao" element={<Shippers />} />
