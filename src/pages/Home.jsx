@@ -42,7 +42,7 @@ const dashboardModules = [
   },
   {
     icon: Users,
-    title: 'Danh sách lead khách hàng',
+    title: 'Form đăng kí khách hàng mới',
     description: 'Quản lý khách hàng tiềm năng chưa phát sinh hoạt động.',
     href: '/khach-hang-lead',
     colorScheme: 'amber',

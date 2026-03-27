@@ -50,7 +50,7 @@ export const extraMenuItems = [
   { path: '/bao-cao/doanh-so-san-luong', label: 'Doanh số/Sản lượng', icon: BarChart3 },
   { path: '/don-hang', label: 'Danh sách đơn hàng', icon: Package },
   { path: '/khach-hang', label: 'Danh sách khách hàng', icon: Building2 },
-  { path: '/khach-hang-lead', label: 'Danh sách lead khách hàng', icon: Building2 },
+  { path: '/khach-hang-lead', label: 'Form đăng kí khách hàng mới', icon: Building2 },
   { path: '/khach-hang/tao', label: 'Thêm khách hàng', icon: Building2 },
   { path: '/may', label: 'Danh sách máy', icon: Monitor },
   { path: '/binh', label: 'Danh sách bình', icon: Package },
