@@ -4,9 +4,15 @@ import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { supabase } from '../../supabase/config';
 import { toast } from 'react-toastify';
+import usePermissions from '../../hooks/usePermissions';
 
 const MachineIssueRequestForm = () => {
     const location = useLocation();
+    const { role } = usePermissions();
+    
+    // Authorization check for Machine Code
+    const canEditMachineCode = role === 'Admin' || role === 'Thủ kho';
+
     const [formData, setFormData] = useState({
         orangeNumber: '',
         formNumber: '',
@@ -109,10 +115,17 @@ const MachineIssueRequestForm = () => {
     }, [formData.phone]);
 
     const handleInputChange = (field, value) => {
-        setFormData(prev => ({
-            ...prev,
-            [field]: value
-        }));
+        setFormData(prev => {
+            const newData = { ...prev, [field]: value };
+            
+            // Auto-calculate quantity based on machineCode split by comma
+            if (field === 'machineCode') {
+                const codes = value.split(',').map(c => c.trim()).filter(c => c !== '');
+                newData.quantity = codes.length > 0 ? codes.length.toString() : '';
+            }
+            
+            return newData;
+        });
     };
 
     const handleCheckboxChange = (group, key) => {
@@ -164,9 +177,13 @@ const MachineIssueRequestForm = () => {
             const orderData = {
                 order_code: formData.orangeNumber || `DNXM-${Date.now().toString().slice(-6)}`,
                 customer_name: formData.customerName,
-                recipient_address: formData.placementAddress || '',
+                recipient_name: formData.customerName, // Required NOT NULL
+                recipient_address: formData.placementAddress || 'N/A', // Required NOT NULL
+                recipient_phone: formData.phone || 'N/A', // Required NOT NULL
                 product_type: selectedMachineTypes || 'MAY',
                 quantity: parseInt(formData.quantity) || 1,
+                unit_price: 0, // Required NOT NULL
+                total_amount: 0, // Required NOT NULL
                 order_type: issueTypes || 'ĐNXM',
                 note: `Màu máy: ${selectedColors}. 
                        Ngày cần: ${formData.dateNeeded}. 
@@ -380,12 +397,24 @@ const MachineIssueRequestForm = () => {
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium text-foreground mb-1.5">Mã máy</label>
+                                        <label className={clsx(
+                                            "block text-sm font-medium mb-1.5",
+                                            canEditMachineCode ? "text-foreground" : "text-muted-foreground"
+                                        )}>
+                                            Mã máy {!canEditMachineCode && <span className="text-[10px] bg-muted px-1.5 py-0.5 rounded ml-1 text-muted-foreground font-normal">(Chỉ Admin/Kho)</span>}
+                                        </label>
                                         <input
                                             type="text"
                                             value={formData.machineCode}
+                                            readOnly={!canEditMachineCode}
                                             onChange={(e) => handleInputChange('machineCode', e.target.value)}
-                                            className="w-full px-4 py-2 bg-background border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20"
+                                            placeholder={canEditMachineCode ? "Nhập mã máy..." : "Chưa được gán mã"}
+                                            className={clsx(
+                                                "w-full px-4 py-2 border rounded-lg focus:outline-none transition-all",
+                                                canEditMachineCode 
+                                                    ? "bg-background border-border focus:ring-2 focus:ring-primary/20" 
+                                                    : "bg-muted/50 border-border/50 text-muted-foreground cursor-not-allowed italic font-normal"
+                                            )}
                                         />
                                     </div>
                                 </div>

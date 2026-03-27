@@ -264,7 +264,7 @@ export default function OrderStatusUpdater({ order, warehouseName, userRole, onC
             };
 
             // Calculate total amount if quantity changed
-            if (order.status === 'KHO_XU_LY' && adjustedQuantity !== order.quantity) {
+            if (adjustedQuantity !== order.quantity) {
                 let freeCylinders = 0;
                 if (order.promotion_code) {
                     const { data: promoData } = await supabase
@@ -393,11 +393,11 @@ export default function OrderStatusUpdater({ order, warehouseName, userRole, onC
                     {activeTab === 'actions' && (
                         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
                             {/* Quantity Adjustment + RFID Scanner for Warehouse */}
-                            {(order.status === 'KHO_XU_LY') && (
+                            {(order.status === 'CHO_DUYET' || order.status === 'CHO_CTY_DUYET' || order.status === 'KHO_XU_LY') && (
                                 <div className="space-y-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
                                     <div className="space-y-1.5">
                                         <label className="block text-xs font-black text-slate-500 uppercase tracking-widest">
-                                            Số lượng duyệt xuất kho
+                                            Số lượng duyệt / Điều chỉnh
                                         </label>
                                         <input
                                             type="number"

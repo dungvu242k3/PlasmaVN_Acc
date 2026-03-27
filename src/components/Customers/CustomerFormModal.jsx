@@ -3,7 +3,7 @@ import { Building, Hash, MapPin, Phone, Receipt, Save, User, X, Mail } from 'luc
 import { useCallback, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { supabase } from '../../supabase/config';
-import { validateMST, validatePhone } from '../../utils/taxUtils';
+import { validateMST, validatePhone, formatPhoneNumber } from '../../utils/taxUtils';
 
 export default function CustomerFormModal({ customer, onClose, onSuccess, categories, warehouses }) {
     const isEdit = !!customer;
@@ -147,6 +147,35 @@ export default function CustomerFormModal({ customer, onClose, onSuccess, catego
         setErrorMsg('');
 
         try {
+            // Duplicate Check: Name + Phone + Category
+            const checkQuery = supabase
+                .from('customers')
+                .select('id, name')
+                .eq('name', formData.name.trim())
+                .eq('category', formData.category);
+
+            // Only check phone if it exists
+            if (formData.phone) {
+                checkQuery.eq('phone', formData.phone.trim());
+            } else {
+                checkQuery.is('phone', null);
+            }
+
+            // Exclude current record if editing
+            if (isEdit) {
+                checkQuery.neq('id', customer.id);
+            }
+
+            const { data: existing, error: checkError } = await checkQuery;
+
+            if (checkError) throw checkError;
+
+            if (existing && existing.length > 0) {
+                setErrorMsg('❌ Khách hàng trùng lặp: Đã tồn tại khách hàng có cùng Tên, SĐT và Loại này!');
+                setIsLoading(false);
+                return;
+            }
+
             if (isEdit) {
                 const { error } = await supabase
                     .from('customers')

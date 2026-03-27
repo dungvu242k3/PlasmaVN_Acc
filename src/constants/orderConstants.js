@@ -8,7 +8,8 @@ export const MOCK_CUSTOMERS = [
 
 
 export const ORDER_TYPES = [
-    { id: 'THUONG', label: 'Đơn bán / Thuê' },
+    { id: 'BAN', label: 'Đơn bán' },
+    { id: 'THUE', label: 'Đơn thuê' },
     { id: 'DEMO', label: 'Đơn dùng thử (Demo)' },
     { id: 'NGOAI_GIAO', label: 'Đơn ngoại giao' },
     { id: 'NGHIEN_CUU', label: 'Đơn nghiên cứu' },
@@ -32,7 +33,8 @@ export const PRODUCT_TYPES = [
 
 export const ORDER_STATUSES = [
     { id: 'ALL', label: 'Tất cả', color: 'gray' },
-    { id: 'CHO_DUYET', label: 'Chờ KD duyệt', color: 'yellow' },
+    { id: 'CHO_DUYET', label: 'Chờ Lead duyệt', color: 'yellow' },
+    { id: 'CHO_CTY_DUYET', label: 'Chờ Công ty duyệt', color: 'orange' },
     { id: 'KHO_XU_LY', label: 'Kho đang xử lý', color: 'blue' },
     { id: 'DIEU_CHINH', label: 'Điều chỉnh', color: 'orange' },
     { id: 'DA_DUYET', label: 'Đã báo xuất (Chờ giao)', color: 'indigo' },
@@ -71,10 +73,16 @@ export const ORDER_ROLES = {
 export const ORDER_STATE_TRANSITIONS = {
     'CHO_DUYET': [
         { nextStatus: 'DIEU_CHINH', allowedRoles: [ORDER_ROLES.ADMIN, ORDER_ROLES.LEAD_SALE], label: 'Yêu cầu điều chỉnh' },
-        { nextStatus: 'KHO_XU_LY', allowedRoles: [ORDER_ROLES.ADMIN, ORDER_ROLES.LEAD_SALE], label: 'Lead KD Duyệt (Chuyển Kho)' },
+        { nextStatus: 'CHO_CTY_DUYET', allowedRoles: [ORDER_ROLES.ADMIN, ORDER_ROLES.LEAD_SALE], label: 'Lead Duyệt -> Công ty' },
         { nextStatus: 'HUY_DON', allowedRoles: [ORDER_ROLES.ADMIN, ORDER_ROLES.LEAD_SALE, ORDER_ROLES.SALE], label: 'Hủy đơn' }
     ],
+    'CHO_CTY_DUYET': [
+        { nextStatus: 'DIEU_CHINH', allowedRoles: [ORDER_ROLES.ADMIN], label: 'Yêu cầu điều chỉnh' },
+        { nextStatus: 'KHO_XU_LY', allowedRoles: [ORDER_ROLES.ADMIN], label: 'Công ty Duyệt -> Kho' },
+        { nextStatus: 'HUY_DON', allowedRoles: [ORDER_ROLES.ADMIN], label: 'Hủy đơn' }
+    ],
     'KHO_XU_LY': [
+        { nextStatus: 'DIEU_CHINH', allowedRoles: [ORDER_ROLES.ADMIN, ORDER_ROLES.THU_KHO], label: 'Yêu cầu điều chỉnh' },
         { nextStatus: 'CHO_GIAO_HANG', allowedRoles: [ORDER_ROLES.ADMIN, ORDER_ROLES.THU_KHO], label: 'Kho Báo Đã Xuất' }
     ],
     'DIEU_CHINH': [

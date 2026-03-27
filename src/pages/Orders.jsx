@@ -241,7 +241,7 @@ const Orders = () => {
         };
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
+    }, [activeDropdown]);
 
     const fetchOrders = async () => {
         setIsLoading(true);
