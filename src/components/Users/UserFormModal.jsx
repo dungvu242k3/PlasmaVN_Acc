@@ -73,7 +73,7 @@ export default function UserFormModal({ user, onClose, onSuccess }) {
                     .from('app_users')
                     .select('id')
                     .eq('username', formData.username.trim())
-                    .single();
+                    .maybeSingle();
 
                 if (existingUser) {
                     setErrorMsg(`Tên tài khoản "${formData.username}" đã tồn tại.`);

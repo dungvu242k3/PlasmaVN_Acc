@@ -12,7 +12,10 @@ CREATE TABLE app_users (
     username VARCHAR(100) NOT NULL UNIQUE, -- 2. Tên tài khoản (đăng nhập)
     role VARCHAR(100) NOT NULL, -- 3. Vai trò, chức vụ
     phone VARCHAR(50) NOT NULL, -- 4. Số điện thoại
-    status VARCHAR(50) NOT NULL DEFAULT 'Hoạt động', -- 5. Trạng thái
+    department TEXT, -- 5. Phòng ban / Đại lý
+    sales_group TEXT, -- 6. Nhóm kinh doanh
+    approval_level TEXT DEFAULT 'Staff', -- 7. Quyền hạn phê duyệt
+    status VARCHAR(50) NOT NULL DEFAULT 'Hoạt động', -- 8. Trạng thái
     
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
@@ -28,4 +31,7 @@ COMMENT ON COLUMN app_users.name IS 'Họ và tên người dùng';
 COMMENT ON COLUMN app_users.username IS 'Tên định danh dùng để đăng nhập';
 COMMENT ON COLUMN app_users.role IS 'Vai trò hoặc chức vụ để phân quyền (Admin, Nhân viên, v.v.)';
 COMMENT ON COLUMN app_users.phone IS 'Số điện thoại liên hệ';
+COMMENT ON COLUMN app_users.department IS 'Phòng ban hoặc Đại lý mà nhân viên thuộc về';
+COMMENT ON COLUMN app_users.sales_group IS 'Nhóm kinh doanh (để phân tích doanh số nhóm)';
+COMMENT ON COLUMN app_users.approval_level IS 'Cấp bậc phê duyệt (Admin, Manager, Supervisor, Staff)';
 COMMENT ON COLUMN app_users.status IS 'Trạng thái hoạt động của tài khoản (Hoạt động / Dừng hoạt động)';
