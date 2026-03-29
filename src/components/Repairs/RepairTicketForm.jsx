@@ -1,5 +1,5 @@
 import { clsx } from 'clsx';
-import { Activity, AlertCircle, Camera, ChevronDown, Edit3, HeartPulse, Image as ImageIcon, MapPin, Save, Search, Ticket, Trash2, User, Wrench, X, Plus } from 'lucide-react';
+import { Activity, AlertCircle, Camera, ChevronDown, Edit3, HeartPulse, Image as ImageIcon, MapPin, Plus, Save, Search, Ticket, Trash2, User, Wrench, X } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { toast } from 'react-toastify';
@@ -74,7 +74,7 @@ export default function RepairTicketForm({ ticket, initialCustomer, onClose, onS
         status: 'Mới',
         errorCategory: '', // Tên lỗi: Máy/Bình
         expectedCompletionDate: '',
-        errorLevel: 'Trung bình' 
+        errorLevel: 'Trung bình'
     };
 
     const [formData, setFormData] = useState(defaultState);
@@ -116,10 +116,13 @@ export default function RepairTicketForm({ ticket, initialCustomer, onClose, onS
                 fetchCustomerDevices(initialCustomer.name);
             }
 
-            // Auto assign if user is sales or technical
+            // Auto assign creator to the salesperson field (Nhân viên kinh doanh)
             if (user?.id) {
-                if (role === 'kinh_doanh') setFormData(prev => ({ ...prev, salesId: user.id }));
-                if (role === 'ky_thuat') setFormData(prev => ({ ...prev, technicianId: user.id }));
+                setFormData(prev => ({ ...prev, salesId: user.id }));
+                
+                if (role === 'Nhân viên kỹ thuật') {
+                    setFormData(prev => ({ ...prev, technicianId: user.id }));
+                }
             }
         }
     }, [ticket, isEdit, user, role, initialCustomer]);
@@ -160,6 +163,20 @@ export default function RepairTicketForm({ ticket, initialCustomer, onClose, onS
         }
     };
 
+    // Sync salesUsers with current user to ensure their name displays when auto-assigned
+    useEffect(() => {
+        if (allUsers.length > 0) {
+            let salesList = allUsers.filter(u => u.role === 'Nhân viên kinh doanh');
+            
+            // If current user is not in the salesList (e.g. they are Admin/Tech), 
+            // add them to the list so their name displays correctly in the select.
+            if (user?.id && !salesList.find(u => u.id === user.id)) {
+                salesList = [...salesList, user];
+            }
+            setSalesUsers(salesList);
+        }
+    }, [user, allUsers]);
+
     const fetchCustomerDevices = async (customerName) => {
         if (!customerName) return;
         try {
@@ -191,7 +208,7 @@ export default function RepairTicketForm({ ticket, initialCustomer, onClose, onS
                         });
                     }
                 });
-                
+
                 setAvailableDevices(Array.from(serialMap.entries()).map(([s, name]) => ({
                     serial_number: s,
                     name: name,
@@ -224,17 +241,17 @@ export default function RepairTicketForm({ ticket, initialCustomer, onClose, onS
 
     // Device Dropdown logic
     const handleMachineSelect = (m) => {
-        setFormData(prev => ({ 
-            ...prev, 
-            machineSerial: m.serial_number, 
+        setFormData(prev => ({
+            ...prev,
+            machineSerial: m.serial_number,
             machineName: m.name,
-            errorCategory: m.category || prev.errorCategory 
+            errorCategory: m.category || prev.errorCategory
         }));
         setIsMachineDropdownOpen(false);
         setMachineSearchTerm('');
     };
 
-    const mFilteredMachines = availableDevices.filter(m => 
+    const mFilteredMachines = availableDevices.filter(m =>
         m.serial_number.toLowerCase().includes(machineSearchTerm.toLowerCase())
     );
 
@@ -380,41 +397,41 @@ export default function RepairTicketForm({ ticket, initialCustomer, onClose, onS
             isClosing && "animate-out slide-out-to-right duration-300"
         )}>
 
-                {/* Header */}
-                <div className="px-4 py-3.5 border-b border-slate-200 flex items-center justify-between shrink-0 bg-white sticky top-0 z-20">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center text-primary shadow-sm">
-                            {isEdit ? <Edit3 className="w-6 h-6" /> : <Ticket className="w-6 h-6" />}
-                        </div>
-                        <div>
-                            <h3 className="text-[20px] leading-tight font-bold text-slate-900 tracking-tight">
-                                {isEdit ? `Cập nhật Ticket Sửa chữa #${ticket.stt}` : 'Tạo Ticket Sửa chữa mới'}
-                            </h3>
-                            <p className="text-slate-500 text-[12px] font-semibold mt-0.5">
-                                {isEdit ? (
-                                    <span>
-                                        Báo lỗi bởi: <strong className="text-emerald-700">{allUsers.find(u => u.id === ticket.created_by)?.name || 'Hệ thống'}</strong> lúc <strong className="text-slate-700">{new Date(ticket.created_at).toLocaleString('vi-VN')}</strong>
-                                    </span>
-                                ) : 'Tạo mới phiếu yêu cầu bảo hành/sửa chữa'}
-                            </p>
-                        </div>
+            {/* Header */}
+            <div className="px-4 py-3.5 border-b border-slate-200 flex items-center justify-between shrink-0 bg-white sticky top-0 z-20">
+                <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center text-primary shadow-sm">
+                        {isEdit ? <Edit3 className="w-6 h-6" /> : <Ticket className="w-6 h-6" />}
                     </div>
-                    <button onClick={handleClose} className="p-2 text-primary hover:text-primary hover:bg-primary/5 rounded-xl transition-all">
-                        <X className="w-6 h-6" />
-                    </button>
+                    <div>
+                        <h3 className="text-[20px] leading-tight font-bold text-slate-900 tracking-tight">
+                            {isEdit ? `Cập nhật Ticket Sửa chữa #${ticket.stt}` : 'Tạo Ticket Sửa chữa mới'}
+                        </h3>
+                        <p className="text-slate-500 text-[12px] font-semibold mt-0.5">
+                            {isEdit ? (
+                                <span>
+                                    Báo lỗi bởi: <strong className="text-emerald-700">{allUsers.find(u => u.id === ticket.created_by)?.name || 'Hệ thống'}</strong> lúc <strong className="text-slate-700">{new Date(ticket.created_at).toLocaleString('vi-VN')}</strong>
+                                </span>
+                            ) : 'Tạo mới phiếu yêu cầu bảo hành/sửa chữa'}
+                        </p>
+                    </div>
                 </div>
+                <button onClick={handleClose} className="p-2 text-primary hover:text-primary hover:bg-primary/5 rounded-xl transition-all">
+                    <X className="w-6 h-6" />
+                </button>
+            </div>
 
 
-                {/* Form Body - Single Page Scroll */}
-                <div className={((fullPage && !isEdit) ? "p-3 sm:p-5" : "p-4 sm:p-5") + " overflow-y-auto bg-slate-50 custom-scrollbar flex-1 min-h-0 pb-20 form-body-scroll"}>
-                    <div className="w-full px-1 sm:px-2">
-                        {errorMsg && (
-                            <div className="mb-4 p-4 bg-rose-50 border border-rose-200 rounded-2xl text-[14px] font-bold text-primary flex items-center gap-2 shadow-sm animate-in fade-in slide-in-from-top-2">
-                                <X className="w-5 h-5 shrink-0" /> {errorMsg}
-                            </div>
-                        )}
+            {/* Form Body - Single Page Scroll */}
+            <div className={((fullPage && !isEdit) ? "p-3 sm:p-5" : "p-4 sm:p-5") + " overflow-y-auto bg-slate-50 custom-scrollbar flex-1 min-h-0 pb-20 form-body-scroll"}>
+                <div className="w-full px-1 sm:px-2">
+                    {errorMsg && (
+                        <div className="mb-4 p-4 bg-rose-50 border border-rose-200 rounded-2xl text-[14px] font-bold text-primary flex items-center gap-2 shadow-sm animate-in fade-in slide-in-from-top-2">
+                            <X className="w-5 h-5 shrink-0" /> {errorMsg}
+                        </div>
+                    )}
 
-                        <form id="ticketForm" onSubmit={handleSubmit} className="space-y-6">
+                    <form id="ticketForm" onSubmit={handleSubmit} className="space-y-6">
 
                         {/* Section 0: Nhân viên phụ trách - PINNED TO TOP */}
                         <div className="scroll-mt-6 rounded-2xl border-2 border-primary/20 bg-primary/5 p-4 sm:p-5 space-y-4 shadow-md hover:shadow-lg transition-all animate-in zoom-in-95">
@@ -424,7 +441,16 @@ export default function RepairTicketForm({ ticket, initialCustomer, onClose, onS
                             <div className="space-y-2">
                                 <label className="text-[14px] font-black text-primary flex items-center gap-1.5 uppercase tracking-wider">Nhân viên kinh doanh phụ trách <span className="text-red-500 font-black">*</span></label>
                                 <div className="relative">
-                                    <select name="salesId" value={formData.salesId} onChange={handleChange} className="w-full h-14 px-6 bg-white border-2 border-primary/40 rounded-2xl text-[16px] font-black text-primary appearance-none focus:border-primary focus:ring-8 focus:ring-primary/10 outline-none shadow-xl hover:shadow-primary/5 transition-all cursor-pointer ring-4 ring-primary/5">
+                                    <select
+                                        name="salesId"
+                                        value={formData.salesId}
+                                        onChange={handleChange}
+                                        className={clsx(
+                                            "w-full h-14 px-6 border-2 rounded-2xl text-[16px] font-black appearance-none focus:ring-8 outline-none shadow-xl transition-all ring-4 ring-primary/5",
+                                            !isEdit ? "bg-slate-100 border-slate-300 text-slate-400 cursor-not-allowed" : "bg-white border-primary/40 text-primary hover:shadow-primary/5 cursor-pointer focus:border-primary focus:ring-primary/10"
+                                        )}
+                                        disabled={!isEdit}
+                                    >
                                         <option value="">-- CHỌN NHÂN VIÊN KINH DOANH --</option>
                                         {salesUsers.map(u => <option key={u.id} value={u.id} className="font-bold text-slate-800">{u.name}</option>)}
                                     </select>
@@ -479,7 +505,7 @@ export default function RepairTicketForm({ ticket, initialCustomer, onClose, onS
                                 <div className="space-y-2">
                                     <label className="flex items-center gap-1.5 text-[14px] font-bold text-primary"><MapPin className="w-4 h-4 text-primary/80" />Mã thiết bị <span className="text-red-500">*</span></label>
                                     <div className="relative" ref={machineDropdownRef}>
-                                        <div 
+                                        <div
                                             className={`w-full h-12 px-5 border rounded-2xl text-[14px] transition-all cursor-pointer flex justify-between items-center ${!formData.customerId ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed' : 'bg-slate-50 border-slate-200 text-slate-900 hover:border-primary/40 hover:bg-white shadow-sm font-semibold'}`}
                                             onClick={() => formData.customerId && setIsMachineDropdownOpen(!isMachineDropdownOpen)}
                                         >
@@ -493,9 +519,9 @@ export default function RepairTicketForm({ ticket, initialCustomer, onClose, onS
                                             <div className="absolute z-50 w-full mt-2 top-full bg-white border border-slate-200 shadow-2xl max-h-64 overflow-hidden flex flex-col rounded-2xl animate-in fade-in zoom-in-95 duration-200">
                                                 <div className="p-3 border-b border-slate-100 bg-slate-50 flex items-center gap-3 sticky top-0 z-10">
                                                     <Search className="w-4 h-4 text-primary/40" />
-                                                    <input 
-                                                        type="text" className="w-full bg-transparent border-none outline-none text-[14px] font-bold placeholder-slate-400" placeholder="Tìm mã hoặc tên máy..." 
-                                                        value={machineSearchTerm} onChange={(e) => setMachineSearchTerm(e.target.value)} onClick={(e)=>e.stopPropagation()} autoFocus
+                                                    <input
+                                                        type="text" className="w-full bg-transparent border-none outline-none text-[14px] font-bold placeholder-slate-400" placeholder="Tìm mã hoặc tên máy..."
+                                                        value={machineSearchTerm} onChange={(e) => setMachineSearchTerm(e.target.value)} onClick={(e) => e.stopPropagation()} autoFocus
                                                     />
                                                 </div>
                                                 <div className="overflow-y-auto custom-scrollbar flex-1 py-1">
@@ -519,13 +545,13 @@ export default function RepairTicketForm({ ticket, initialCustomer, onClose, onS
                                         placeholder="Tự động điền..." disabled
                                         className="w-full h-12 px-5 bg-slate-100 border border-slate-200 rounded-2xl text-[15px] font-bold text-slate-400 cursor-not-allowed"
                                     />
+                                </div>
                             </div>
                         </div>
-                    </div>
-                        
+
                         {/* Section 1.5: Phân loại lỗi (Tên lỗi) */}
                         <div id="section-category" className="scroll-mt-6 rounded-2xl border border-primary/10 bg-white p-4 sm:p-5 space-y-4 shadow-sm hover:shadow-md transition-shadow">
-                             <h4 className="flex items-center gap-2 text-[16px] !font-black !text-primary pb-1">
+                            <h4 className="flex items-center gap-2 text-[16px] !font-black !text-primary pb-1">
                                 <Activity className="w-4 h-4 text-primary/80" /> Tên lỗi (Máy/Bình)
                             </h4>
                             <div className="flex flex-wrap gap-4">
@@ -536,8 +562,8 @@ export default function RepairTicketForm({ ticket, initialCustomer, onClose, onS
                                         onClick={() => setFormData(prev => ({ ...prev, errorCategory: cat }))}
                                         className={clsx(
                                             "px-6 py-2.5 rounded-2xl text-[14px] font-bold transition-all border-2",
-                                            formData.errorCategory === cat 
-                                                ? "bg-primary border-primary text-white shadow-lg shadow-primary/20" 
+                                            formData.errorCategory === cat
+                                                ? "bg-primary border-primary text-white shadow-lg shadow-primary/20"
                                                 : "bg-white border-slate-200 text-slate-500 hover:border-primary/40 hover:text-primary"
                                         )}
                                     >
@@ -545,7 +571,7 @@ export default function RepairTicketForm({ ticket, initialCustomer, onClose, onS
                                     </button>
                                 ))}
                                 {!['Máy', 'Bình'].includes(formData.errorCategory) && formData.errorCategory && (
-                                     <div className="px-6 py-2.5 rounded-2xl text-[14px] font-bold bg-primary border-primary text-white shadow-lg shadow-primary/20">
+                                    <div className="px-6 py-2.5 rounded-2xl text-[14px] font-bold bg-primary border-primary text-white shadow-lg shadow-primary/20">
                                         {formData.errorCategory}
                                     </div>
                                 )}
@@ -605,8 +631,8 @@ export default function RepairTicketForm({ ticket, initialCustomer, onClose, onS
                                                 onClick={() => setFormData(prev => ({ ...prev, errorLevel: level.id }))}
                                                 className={clsx(
                                                     "px-4 py-2 rounded-xl text-[12px] font-bold transition-all border-2",
-                                                    formData.errorLevel === level.id 
-                                                        ? `${level.color.replace('bg-', 'bg-').replace('text-', 'text-')} border-transparent shadow-md scale-105` 
+                                                    formData.errorLevel === level.id
+                                                        ? `${level.color.replace('bg-', 'bg-').replace('text-', 'text-')} border-transparent shadow-md scale-105`
                                                         : "bg-white border-slate-100 text-slate-400 hover:border-slate-200 hover:text-slate-600"
                                                 )}
                                             >
@@ -787,7 +813,7 @@ export default function RepairTicketForm({ ticket, initialCustomer, onClose, onS
             isClosing ? "opacity-0 pointer-events-none" : "opacity-100"
         )}>
             {/* Backdrop */}
-            <div 
+            <div
                 className={clsx(
                     "absolute inset-0 bg-black/45 backdrop-blur-sm animate-in fade-in duration-300",
                     isClosing && "animate-out fade-out duration-300"
@@ -796,7 +822,7 @@ export default function RepairTicketForm({ ticket, initialCustomer, onClose, onS
             />
 
             {/* Panel */}
-            <div 
+            <div
                 className={clsx(
                     "relative bg-slate-50 shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col h-full border-l border-slate-200 animate-in slide-in-from-right duration-500",
                     isClosing && "animate-out slide-out-to-right duration-300"
