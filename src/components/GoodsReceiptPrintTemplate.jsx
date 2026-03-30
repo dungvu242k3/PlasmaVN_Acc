@@ -320,11 +320,6 @@ const ReceiptItem = ({ receipt, items, warehousesList }) => {
                     <div style={S.companyInfo}>Tel: 0981 878 423</div>
                 </div>
                 <div style={S.headerRight}>
-                    <div style={S.formNumber}>Mẫu số: 01 - VT</div>
-                    <div style={S.formLegal}>
-                        (Ban hành theo Thông tư số 133/2016/TT-BTC<br />
-                        ngày 26/08/2016 của Bộ Tài chính)
-                    </div>
                 </div>
             </div>
 
@@ -358,6 +353,18 @@ const ReceiptItem = ({ receipt, items, warehousesList }) => {
                         <span style={S.infoValue}>{receipt.deliverer_address}</span>
                     </div>
                 )}
+                <div style={S.infoRow}>
+                    <span style={S.infoLabel}>- Theo số:</span>
+                    <span style={{ ...S.infoFixedValue, minWidth: '40px', fontWeight: 'bold' }}>{receipt.receipt_code}</span>
+                    <span style={S.infoLabel}>&nbsp;ngày</span>
+                    <span style={{ ...S.infoFixedValue, minWidth: '20px' }}>{day}</span>
+                    <span style={S.infoLabel}>&nbsp;tháng</span>
+                    <span style={{ ...S.infoFixedValue, minWidth: '20px' }}>{month}</span>
+                    <span style={S.infoLabel}>&nbsp;năm</span>
+                    <span style={{ ...S.infoFixedValue, minWidth: '40px' }}>{year}</span>
+                    <span style={S.infoLabel}>&nbsp;của</span>
+                    <span style={S.infoValue}>{receipt.supplier_name || ''}</span>
+                </div>
                 <div style={S.infoRowSplit}>
                     <div style={S.splitHalf}>
                         <span style={S.infoLabel}>- Nhập tại kho:</span>
