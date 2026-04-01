@@ -27,7 +27,8 @@ import {
     ChevronDown,
     SlidersHorizontal,
     CheckCircle,
-    Package
+    Package,
+    Lock
 } from 'lucide-react';
 import { useEffect, useState, useRef } from 'react';
 import { Bar as BarChartJS, Pie as PieChartJS } from 'react-chartjs-2';
@@ -229,7 +230,7 @@ const Users = () => {
                         </div>
                         <div>
                             <div className="font-bold text-foreground text-[13px] tracking-tight">{user.name}</div>
-                            <div className="text-[10px] font-medium text-muted-foreground mt-0.5">@{user.username}</div>
+                            <div className="text-[10px] font-medium text-muted-foreground mt-0.5">{user.username}</div>
                         </div>
                     </div>
                 );
@@ -266,6 +267,13 @@ const Users = () => {
                         )} />
                         {user.status}
                     </span>
+                );
+            case 'password':
+                return (
+                    <div className="flex items-center gap-1.5 font-mono text-[11px] text-slate-400 bg-slate-50/50 px-2 py-1.5 rounded-lg border border-slate-100">
+                        <Lock className="w-3 h-3 text-slate-300" />
+                        {user.password ? "••••••••" : <span className="text-[10px] italic font-medium opacity-50">Chưa đặt</span>}
+                    </div>
                 );
             default:
                 return user[key] || '-';
@@ -735,7 +743,7 @@ const Users = () => {
                                                             </div>
                                                             <div>
                                                                 <div className="font-bold text-foreground text-[14px] leading-snug uppercase">{user.name}</div>
-                                                                <div className="text-[11px] font-medium text-muted-foreground">@{user.username}</div>
+                                                                <div className="text-[11px] font-medium text-muted-foreground">{user.username}</div>
                                                             </div>
                                                         </div>
                                                         <span className={getStatusBadgeClass(statusConfig.color)}>
