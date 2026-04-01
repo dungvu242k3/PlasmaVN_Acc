@@ -679,9 +679,7 @@ const Warehouses = () => {
                                             <button onClick={() => handleViewWarehouse(w)} className="text-blue-500 hover:text-blue-700 transition-colors" title="Xem chi tiết"><Eye size={18} /></button>
                                             <button onClick={() => handlePrint(w)} className="text-blue-500 hover:text-blue-700 transition-colors" title="In thông tin"><Printer size={18} /></button>
                                             <button onClick={() => handleEditWarehouse(w)} className="text-amber-500 hover:text-amber-700 transition-colors" title="Chỉnh sửa"><Edit size={18} /></button>
-                                            {(role === 'admin' || role === 'manager') && (
-                                                <button onClick={() => handleDeleteWarehouse(w.id, w.name)} className="text-rose-500 hover:text-rose-700 transition-colors" title="Xóa"><Trash2 size={18} /></button>
-                                            )}
+                                            <button onClick={() => handleDeleteWarehouse(w.id, w.name)} className="text-rose-500 hover:text-rose-700 transition-colors" title="Xóa"><Trash2 size={18} /></button>
                                         </div>
                                     </div>
                                 </div>
@@ -918,11 +916,9 @@ const Warehouses = () => {
                                                 <button onClick={() => handleEditWarehouse(w)} className="text-amber-600/80 hover:text-amber-700 transition-colors p-1 rounded hover:bg-amber-50" title="Chỉnh sửa">
                                                     <Edit size={18} />
                                                 </button>
-                                                {(role === 'admin' || role === 'manager') && (
-                                                    <button onClick={() => handleDeleteWarehouse(w.id, w.name)} className="text-red-600/80 hover:text-red-700 transition-colors p-1 rounded hover:bg-red-50" title="Xóa">
-                                                        <Trash2 className="w-4 h-4" />
-                                                    </button>
-                                                )}
+                                                <button onClick={() => handleDeleteWarehouse(w.id, w.name)} className="text-red-600/80 hover:text-red-700 transition-colors p-1 rounded hover:bg-red-50" title="Xóa">
+                                                    <Trash2 size={18} />
+                                                </button>
                                             </div>
                                         </td>
                                     </tr>

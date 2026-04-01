@@ -594,17 +594,17 @@ const Suppliers = () => {
                                             <span className="text-[10px] font-bold text-muted-foreground uppercase leading-none mb-1 opacity-70">Thao tác</span>
                                             <span className="text-[12px] font-bold text-slate-800 tracking-tight">Quản trị NCC</span>
                                         </div>
-                                        <div className="flex items-center gap-2">
+                                        <div className="flex items-center gap-3">
                                             <button 
                                                 onClick={() => handleViewSupplier(supplier)} 
-                                                className="w-9 h-9 rounded-xl flex items-center justify-center text-slate-950 bg-blue-50 border border-blue-100 shadow-sm transition-all"
+                                                className="text-blue-600/80 hover:text-blue-700 transition-colors p-1 rounded hover:bg-blue-50 shadow-none border-none"
                                                 title="Xem chi tiết"
                                             >
                                                 <Eye size={18} />
                                             </button>
                                             <button 
                                                 onClick={() => handleEditSupplier(supplier)} 
-                                                className="w-9 h-9 rounded-xl flex items-center justify-center text-slate-950 bg-amber-50 border border-amber-100 shadow-sm transition-all"
+                                                className="text-amber-600/80 hover:text-amber-700 transition-colors p-1 rounded hover:bg-amber-50 shadow-none border-none"
                                                 title="Chỉnh sửa"
                                             >
                                                 <Edit size={18} />
@@ -612,7 +612,7 @@ const Suppliers = () => {
                                             {(role === 'admin' || role === 'manager') && (
                                                 <button 
                                                     onClick={() => handleDeleteSupplier(supplier.id, supplier.name)} 
-                                                    className="w-9 h-9 rounded-xl flex items-center justify-center text-slate-950 bg-rose-50 border border-rose-100 shadow-sm transition-all"
+                                                    className="text-red-600/80 hover:text-red-700 transition-colors p-1 rounded hover:bg-red-50 shadow-none border-none"
                                                     title="Xóa"
                                                 >
                                                     <Trash2 size={18} />
@@ -780,28 +780,28 @@ const Suppliers = () => {
                                         {isColumnVisible('phone') && <td className="px-4 py-4 text-[13px] font-bold text-slate-500 tabular-nums">{supplier.phone || '—'}</td>}
                                         {isColumnVisible('address') && <td className="px-4 py-4 text-[13px] font-bold text-slate-500">{supplier.address || '—'}</td>}
                                         <td className="sticky right-0 z-20 bg-white group-hover:bg-blue-50/40 px-4 py-4 text-center shadow-[-6px_0_10px_-8px_rgba(15,23,42,0.25)] before:content-[''] before:absolute before:left-0 before:top-0 before:bottom-0 before:w-[3px] before:bg-slate-300">
-                                            <div className="flex items-center justify-center gap-2">
+                                            <div className="flex items-center justify-center gap-3">
                                                 <button 
                                                     onClick={() => handleViewSupplier(supplier)} 
-                                                    className="w-9 h-9 rounded-xl flex items-center justify-center text-slate-950 bg-blue-50 border border-blue-100 shadow-sm hover:bg-blue-600 hover:text-white hover:shadow-md transition-all duration-300" 
+                                                    className="text-blue-600/80 hover:text-blue-700 transition-colors p-1 rounded hover:bg-blue-50" 
                                                     title="Xem chi tiết"
                                                 >
-                                                    <Eye className="w-4.5 h-4.5" />
+                                                    <Eye size={18} />
                                                 </button>
                                                 <button 
                                                     onClick={() => handleEditSupplier(supplier)} 
-                                                    className="w-9 h-9 rounded-xl flex items-center justify-center text-slate-950 bg-amber-50 border border-amber-100 shadow-sm hover:bg-amber-500 hover:text-white hover:shadow-md transition-all duration-300" 
+                                                    className="text-amber-600/80 hover:text-amber-700 transition-colors p-1 rounded hover:bg-amber-50" 
                                                     title="Chỉnh sửa"
                                                 >
-                                                    <Edit className="w-4.5 h-4.5" />
+                                                    <Edit size={18} />
                                                 </button>
                                                 {(role === 'admin' || role === 'manager') && (
                                                     <button 
                                                         onClick={() => handleDeleteSupplier(supplier.id, supplier.name)} 
-                                                        className="w-9 h-9 rounded-xl flex items-center justify-center text-slate-950 bg-rose-50 border border-rose-100 shadow-sm hover:bg-rose-600 hover:text-white hover:shadow-md transition-all duration-300" 
+                                                        className="text-red-600/80 hover:text-red-700 transition-colors p-1 rounded hover:bg-red-50" 
                                                         title="Xóa"
                                                     >
-                                                        <Trash2 className="w-4.5 h-4.5" />
+                                                        <Trash2 size={18} />
                                                     </button>
                                                 )}
                                             </div>
