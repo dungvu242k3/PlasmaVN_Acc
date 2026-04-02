@@ -1346,16 +1346,17 @@ const GoodsIssues = () => {
                 />
             )}
 
-            {printData.issue && (
-                <div style={{ display: 'none' }}>
+            {printData.issue && createPortal(
+                <div className="pvn-goods-issue-print-portal">
                     <GoodsIssuePrintTemplate
                         issue={printData.issue}
                         items={printData.items}
-                        warehouse={printData.warehouse}
-                        supplier={printData.supplier}
-                        onPrintComplete={() => setPrintData({ issue: null, items: [], warehouse: '', supplier: '' })}
+                        warehouseName={printData.warehouse}
+                        supplierName={printData.supplier}
+                        onPrinted={() => setPrintData({ issue: null, items: [], warehouse: '', supplier: '' })}
                     />
-                </div>
+                </div>,
+                document.body
             )}
 
             {showMobileFilter && (
