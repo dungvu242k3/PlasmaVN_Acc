@@ -48,17 +48,17 @@ function Sidebar({ isOpen, setIsOpen }) {
           {sidebarMenu
             .filter(item => !item.roles || item.roles.includes(role))
             .map((item) => (
-            <NavItem
-              key={item.path}
-              item={item}
-              isOpen={isOpen}
-              onClick={() => {
-                if (window.innerWidth < 1024) {
-                  setIsOpen(false);
-                }
-              }}
-            />
-          ))}
+              <NavItem
+                key={item.path}
+                item={item}
+                isOpen={isOpen}
+                onClick={() => {
+                  if (window.innerWidth < 1024) {
+                    setIsOpen(false);
+                  }
+                }}
+              />
+            ))}
         </nav>
       </aside>
     </>
@@ -73,7 +73,7 @@ function NavItem({ item, onClick, isOpen }) {
   );
 
   const isActive = location.pathname === item.path || modulePathByItemPath[location.pathname] === item.path;
-  
+
   // Mapping for Tailwind classes to ensure they are picked up by the compiler
   const colorMap = {
     'blue-500': { bg: 'bg-blue-500', indicator: 'bg-blue-500', shadow: 'shadow-blue-500/20' },
@@ -105,31 +105,31 @@ function NavItem({ item, onClick, isOpen }) {
       title={!isOpen ? item.label : undefined}
     >
       {/* Active Indicator Bar */}
-      <div 
+      <div
         className={clsx(
           'absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-8 rounded-r-full transition-all duration-500 ease-out',
           isActive ? clsx('opacity-100 scale-y-100', styles.indicator) : 'opacity-0 scale-y-50'
-        )} 
+        )}
       />
 
-      <div 
+      <div
         className={clsx(
           'flex items-center justify-center shrink-0 transition-all duration-300 rounded-[14px]',
-          isActive 
-            ? clsx('text-white shadow-lg', styles.bg, styles.shadow) 
+          isActive
+            ? clsx('text-white shadow-lg', styles.bg, styles.shadow)
             : 'text-slate-400 group-hover:bg-slate-50 group-hover:text-slate-600',
           isOpen ? 'w-10 h-10 mr-3' : 'w-11 h-11'
         )}
       >
-        <item.icon 
-          size={22} 
+        <item.icon
+          size={22}
           strokeWidth={2.25}
         />
       </div>
 
-      <span 
+      <span
         className={clsx(
-          'font-semibold text-[14px] transition-all duration-300', 
+          'font-semibold text-[14px] transition-all duration-300',
           !isOpen && 'opacity-0 w-0 hidden',
           isActive ? 'text-foreground' : 'text-slate-500 group-hover:text-foreground'
         )}

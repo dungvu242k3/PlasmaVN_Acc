@@ -13,6 +13,7 @@ import {
 import {
     Activity,
     BarChart2,
+    CheckCircle2,
     ChevronDown,
     ChevronLeft,
     ChevronRight,
@@ -20,6 +21,7 @@ import {
     Eye,
     Filter,
     List,
+    MoreVertical,
     Plus,
     Search,
     SlidersHorizontal,
@@ -36,6 +38,9 @@ import * as XLSX from 'xlsx';
 import { Bar as BarChartJS, Pie as PieChartJS } from 'react-chartjs-2';
 import { useNavigate } from 'react-router-dom';
 import { clsx } from 'clsx';
+import MobilePageHeader from '../components/layout/MobilePageHeader';
+import MobilePagination from '../components/layout/MobilePagination';
+import PageViewSwitcher from '../components/layout/PageViewSwitcher';
 import MachineDetailsModal from '../components/Machines/MachineDetailsModal';
 import MachineFormModal from '../components/Machines/MachineFormModal';
 import ColumnPicker from '../components/ui/ColumnPicker';
@@ -78,6 +83,18 @@ const Machines = () => {
     const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
     const [selectedMachine, setSelectedMachine] = useState(null);
 
+    // Pagination State
+    const [currentPage, setCurrentPage] = useState(1);
+    const [pageSize, setPageSize] = useState(50);
+    const [totalRecords, setTotalRecords] = useState(0);
+    const [stats, setStats] = useState({
+        total: 0,
+        ready: 0,
+        inUse: 0,
+        maintenance: 0
+    });
+    const [allMetadata, setAllMetadata] = useState([]); // For stats and charts
+
     const [selectedStatuses, setSelectedStatuses] = useState([]);
     const [selectedMachineTypes, setSelectedMachineTypes] = useState([]);
     const [selectedCustomers, setSelectedCustomers] = useState([]);
@@ -94,6 +111,7 @@ const Machines = () => {
     const [pendingCustomers, setPendingCustomers] = useState([]);
     const [pendingDepartments, setPendingDepartments] = useState([]);
     const [pendingWarehouses, setPendingWarehouses] = useState([]);
+    const [showMoreActions, setShowMoreActions] = useState(false);
 
     const [activeDropdown, setActiveDropdown] = useState(null);
     const [filterSearch, setFilterSearch] = useState('');
@@ -138,16 +156,83 @@ const Machines = () => {
     const totalCount = defaultColOrder.length;
 
     useEffect(() => {
-        fetchMachines();
         fetchWarehouses();
     }, []);
 
     useEffect(() => {
-        const customers = [...new Set(machines.map(m => m.customer_name).filter(Boolean))];
-        const departments = [...new Set(machines.map(m => m.department_in_charge).filter(Boolean))];
+        fetchMachines();
+        fetchGlobalStats();
+        fetchMetadataForCharts();
+    }, [currentPage, searchTerm, selectedStatuses, selectedMachineTypes, selectedCustomers, selectedDepartments, selectedWarehouses]);
+
+    const fetchMetadataForCharts = async () => {
+        try {
+            let query = supabase
+                .from('machines')
+                .select('status, machine_type, customer_name, department_in_charge');
+
+            if (searchTerm) {
+                query = query.or(`serial_number.ilike.%${searchTerm}%,machine_type.ilike.%${searchTerm}%,customer_name.ilike.%${searchTerm}%,department_in_charge.ilike.%${searchTerm}%`);
+            }
+            if (selectedStatuses.length > 0) query = query.in('status', selectedStatuses);
+            if (selectedMachineTypes.length > 0) query = query.in('machine_type', selectedMachineTypes);
+            if (selectedCustomers.length > 0) query = query.in('customer_name', selectedCustomers);
+            if (selectedDepartments.length > 0) query = query.in('department_in_charge', selectedDepartments);
+
+            const { data } = await query;
+            if (data) setAllMetadata(data);
+        } catch (err) {
+            console.error('Error fetching metadata for charts:', err);
+        }
+    };
+
+    const fetchGlobalStats = async () => {
+        try {
+            let queries = {
+                total: supabase.from('machines').select('*', { count: 'exact', head: true }),
+                ready: supabase.from('machines').select('*', { count: 'exact', head: true }).eq('status', 'sẵn sàng'),
+                inUse: supabase.from('machines').select('*', { count: 'exact', head: true }).eq('status', 'thuộc khách hàng'),
+                maintenance: supabase.from('machines').select('*', { count: 'exact', head: true }).in('status', ['bảo trì', 'kiểm tra', 'đang sửa'])
+            };
+
+            // Apply same filters to stat queries
+            Object.keys(queries).forEach(key => {
+                if (searchTerm) {
+                    queries[key] = queries[key].or(`serial_number.ilike.%${searchTerm}%,machine_type.ilike.%${searchTerm}%,customer_name.ilike.%${searchTerm}%,department_in_charge.ilike.%${searchTerm}%`);
+                }
+                if (key === 'total') {
+                    if (selectedStatuses.length > 0) queries[key] = queries[key].in('status', selectedStatuses);
+                }
+                if (selectedMachineTypes.length > 0) queries[key] = queries[key].in('machine_type', selectedMachineTypes);
+                if (selectedCustomers.length > 0) queries[key] = queries[key].in('customer_name', selectedCustomers);
+                if (selectedDepartments.length > 0) queries[key] = queries[key].in('department_in_charge', selectedDepartments);
+                if (selectedWarehouses.length > 0) queries[key] = queries[key].in('warehouse', selectedWarehouses);
+            });
+
+            const [totalRes, readyRes, inUseRes, maintenanceRes] = await Promise.all([
+                queries.total,
+                queries.ready,
+                queries.inUse,
+                queries.maintenance
+            ]);
+
+            setStats({
+                total: totalRes.count || 0,
+                ready: readyRes.count || 0,
+                inUse: inUseRes.count || 0,
+                maintenance: maintenanceRes.count || 0
+            });
+        } catch (err) {
+            console.error('Error fetching global stats:', err);
+        }
+    };
+
+    useEffect(() => {
+        const customers = [...new Set(allMetadata.map(m => m.customer_name).filter(Boolean))].sort();
+        const departments = [...new Set(allMetadata.map(m => m.department_in_charge).filter(Boolean))].sort();
         setUniqueCustomers(customers);
         setUniqueDepartments(departments);
-    }, [machines]);
+    }, [allMetadata]);
 
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -157,10 +242,13 @@ const Machines = () => {
             if (columnPickerRef.current && !columnPickerRef.current.contains(event.target)) {
                 setShowColumnPicker(false);
             }
+            if (!event.target.closest('#more-actions-menu-machines') && !event.target.closest('#more-actions-btn-machines')) {
+                setShowMoreActions(false);
+            }
         };
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, [activeDropdown, showColumnPicker]);
+    }, [activeDropdown, showColumnPicker, showMoreActions]);
 
     useEffect(() => {
         localStorage.setItem('columns_machines', JSON.stringify(visibleColumns));
@@ -199,13 +287,40 @@ const Machines = () => {
     const fetchMachines = async () => {
         setIsLoading(true);
         try {
-            const { data, error } = await supabase
+            let query = supabase
                 .from('machines')
-                .select('*')
-                .order('created_at', { ascending: false });
+                .select('*', { count: 'exact' });
+
+            // Apply Filters (Server-side)
+            if (searchTerm) {
+                query = query.or(`serial_number.ilike.%${searchTerm}%,machine_type.ilike.%${searchTerm}%,customer_name.ilike.%${searchTerm}%,department_in_charge.ilike.%${searchTerm}%`);
+            }
+            if (selectedStatuses.length > 0) {
+                query = query.in('status', selectedStatuses);
+            }
+            if (selectedMachineTypes.length > 0) {
+                query = query.in('machine_type', selectedMachineTypes);
+            }
+            if (selectedCustomers.length > 0) {
+                query = query.in('customer_name', selectedCustomers);
+            }
+            if (selectedDepartments.length > 0) {
+                query = query.in('department_in_charge', selectedDepartments);
+            }
+            if (selectedWarehouses.length > 0) {
+                query = query.in('warehouse', selectedWarehouses);
+            }
+
+            const from = (currentPage - 1) * pageSize;
+            const to = from + pageSize - 1;
+
+            const { data, count, error } = await query
+                .order('created_at', { ascending: false })
+                .range(from, to);
 
             if (error && error.code !== '42P01') throw error;
             setMachines(data || []);
+            setTotalRecords(count || 0);
             setSelectedIds([]); // Clear selection on refresh
         } catch (error) {
             console.error('Error fetching machines:', error);
@@ -215,10 +330,10 @@ const Machines = () => {
     };
 
     const toggleSelectAll = () => {
-        if (selectedIds.length === filteredMachines.length && filteredMachines.length > 0) {
+        if (selectedIds.length === machines.length && machines.length > 0) {
             setSelectedIds([]);
         } else {
-            setSelectedIds(filteredMachines.map(m => m.id));
+            setSelectedIds(machines.map(m => m.id));
         }
     };
 
@@ -374,7 +489,7 @@ const Machines = () => {
                 }
 
                 setIsLoading(true);
-                
+
                 // Map warehouse names to IDs
                 const warehouseMap = (warehousesList || []).reduce((acc, w) => {
                     acc[w.name.toLowerCase()] = w.id;
@@ -385,13 +500,13 @@ const Machines = () => {
                     // Try to find status value regardless of header case
                     const statusKey = Object.keys(row).find(k => k.toLowerCase() === 'trạng thái');
                     const statusVal = statusKey ? row[statusKey]?.toString().trim() : null;
-                    
+
                     let machineStatus = 'sẵn sàng';
-                    
+
                     if (statusVal) {
                         // Map label or ID to machine status ID
-                        const foundStatus = MACHINE_STATUSES.find(s => 
-                            s.label.toLowerCase() === statusVal.toLowerCase() || 
+                        const foundStatus = MACHINE_STATUSES.find(s =>
+                            s.label.toLowerCase() === statusVal.toLowerCase() ||
                             s.id.toLowerCase() === statusVal.toLowerCase()
                         );
                         if (foundStatus) {
@@ -468,35 +583,17 @@ const Machines = () => {
         return warehousesList.find(item => item.id === warehouseId)?.name || warehouseId;
     };
 
-    const filteredMachines = machines.filter(m => {
-        const search = searchTerm.toLowerCase();
-        const matchesSearch = (
-            (m.serial_number?.toLowerCase().includes(search)) ||
-            (m.machine_type?.toLowerCase().includes(search)) ||
-            (m.warehouse?.toLowerCase().includes(search)) ||
-            (m.customer_name?.toLowerCase().includes(search)) ||
-            (m.department_in_charge?.toLowerCase().includes(search))
-        );
 
-        const matchesStatus = selectedStatuses.length === 0 || selectedStatuses.includes(m.status);
-        const matchesMachineType = selectedMachineTypes.length === 0 || selectedMachineTypes.includes(m.machine_type);
-        const matchesCustomer = selectedCustomers.length === 0 || selectedCustomers.includes(m.customer_name);
-        const matchesDepartment = selectedDepartments.length === 0 || selectedDepartments.includes(m.department_in_charge);
-        const matchesWarehouse = selectedWarehouses.length === 0 || selectedWarehouses.includes(m.warehouse);
+    const readyCount = stats.ready;
+    const inUseCount = stats.inUse;
+    const maintenanceCount = stats.maintenance;
 
-        return matchesSearch && matchesStatus && matchesMachineType && matchesCustomer && matchesDepartment && matchesWarehouse;
-    });
-
-    const filteredMachinesCount = filteredMachines.length;
-    const readyCount = filteredMachines.filter(m => m.status === 'sẵn sàng').length;
-    const inUseCount = filteredMachines.filter(m => m.status === 'thuộc khách hàng').length;
-    const maintenanceCount = filteredMachines.filter(m => m.status === 'bảo trì' || m.status === 'kiểm tra' || m.status === 'đang sửa').length;
-
-    const hasActiveFilters = selectedStatuses.length > 0
-        || selectedMachineTypes.length > 0
-        || selectedCustomers.length > 0
-        || selectedDepartments.length > 0
-        || selectedWarehouses.length > 0;
+    const hasActiveFilters = searchTerm !== '' ||
+        selectedStatuses.length > 0 ||
+        selectedMachineTypes.length > 0 ||
+        selectedCustomers.length > 0 ||
+        selectedDepartments.length > 0 ||
+        selectedWarehouses.length > 0;
 
     const totalActiveFilters = selectedStatuses.length
         + selectedMachineTypes.length
@@ -507,31 +604,31 @@ const Machines = () => {
     const statusOptions = MACHINE_STATUSES.map(item => ({
         id: item.id,
         label: item.label,
-        count: machines.filter(m => m.status === item.id).length
+        count: allMetadata.filter(m => m.status === item.id).length
     }));
 
     const machineTypeOptions = MACHINE_TYPES.map(item => ({
         id: item.id,
         label: item.label,
-        count: machines.filter(m => m.machine_type === item.id).length
+        count: allMetadata.filter(m => m.machine_type === item.id).length
     }));
 
     const customerOptions = uniqueCustomers.map(item => ({
         id: item,
         label: item,
-        count: machines.filter(m => m.customer_name === item).length
+        count: allMetadata.filter(m => m.customer_name === item).length
     }));
 
     const departmentOptions = uniqueDepartments.map(item => ({
         id: item,
         label: item,
-        count: machines.filter(m => m.department_in_charge === item).length
+        count: allMetadata.filter(m => m.department_in_charge === item).length
     }));
 
     const warehouseOptions = warehousesList.map(item => ({
         id: item.id,
         label: item.name,
-        count: machines.filter(m => m.warehouse === item.id).length
+        count: allMetadata.filter(m => m.warehouse === item.id).length
     }));
 
     const clearAllFilters = () => {
@@ -543,42 +640,42 @@ const Machines = () => {
     };
 
     const getStatusStats = () => {
-        const stats = {};
-        filteredMachines.forEach(machine => {
+        const statsMap = {};
+        allMetadata.forEach(machine => {
             const statusLabel = getStatusLabel(machine.status);
-            stats[statusLabel] = (stats[statusLabel] || 0) + 1;
+            statsMap[statusLabel] = (statsMap[statusLabel] || 0) + 1;
         });
-        return Object.entries(stats).map(([name, value]) => ({ name, value }));
+        return Object.entries(statsMap).map(([name, value]) => ({ name, value }));
     };
 
     const getMachineTypeStats = () => {
-        const stats = {};
-        filteredMachines.forEach(machine => {
+        const statsMap = {};
+        allMetadata.forEach(machine => {
             const typeLabel = getLabel(MACHINE_TYPES, machine.machine_type);
-            stats[typeLabel] = (stats[typeLabel] || 0) + 1;
+            statsMap[typeLabel] = (statsMap[typeLabel] || 0) + 1;
         });
-        return Object.entries(stats).map(([name, value]) => ({ name, value }));
+        return Object.entries(statsMap).map(([name, value]) => ({ name, value }));
     };
 
     const getCustomerStats = () => {
-        const stats = {};
-        filteredMachines.forEach(machine => {
+        const statsMap = {};
+        allMetadata.forEach(machine => {
             const customer = machine.customer_name || '—';
-            stats[customer] = (stats[customer] || 0) + 1;
+            statsMap[customer] = (statsMap[customer] || 0) + 1;
         });
-        return Object.entries(stats)
+        return Object.entries(statsMap)
             .map(([name, value]) => ({ name, value }))
             .sort((a, b) => b.value - a.value)
             .slice(0, 10);
     };
 
     const getDepartmentStats = () => {
-        const stats = {};
-        filteredMachines.forEach(machine => {
+        const statsMap = {};
+        allMetadata.forEach(machine => {
             const dept = machine.department_in_charge || 'Không xác định';
-            stats[dept] = (stats[dept] || 0) + 1;
+            statsMap[dept] = (statsMap[dept] || 0) + 1;
         });
-        return Object.entries(stats)
+        return Object.entries(statsMap)
             .map(([name, value]) => ({ name, value }))
             .sort((a, b) => b.value - a.value)
             .slice(0, 10);
@@ -693,141 +790,110 @@ const Machines = () => {
 
     return (
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 w-full flex-1 flex flex-col mt-1 min-h-0 px-1 md:px-1.5">
-            <div className="flex items-center gap-1 mb-3 mt-1">
-                <button
-                    onClick={() => setActiveView('list')}
-                    className={clsx(
-                        'flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-bold transition-all',
-                        activeView === 'list'
-                            ? 'bg-white text-primary shadow-sm ring-1 ring-border'
-                            : 'text-muted-foreground hover:text-foreground'
-                    )}
-                >
-                    <List size={14} />
-                    Danh sách
-                </button>
-                <button
-                    onClick={() => setActiveView('stats')}
-                    className={clsx(
-                        'flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-bold transition-all',
-                        activeView === 'stats'
-                            ? 'bg-white text-primary shadow-sm ring-1 ring-border'
-                            : 'text-muted-foreground hover:text-foreground'
-                    )}
-                >
-                    <BarChart2 size={14} />
-                    Thống kê
-                </button>
-            </div>
+            <PageViewSwitcher
+                activeView={activeView}
+                setActiveView={setActiveView}
+                views={[
+                    { id: 'list', label: 'Danh sách', icon: <List size={16} /> },
+                    { id: 'stats', label: 'Thống kê', icon: <BarChart2 size={16} /> },
+                ]}
+            />
+
 
             {activeView === 'list' && (
                 <div className="bg-white rounded-2xl border border-border shadow-sm flex flex-col flex-1 min-h-0 w-full">
-                    <div className="md:hidden flex items-center gap-2 p-3 border-b border-border">
-                        <div className="flex items-center gap-2 shrink-0 pr-1">
-                            <input
-                                type="checkbox"
-                                checked={selectedIds.length === filteredMachines.length && filteredMachines.length > 0}
-                                onChange={toggleSelectAll}
-                                className="w-5 h-5 rounded-md border-border text-primary focus:ring-primary/20 transition-all cursor-pointer"
-                            />
-                        </div>
-                        <button
-                            onClick={() => navigate(-1)}
-                            className="p-2 rounded-xl border border-border bg-white text-muted-foreground shrink-0"
-                        >
-                            <ChevronLeft size={18} />
-                        </button>
-                        <div className="relative flex-1">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={15} />
-                            <input
-                                type="text"
-                                placeholder="Tìm kiếm . . ."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full pl-9 pr-8 py-2 bg-muted/20 border border-border/80 rounded-xl text-[13px] focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all font-medium"
-                            />
-                            {searchTerm && (
-                                <button onClick={() => setSearchTerm('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                                    <X size={14} />
-                                </button>
-                            )}
-                        </div>
-                        <div className="flex items-center gap-2 shrink-0 pr-1">
-                            <input
-                                type="checkbox"
-                                checked={selectedIds.length === filteredMachines.length && filteredMachines.length > 0}
-                                onChange={toggleSelectAll}
-                                className="w-5 h-5 rounded-md border-border text-primary focus:ring-primary/20 transition-all cursor-pointer"
-                            />
-                        </div>
-                        <button
-                            onClick={openMobileFilter}
-                            className={clsx(
-                                'relative p-2 rounded-xl border shrink-0 transition-all',
-                                hasActiveFilters ? 'border-primary bg-primary/5 text-primary' : 'border-border bg-white text-muted-foreground',
-                            )}
-                        >
-                            <Filter size={18} />
-                            {hasActiveFilters && (
-                                <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-primary text-white text-[9px] font-bold flex items-center justify-center">
-                                    {totalActiveFilters}
-                                </span>
-                            )}
-                        </button>
-                        <button
-                            onClick={downloadTemplate}
-                            className="p-2 rounded-xl border border-indigo-200 bg-indigo-50 text-indigo-700 shrink-0 shadow-sm transition-all"
-                            title="Tải mẫu Excel"
-                        >
-                            <Download size={18} />
-                        </button>
-                        <div className="relative">
-                            <input
-                                type="file"
-                                accept=".xlsx, .xls"
-                                onChange={handleImportExcel}
-                                className="hidden"
-                                id="machine-import-mobile"
-                            />
-                            <label
-                                htmlFor="machine-import-mobile"
-                                className="p-2 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-700 flex items-center justify-center cursor-pointer shadow-sm transition-all"
-                                title="Import Excel"
-                            >
-                                <Upload size={18} />
-                            </label>
-                        </div>
-                        {selectedIds.length > 0 && (
-                            <button
-                                onClick={handleBulkDelete}
-                                className="p-2 rounded-xl bg-rose-50 text-rose-600 border border-rose-200 shrink-0 shadow-sm animate-in zoom-in-95 duration-200"
-                                title="Xóa các mục đã chọn"
-                            >
-                                <Trash2 size={18} />
-                            </button>
-                        )}
-                        <button
-                            onClick={() => {
-                                setSelectedMachine(null);
-                                setIsFormModalOpen(true);
-                            }}
-                            className="p-2 rounded-xl bg-primary text-white shrink-0 shadow-md shadow-primary/20"
-                        >
-                            <Plus size={18} />
-                        </button>
-                    </div>
+                    <MobilePageHeader
+                        searchTerm={searchTerm}
+                        setSearchTerm={setSearchTerm}
+                        searchPlaceholder="Tìm kiếm..."
+                        onFilterClick={openMobileFilter}
+                        hasActiveFilters={hasActiveFilters}
+                        totalActiveFilters={totalActiveFilters}
+                        actions={
+                            <>
+                                <div className="relative">
+                                    <button
+                                        id="more-actions-btn-machines"
+                                        onClick={() => setShowMoreActions(!showMoreActions)}
+                                        className={clsx(
+                                            "p-2 rounded-xl border shrink-0 transition-all active:scale-95 shadow-sm",
+                                            showMoreActions ? "bg-slate-100 border-slate-300" : "bg-white border-slate-200 text-slate-600"
+                                        )}
+                                    >
+                                        <MoreVertical size={20} />
+                                    </button>
+                                    {showMoreActions && (
+                                        <div id="more-actions-menu-machines" className="absolute right-0 top-full mt-2 w-48 bg-white rounded-2xl shadow-xl border border-slate-100 py-2 z-[100] animate-in fade-in slide-in-from-top-2 duration-200 origin-top-right">
+                                            <div
+                                                role="button"
+                                                onClick={() => { downloadTemplate(); setShowMoreActions(false); }}
+                                                className="w-full flex items-center justify-start gap-4 px-4 py-2.5 text-[14px] font-bold text-slate-700 hover:bg-slate-50 transition-colors text-left cursor-pointer"
+                                            >
+                                                <div className="w-5 flex justify-center flex-shrink-0">
+                                                    <Download size={18} className="text-slate-400" />
+                                                </div>
+                                                Tải mẫu Excel
+                                            </div>
 
-                    <div className="md:hidden flex-1 overflow-y-auto p-3 flex flex-col gap-3">
+                                            <label className="w-full flex items-center justify-start gap-4 px-4 py-2.5 text-[14px] font-bold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer text-left">
+                                                <div className="w-5 flex justify-center flex-shrink-0">
+                                                    <Upload size={18} className="text-slate-400" />
+                                                </div>
+                                                Import Excel
+                                                <input
+                                                    type="file"
+                                                    accept=".xlsx, .xls"
+                                                    onChange={(e) => { handleImportExcel(e); setShowMoreActions(false); }}
+                                                    className="hidden"
+                                                />
+                                            </label>
+                                        </div>
+                                    )}
+                                </div>
+                                <button
+                                    onClick={() => { setSelectedMachine(null); setIsFormModalOpen(true); }}
+                                    className="p-2 rounded-xl bg-primary text-white shadow-lg shadow-primary/30 active:scale-95 transition-all"
+                                >
+                                    <Plus size={20} />
+                                </button>
+                            </>
+                        }
+                        selectionBar={
+                            selectedIds.length > 0 ? (
+                                <div className="flex items-center justify-between px-1 mt-3 pt-3 border-t border-slate-100 animate-in slide-in-from-top-2 duration-300">
+                                    <span className="text-[13px] font-bold text-slate-600">
+                                        Đã chọn <span className="text-primary">{selectedIds.length}</span> máy
+                                    </span>
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            onClick={() => setSelectedIds([])}
+                                            className="text-[12px] font-bold text-primary hover:underline px-2 py-1"
+                                        >
+                                            Bỏ chọn
+                                        </button>
+                                        <button
+                                            onClick={handleBulkDelete}
+                                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-50 text-rose-600 text-[12px] font-bold border border-rose-100"
+                                        >
+                                            <Trash2 size={14} /> Xóa tất cả
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : null
+                        }
+                    />
+
+                    <div className="md:hidden flex-1 overflow-y-auto p-3 pb-4 flex flex-col gap-3">
                         {isLoading ? (
                             <div className="py-16 text-center text-[13px] text-muted-foreground italic">Đang tải dữ liệu...</div>
-                        ) : filteredMachines.length === 0 ? (
+                        ) : machines.length === 0 ? (
                             <div className="py-16 text-center text-[13px] text-muted-foreground italic">Không tìm thấy kết quả phù hợp</div>
                         ) : (
-                            filteredMachines.map((machine) => (
+                            machines.map((machine, index) => (
                                 <div key={machine.id} className={clsx(
                                     "rounded-2xl border shadow-sm p-4 transition-all duration-200",
-                                    selectedIds.includes(machine.id) 
-                                        ? "border-primary bg-primary/[0.05] ring-1 ring-primary/20" 
+                                    selectedIds.includes(machine.id)
+                                        ? "border-primary bg-primary/[0.05] ring-1 ring-primary/20"
                                         : "border-primary/15 bg-white"
                                 )}>
                                     <div className="flex items-start justify-between gap-2 mb-2">
@@ -841,7 +907,7 @@ const Machines = () => {
                                                 />
                                             </div>
                                             <div>
-                                                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Mã máy</p>
+                                                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">#{index + 1 + (currentPage - 1) * pageSize}</p>
                                                 <h3 className="text-[14px] font-bold text-foreground leading-tight mt-0.5 font-mono">{machine.serial_number}</h3>
                                             </div>
                                         </div>
@@ -859,11 +925,18 @@ const Machines = () => {
                                         </div>
                                         <div>
                                             <p className="text-[9px] uppercase tracking-wider text-muted-foreground">Đại lý</p>
-                                            <p className="text-[12px] text-foreground font-medium">{machine.department_in_charge || '—'}</p>
+                                            <p className="text-[12px] text-foreground font-medium truncate">{machine.department_in_charge || '—'}</p>
                                         </div>
                                         <div className="col-span-2">
-                                            <p className="text-[9px] uppercase tracking-wider text-muted-foreground">Khách hàng</p>
-                                            <p className="text-[12px] text-foreground font-medium">{machine.customer_name || '—'}</p>
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600 shrink-0">
+                                                    <User size={14} />
+                                                </div>
+                                                <div className="min-w-0 flex-1">
+                                                    <p className="text-[9px] uppercase tracking-wider text-muted-foreground">Khách hàng</p>
+                                                    <p className="text-[12px] text-foreground font-bold truncate">{machine.customer_name || '—'}</p>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
 
@@ -884,6 +957,17 @@ const Machines = () => {
                             ))
                         )}
                     </div>
+
+                    {/* Stick Mobile Pagination */}
+                    {!isLoading && (
+                        <MobilePagination
+                            currentPage={currentPage}
+                            setCurrentPage={setCurrentPage}
+                            pageSize={pageSize}
+                            setPageSize={setPageSize}
+                            totalRecords={totalRecords}
+                        />
+                    )}
 
                     <div className="hidden md:block p-4 space-y-4">
                         <div className="flex items-center justify-between gap-4">
@@ -916,7 +1000,7 @@ const Machines = () => {
                                     <button
                                         onClick={() => setShowColumnPicker(prev => !prev)}
                                         className={clsx(
-                                            'flex items-center gap-2 px-4 py-1.5 rounded-xl border text-[13px] font-bold transition-all bg-white shadow-sm',
+                                            'flex items-center gap-2 px-4 h-10 rounded-lg border text-[13px] font-bold transition-all bg-white shadow-sm',
                                             showColumnPicker
                                                 ? 'border-primary bg-primary/5 text-primary'
                                                 : 'border-border text-muted-foreground hover:bg-muted/20'
@@ -942,7 +1026,7 @@ const Machines = () => {
                                         setSelectedMachine(null);
                                         setIsFormModalOpen(true);
                                     }}
-                                    className="flex items-center gap-2 px-6 py-1.5 rounded-xl bg-primary text-white text-[13px] font-bold hover:bg-primary/90 shadow-md shadow-primary/20 transition-all"
+                                    className="flex items-center gap-2 px-6 h-10 rounded-lg bg-primary text-white text-[13px] font-bold hover:bg-primary/90 shadow-md shadow-primary/20 transition-all active:scale-95"
                                 >
                                     <Plus size={18} />
                                     Thêm
@@ -951,7 +1035,7 @@ const Machines = () => {
                                 {selectedIds.length > 0 && (
                                     <button
                                         onClick={handleBulkDelete}
-                                        className="flex items-center gap-2 px-4 py-1.5 rounded-xl border border-rose-200 bg-rose-50 text-rose-600 text-[13px] font-bold hover:bg-rose-100 shadow-sm transition-all animate-in slide-in-from-right-4"
+                                        className="flex items-center gap-2 px-4 h-10 rounded-lg border border-rose-200 bg-rose-50 text-rose-600 text-[13px] font-bold hover:bg-rose-100 shadow-sm transition-all active:scale-95 animate-in slide-in-from-right-4"
                                     >
                                         <Trash2 size={16} />
                                         Xóa ({selectedIds.length})
@@ -960,7 +1044,7 @@ const Machines = () => {
 
                                 <button
                                     onClick={downloadTemplate}
-                                    className="flex items-center gap-2 px-4 py-1.5 rounded-xl border border-indigo-200 bg-indigo-50 text-indigo-700 text-[13px] font-bold hover:bg-indigo-100 shadow-sm transition-all"
+                                    className="flex items-center gap-2 px-4 h-10 rounded-lg border border-indigo-200 bg-indigo-50 text-indigo-700 text-[13px] font-bold hover:bg-indigo-100 shadow-sm transition-all active:scale-95"
                                     title="Tải file Excel mẫu"
                                 >
                                     <Download size={16} />
@@ -977,7 +1061,7 @@ const Machines = () => {
                                     />
                                     <label
                                         htmlFor="machine-excel-import"
-                                        className="flex items-center gap-2 px-4 py-1.5 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-700 text-[13px] font-bold hover:bg-emerald-100 shadow-sm transition-all cursor-pointer"
+                                        className="flex items-center gap-2 px-4 h-10 rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 text-[13px] font-bold hover:bg-emerald-100 shadow-sm transition-all cursor-pointer active:scale-95 select-none"
                                         title="Nhập dữ liệu từ Excel"
                                     >
                                         <Upload size={16} />
@@ -986,6 +1070,7 @@ const Machines = () => {
                                 </div>
                             </div>
                         </div>
+
 
                         <div className="flex flex-wrap items-center gap-2" ref={dropdownRef}>
                             <div className="relative">
@@ -1147,7 +1232,7 @@ const Machines = () => {
                                     <th className="w-12 px-4 py-3.5 text-center border-r border-primary/30">
                                         <input
                                             type="checkbox"
-                                            checked={selectedIds.length === filteredMachines.length && filteredMachines.length > 0}
+                                            checked={selectedIds.length === machines.length && machines.length > 0}
                                             onChange={toggleSelectAll}
                                             className="w-5 h-5 rounded-md border-border text-primary focus:ring-primary/20 transition-all cursor-pointer"
                                         />
@@ -1173,13 +1258,13 @@ const Machines = () => {
                                             Đang tải dữ liệu...
                                         </td>
                                     </tr>
-                                ) : filteredMachines.length === 0 ? (
+                                ) : machines.length === 0 ? (
                                     <tr>
                                         <td colSpan={visibleTableColumns.length + 1} className="px-4 py-16 text-center text-muted-foreground">
                                             Không tìm thấy máy nào
                                         </td>
                                     </tr>
-                                ) : filteredMachines.map((machine) => (
+                                ) : machines.map((machine) => (
                                     <tr key={machine.id} className={clsx(
                                         getRowStyle(machine.status),
                                         selectedIds.includes(machine.id) && "bg-primary/[0.04]"
@@ -1227,7 +1312,7 @@ const Machines = () => {
 
                     <div className="hidden md:flex px-4 py-4 border-t border-border items-center justify-between bg-muted/5">
                         <div className="flex items-center gap-3 text-[12px] text-muted-foreground font-medium">
-                            <span>{filteredMachines.length > 0 ? `1–${filteredMachines.length}` : '0'}/Tổng {filteredMachines.length}</span>
+                            <span>{machines.length > 0 ? `1–${machines.length}` : '0'}/Tổng {machines.length}</span>
                             <div className="flex items-center gap-1 ml-2">
                                 <span className="text-[11px] font-bold">│</span>
                                 <span className="text-primary font-bold">Sẵn sàng {formatNumber(readyCount)}</span>
@@ -1259,29 +1344,14 @@ const Machines = () => {
             {activeView === 'stats' && (
                 <div className="bg-white rounded-2xl border border-border shadow-sm flex flex-col w-full">
                     <div className="space-y-0">
-                        <div className="md:hidden flex items-center gap-2 p-3 border-b border-border">
-                            <button
-                                onClick={() => navigate(-1)}
-                                className="p-2 rounded-xl border border-border bg-white text-muted-foreground shrink-0"
-                            >
-                                <ChevronLeft size={18} />
-                            </button>
-                            <h2 className="text-base font-bold text-foreground flex-1 text-center">Thống kê</h2>
-                            <button
-                                onClick={openMobileFilter}
-                                className={clsx(
-                                    'relative p-2 rounded-xl border shrink-0 transition-all',
-                                    hasActiveFilters ? 'border-primary bg-primary/5 text-primary' : 'border-border bg-white text-muted-foreground',
-                                )}
-                            >
-                                <Filter size={18} />
-                                {hasActiveFilters && (
-                                    <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-primary text-white text-[9px] font-bold flex items-center justify-center">
-                                        {totalActiveFilters}
-                                    </span>
-                                )}
-                            </button>
-                        </div>
+                        <MobilePageHeader
+                            searchTerm={searchTerm}
+                            setSearchTerm={setSearchTerm}
+                            searchPlaceholder="Lọc thống kê..."
+                            onFilterClick={openMobileFilter}
+                            hasActiveFilters={hasActiveFilters}
+                            totalActiveFilters={totalActiveFilters}
+                        />
 
                         <div className="hidden md:block p-4 border-b border-border" ref={dropdownRef}>
                             <div className="flex flex-wrap items-center gap-2">
@@ -1292,7 +1362,6 @@ const Machines = () => {
                                     <ChevronLeft size={16} />
                                     Quay lại
                                 </button>
-
                                 <div className="relative">
                                     <button
                                         onClick={() => setActiveDropdown(activeDropdown === 'status' ? null : 'status')}
@@ -1445,155 +1514,147 @@ const Machines = () => {
                             </div>
                         </div>
 
-                        <div className="w-full px-3 md:px-4 pt-4 md:pt-5 pb-5 md:pb-6 space-y-5">
-                            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                                <div className="bg-blue-50/70 border border-blue-100 rounded-2xl p-4 md:p-5 shadow-sm">
-                                    <div className="flex flex-col md:flex-row items-center md:items-center justify-center md:justify-start text-center md:text-left gap-3 md:gap-4">
-                                        <div className="w-10 h-10 md:w-12 md:h-12 bg-blue-100/80 rounded-full flex items-center justify-center shrink-0 ring-1 ring-blue-200/70">
-                                            <Activity className="w-5 h-5 md:w-6 md:h-6 text-blue-600" />
+                        <div className="p-4 md:p-6 space-y-6">
+                            {/* Summary Cards */}
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+                                <div className="bg-slate-50/50 p-4 rounded-2xl border border-slate-100 shadow-sm">
+                                    <div className="flex items-center gap-3 mb-2">
+                                        <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-600">
+                                            <Wrench size={20} />
                                         </div>
-                                        <div>
-                                            <p className="text-[10px] md:text-[11px] font-semibold text-blue-600 uppercase tracking-wider">Tổng máy</p>
-                                            <p className="text-2xl md:text-3xl font-bold text-foreground mt-0.5 md:mt-1 leading-none">{formatNumber(filteredMachinesCount)}</p>
-                                        </div>
+                                        <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider leading-tight">Tổng số máy</p>
                                     </div>
+                                    <p className="text-2xl font-black text-slate-700">{formatNumber(stats.total)}</p>
                                 </div>
 
-                                <div className="bg-green-50/70 border border-green-100 rounded-2xl p-4 md:p-5 shadow-sm">
-                                    <div className="flex flex-col md:flex-row items-center md:items-center justify-center md:justify-start text-center md:text-left gap-3 md:gap-4">
-                                        <div className="w-10 h-10 md:w-12 md:h-12  bg-green-100/80 rounded-full flex items-center justify-center shrink-0 ring-1 ring-green-200/70">
-                                            <BarChart2 className="w-5 h-5 md:w-6 md:h-6 text-green-600" />
+                                <div className="bg-emerald-50/30 p-4 rounded-2xl border border-emerald-100 shadow-sm">
+                                    <div className="flex items-center gap-3 mb-2">
+                                        <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center text-emerald-600">
+                                            <CheckCircle2 size={20} />
                                         </div>
-                                        <div>
-                                            <p className="text-[10px] md:text-[11px] font-semibold text-green-600 uppercase tracking-wider">Sẵn sàng</p>
-                                            <p className="text-2xl md:text-3xl font-bold text-foreground mt-0.5 md:mt-1 leading-none">{formatNumber(readyCount)}</p>
-                                        </div>
+                                        <p className="text-[11px] font-bold text-emerald-600 uppercase tracking-wider leading-tight">Sẵn sàng</p>
                                     </div>
+                                    <p className="text-2xl font-black text-emerald-700">{formatNumber(stats.ready)}</p>
                                 </div>
 
-                                <div className="bg-indigo-50/70 border border-indigo-100 rounded-2xl p-4 md:p-5 shadow-sm">
-                                    <div className="flex flex-col md:flex-row items-center md:items-center justify-center md:justify-start text-center md:text-left gap-3 md:gap-4">
-                                        <div className="w-10 h-10 md:w-12 md:h-12  bg-indigo-100/80 rounded-full flex items-center justify-center shrink-0 ring-1 ring-indigo-200/70">
-                                            <BarChart2 className="w-5 h-5 md:w-6 md:h-6 text-indigo-600" />
+                                <div className="bg-blue-50/30 p-4 rounded-2xl border border-blue-100 shadow-sm">
+                                    <div className="flex items-center gap-3 mb-2">
+                                        <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center text-blue-600">
+                                            <User size={20} />
                                         </div>
-                                        <div>
-                                            <p className="text-[10px] md:text-[11px] font-semibold text-indigo-600 uppercase tracking-wider">Đang dùng</p>
-                                            <p className="text-2xl md:text-3xl font-bold text-foreground mt-0.5 md:mt-1 leading-none">{formatNumber(inUseCount)}</p>
-                                        </div>
+                                        <p className="text-[11px] font-bold text-blue-600 uppercase tracking-wider leading-tight">Đang dùng</p>
                                     </div>
+                                    <p className="text-2xl font-black text-blue-700">{formatNumber(stats.inUse)}</p>
                                 </div>
 
-                                <div className="bg-amber-50/70 border border-amber-100 rounded-2xl p-4 md:p-5 shadow-sm">
-                                    <div className="flex flex-col md:flex-row items-center md:items-center justify-center md:justify-start text-center md:text-left gap-3 md:gap-4">
-                                        <div className="w-10 h-10 md:w-12 md:h-12  bg-amber-100/80 rounded-full flex items-center justify-center shrink-0 ring-1 ring-amber-200/70">
-                                            <Wrench className="w-5 h-5 md:w-6 md:h-6 text-amber-600" />
+                                <div className="bg-amber-50/30 p-4 rounded-2xl border border-amber-100 shadow-sm">
+                                    <div className="flex items-center gap-3 mb-2">
+                                        <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center text-amber-600">
+                                            <Activity size={20} />
                                         </div>
-                                        <div>
-                                            <p className="text-[10px] md:text-[11px] font-semibold text-amber-600 uppercase tracking-wider">Bảo trì</p>
-                                            <p className="text-2xl md:text-3xl font-bold text-foreground mt-0.5 md:mt-1 leading-none">{formatNumber(maintenanceCount)}</p>
-                                        </div>
+                                        <p className="text-[11px] font-bold text-amber-600 uppercase tracking-wider leading-tight">Bảo trì</p>
                                     </div>
+                                    <p className="text-2xl font-black text-amber-700">{formatNumber(stats.maintenance)}</p>
+                                </div>
+                            </div>
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                            <div className="bg-card border border-border rounded-xl p-6 shadow-sm">
+                                <h3 className="text-lg font-bold text-foreground mb-4">Phân bổ theo Trạng thái</h3>
+                                <div style={{ height: '300px' }}>
+                                    <PieChartJS
+                                        data={{
+                                            labels: getStatusStats().map(item => item.name),
+                                            datasets: [{
+                                                data: getStatusStats().map(item => item.value),
+                                                backgroundColor: chartColors.slice(0, getStatusStats().length),
+                                                borderColor: '#fff',
+                                                borderWidth: 2
+                                            }]
+                                        }}
+                                        options={{
+                                            responsive: true,
+                                            maintainAspectRatio: false,
+                                            plugins: { legend: { position: 'bottom' } }
+                                        }}
+                                    />
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                                <div className="bg-card border border-border rounded-xl p-6 shadow-sm">
-                                    <h3 className="text-lg font-bold text-foreground mb-4">Phân bổ theo Trạng thái</h3>
-                                    <div style={{ height: '300px' }}>
-                                        <PieChartJS
-                                            data={{
-                                                labels: getStatusStats().map(item => item.name),
-                                                datasets: [{
-                                                    data: getStatusStats().map(item => item.value),
-                                                    backgroundColor: chartColors.slice(0, getStatusStats().length),
-                                                    borderColor: '#fff',
-                                                    borderWidth: 2
-                                                }]
-                                            }}
-                                            options={{
-                                                responsive: true,
-                                                maintainAspectRatio: false,
-                                                plugins: { legend: { position: 'bottom' } }
-                                            }}
-                                        />
-                                    </div>
+                            <div className="bg-card border border-border rounded-xl p-6 shadow-sm">
+                                <h3 className="text-lg font-bold text-foreground mb-4">Phân bổ theo Loại máy</h3>
+                                <div style={{ height: '300px' }}>
+                                    <PieChartJS
+                                        data={{
+                                            labels: getMachineTypeStats().map(item => item.name),
+                                            datasets: [{
+                                                data: getMachineTypeStats().map(item => item.value),
+                                                backgroundColor: chartColors.slice(0, getMachineTypeStats().length),
+                                                borderColor: '#fff',
+                                                borderWidth: 2
+                                            }]
+                                        }}
+                                        options={{
+                                            responsive: true,
+                                            maintainAspectRatio: false,
+                                            plugins: { legend: { position: 'bottom' } }
+                                        }}
+                                    />
                                 </div>
+                            </div>
 
-                                <div className="bg-card border border-border rounded-xl p-6 shadow-sm">
-                                    <h3 className="text-lg font-bold text-foreground mb-4">Phân bổ theo Loại máy</h3>
-                                    <div style={{ height: '300px' }}>
-                                        <PieChartJS
-                                            data={{
-                                                labels: getMachineTypeStats().map(item => item.name),
-                                                datasets: [{
-                                                    data: getMachineTypeStats().map(item => item.value),
-                                                    backgroundColor: chartColors.slice(0, getMachineTypeStats().length),
-                                                    borderColor: '#fff',
-                                                    borderWidth: 2
-                                                }]
-                                            }}
-                                            options={{
-                                                responsive: true,
-                                                maintainAspectRatio: false,
-                                                plugins: { legend: { position: 'bottom' } }
-                                            }}
-                                        />
-                                    </div>
+                            <div className="bg-card border border-border rounded-xl p-6 shadow-sm">
+                                <h3 className="text-lg font-bold text-foreground mb-4">Top 10 Khách hàng</h3>
+                                <div style={{ height: '300px' }}>
+                                    <BarChartJS
+                                        data={{
+                                            labels: getCustomerStats().map(item => item.name.length > 20 ? item.name.substring(0, 20) + '...' : item.name),
+                                            datasets: [{
+                                                label: 'Số máy',
+                                                data: getCustomerStats().map(item => item.value),
+                                                backgroundColor: chartColors[0],
+                                                borderColor: chartColors[0],
+                                                borderWidth: 1
+                                            }]
+                                        }}
+                                        options={{
+                                            responsive: true,
+                                            maintainAspectRatio: false,
+                                            indexAxis: 'y',
+                                            plugins: { legend: { display: false } },
+                                            scales: { x: { beginAtZero: true } }
+                                        }}
+                                    />
                                 </div>
+                            </div>
 
-                                <div className="bg-card border border-border rounded-xl p-6 shadow-sm">
-                                    <h3 className="text-lg font-bold text-foreground mb-4">Top 10 Khách hàng</h3>
-                                    <div style={{ height: '300px' }}>
-                                        <BarChartJS
-                                            data={{
-                                                labels: getCustomerStats().map(item => item.name.length > 20 ? item.name.substring(0, 20) + '...' : item.name),
-                                                datasets: [{
-                                                    label: 'Số máy',
-                                                    data: getCustomerStats().map(item => item.value),
-                                                    backgroundColor: chartColors[0],
-                                                    borderColor: chartColors[0],
-                                                    borderWidth: 1
-                                                }]
-                                            }}
-                                            options={{
-                                                responsive: true,
-                                                maintainAspectRatio: false,
-                                                indexAxis: 'y',
-                                                plugins: { legend: { display: false } },
-                                                scales: { x: { beginAtZero: true } }
-                                            }}
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="bg-card border border-border rounded-xl p-6 shadow-sm">
-                                    <h3 className="text-lg font-bold text-foreground mb-4">Top 10 Đại lý</h3>
-                                    <div style={{ height: '300px' }}>
-                                        <BarChartJS
-                                            data={{
-                                                labels: getDepartmentStats().map(item => item.name.length > 20 ? item.name.substring(0, 20) + '...' : item.name),
-                                                datasets: [{
-                                                    label: 'Số máy',
-                                                    data: getDepartmentStats().map(item => item.value),
-                                                    backgroundColor: chartColors[1],
-                                                    borderColor: chartColors[1],
-                                                    borderWidth: 1
-                                                }]
-                                            }}
-                                            options={{
-                                                responsive: true,
-                                                maintainAspectRatio: false,
-                                                indexAxis: 'y',
-                                                plugins: { legend: { display: false } },
-                                                scales: { x: { beginAtZero: true } }
-                                            }}
-                                        />
-                                    </div>
+                            <div className="bg-card border border-border rounded-xl p-6 shadow-sm">
+                                <h3 className="text-lg font-bold text-foreground mb-4">Top 10 Đại lý</h3>
+                                <div style={{ height: '300px' }}>
+                                    <BarChartJS
+                                        data={{
+                                            labels: getDepartmentStats().map(item => item.name.length > 20 ? item.name.substring(0, 20) + '...' : item.name),
+                                            datasets: [{
+                                                label: 'Số máy',
+                                                data: getDepartmentStats().map(item => item.value),
+                                                backgroundColor: chartColors[1],
+                                                borderColor: chartColors[1],
+                                                borderWidth: 1
+                                            }]
+                                        }}
+                                        options={{
+                                            responsive: true,
+                                            maintainAspectRatio: false,
+                                            indexAxis: 'y',
+                                            plugins: { legend: { display: false } },
+                                            scales: { x: { beginAtZero: true } }
+                                        }}
+                                    />
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
+            </div>
             )}
 
             {showMobileFilter && (

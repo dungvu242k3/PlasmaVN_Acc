@@ -1,89 +1,59 @@
 import React from 'react';
-import { ArrowLeft, Home, Bell, ClipboardList } from 'lucide-react';
+import { ChevronLeft, Home, ClipboardList } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { clsx } from 'clsx';
-import { supabase } from '../../supabase/config';
 import { usePermissions } from '../../hooks/usePermissions';
 
 function MobileBottomNav() {
   const navigate = useNavigate();
   const { role } = usePermissions();
   const location = useLocation();
-  const [unreadCount, setUnreadCount] = React.useState(0);
-
-  const fetchUnreadCount = async () => {
-    const { count, error } = await supabase
-      .from('notifications')
-      .select('*', { count: 'exact', head: true })
-      .eq('is_read', false);
-    
-    if (!error) setUnreadCount(count || 0);
-  };
-
-  React.useEffect(() => {
-    fetchUnreadCount();
-
-    const channel = supabase
-      .channel('mobile-notifications')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications' }, () => {
-        fetchUnreadCount();
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
 
   const isHome = location.pathname === '/trang-chu' || location.pathname === '/';
 
   return (
-    <div className="lg:hidden fixed bottom-0 left-0 right-0 h-12 bg-white border-t border-border z-40 px-6 flex items-center justify-between pb-safe shadow-[0_-2px_8px_rgba(15,23,42,0.06)]">
+    <div className="lg:hidden fixed bottom-0 left-0 right-0 h-14 bg-white border-t border-slate-100 z-40 px-8 flex items-center justify-between pb-safe shadow-[0_-4px_12px_rgba(0,0,0,0.03)]">
+      {/* Back Button */}
       <button
         onClick={() => navigate(-1)}
-        className="p-1.5 text-muted-foreground hover:text-foreground transition-colors"
+        className="!p-2 !h-10 !w-10 !min-w-0 !rounded-full flex items-center justify-center text-slate-500 hover:bg-slate-50 hover:text-slate-900 transition-colors"
       >
-        <ArrowLeft size={20} />
+        <ChevronLeft size={24} strokeWidth={2} />
       </button>
 
+      {/* Floating Home Button - FORCED CIRCULAR */}
       <button
         onClick={() => navigate('/trang-chu')}
         className={clsx(
-          '!w-10 !h-10 !p-0 !rounded-full flex items-center justify-center -translate-y-3 shadow-lg transition-transform hover:scale-105 active:scale-95',
-          isHome ? 'bg-primary text-white' : 'bg-white text-muted-foreground border border-border'
+          "relative !w-12 !h-12 !p-0 !rounded-full flex items-center justify-center -translate-y-4 shadow-[0_8px_20px_-4px_rgba(0,0,0,0.12)] border border-slate-50 transition-all duration-300 hover:scale-110 active:scale-95 group",
+          isHome ? "bg-white text-primary" : "bg-white text-slate-500"
         )}
       >
-        <Home size={18} strokeWidth={2.2} />
+        <div className="absolute inset-0 !rounded-full bg-white" />
+        <Home 
+          size={22} 
+          strokeWidth={2.2} 
+          className="relative z-10"
+        />
       </button>
 
-      {(role === 'Admin' || role === 'Shipper') && (
+      {/* Right Slot: Shipping Tasks or Spacer */}
+      {(role === 'Admin' || role === 'Shipper') ? (
         <button
           onClick={() => navigate('/nhiem-vu-giao-hang')}
           className={clsx(
-            'p-1.5 transition-colors',
-            location.pathname === '/nhiem-vu-giao-hang' ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
+            '!p-2 !h-10 !w-10 !min-w-0 !rounded-full flex items-center justify-center transition-colors',
+            location.pathname === '/nhiem-vu-giao-hang' ? 'text-primary bg-primary/5' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
           )}
         >
-          <ClipboardList size={22} />
+          <ClipboardList size={22} strokeWidth={2} />
         </button>
+      ) : (
+        <div className="w-10" />
       )}
-
-      <button 
-        onClick={() => {
-          // You could navigate to a dedicated notification page on mobile if exists
-          console.log('Notification clicked on mobile');
-        }}
-        className="relative p-1.5 text-muted-foreground hover:text-foreground transition-colors"
-      >
-        <Bell size={20} />
-        {unreadCount > 0 && (
-          <span className="absolute top-0 right-0 w-3.5 h-3.5 bg-primary text-white text-[9px] font-bold flex items-center justify-center rounded-full border border-white">
-            {unreadCount}
-          </span>
-        )}
-      </button>
     </div>
   );
 }
 
 export default MobileBottomNav;
+

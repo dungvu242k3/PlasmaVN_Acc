@@ -28,7 +28,8 @@ import {
   Users,
   CheckCircle,
   TrendingUp,
-  ChevronDown
+  ChevronDown,
+  MoreVertical
 } from 'lucide-react';
 import React, { useState, useEffect, useRef } from 'react';
 import { Bar as BarChartJS, Pie as PieChartJS } from 'react-chartjs-2';
@@ -36,6 +37,9 @@ import { clsx } from 'clsx';
 import { useNavigate } from 'react-router-dom';
 import { useReports } from '../hooks/useReports';
 import { exportOrdersMonthlyReport } from '../utils/exportExcel';
+import MobilePageHeader from '../components/layout/MobilePageHeader';
+import MobilePagination from '../components/layout/MobilePagination';
+import PageViewSwitcher from '../components/layout/PageViewSwitcher';
 import FilterDropdown from '../components/ui/FilterDropdown';
 import MobileFilterSheet from '../components/ui/MobileFilterSheet';
 import ColumnPicker from '../components/ui/ColumnPicker';
@@ -103,7 +107,11 @@ const OrdersMonthlyReport = () => {
   const [filterSearch, setFilterSearch] = useState('');
   
   const [showColumnPicker, setShowColumnPicker] = useState(false);
+  const [showMoreActions, setShowMoreActions] = useState(false);
   const columnPickerRef = useRef(null);
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(50);
 
   const defaultColOrder = REPORT_COLUMNS.map(col => col.key);
   const columnDefs = REPORT_COLUMNS.reduce((acc, col) => {
@@ -292,6 +300,7 @@ const OrdersMonthlyReport = () => {
       customer_categories: pendingCustomerCategories
     };
     setFilters(newFilters);
+    setCurrentPage(1);
     closeMobileFilter();
     loadData(newFilters);
   };
@@ -361,6 +370,7 @@ const OrdersMonthlyReport = () => {
   const handleFilterChange = (key, value) => {
     const newFilters = { ...filters, [key]: value };
     setFilters(newFilters);
+    setCurrentPage(1);
     loadData(newFilters);
   };
 
@@ -385,6 +395,8 @@ const OrdersMonthlyReport = () => {
 
   const totalRevenue = filteredData.reduce((sum, item) => sum + (item.thanh_tien || 0), 0);
   const totalQuantity = filteredData.reduce((sum, item) => sum + (item.so_luong || 0), 0);
+  const totalRecords = filteredData.length;
+  const paginatedData = filteredData.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   // Statistics data
   const getStatusStats = () => {
@@ -428,13 +440,24 @@ const OrdersMonthlyReport = () => {
   // Close dropdown on click outside
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+      if (listDropdownRef.current && !listDropdownRef.current.contains(event.target) &&
+          statsDropdownRef.current && !statsDropdownRef.current.contains(event.target)) {
         setActiveDropdown(null);
+      }
+      if (columnPickerRef.current && !columnPickerRef.current.contains(event.target)) {
+        setShowColumnPicker(false);
+      }
+      if (showMoreActions) {
+        const menu = document.getElementById('more-actions-menu-orders-report');
+        const btn = document.getElementById('more-actions-button-orders-report');
+        if (menu && !menu.contains(event.target) && btn && !btn.contains(event.target)) {
+          setShowMoreActions(false);
+        }
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  }, [activeDropdown, showColumnPicker, showMoreActions]);
 
   const getFilterButtonClass = (key, isActive) => {
     if (!isActive) return "border-border bg-white text-muted-foreground hover:bg-muted/20 flex items-center gap-2.5 px-4 py-2 rounded-xl border text-[13px] font-bold transition-all shadow-sm";
@@ -471,82 +494,53 @@ const OrdersMonthlyReport = () => {
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 w-full flex-1 flex flex-col mt-1 min-h-0 px-1 md:px-1.5">
-      {/* Top Sidebar Style Tabs */}
-      <div className="flex items-center gap-1 mb-3 mt-1">
-        <button
-          onClick={() => setActiveView('list')}
-          className={clsx(
-            "flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-bold transition-all",
-            activeView === 'list'
-              ? "bg-white text-primary shadow-sm ring-1 ring-border"
-              : "text-muted-foreground hover:text-foreground"
-          )}
-        >
-          <List size={14} />
-          Danh sách
-        </button>
-        <button
-          onClick={() => setActiveView('stats')}
-          className={clsx(
-            "flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-bold transition-all",
-            activeView === 'stats'
-              ? "bg-white text-primary shadow-sm ring-1 ring-border"
-              : "text-muted-foreground hover:text-foreground"
-          )}
-        >
-          <BarChart2 size={14} />
-          Thống kê
-        </button>
-      </div>
+      <PageViewSwitcher
+        activeView={activeView}
+        setActiveView={setActiveView}
+        views={[
+          { id: 'list', label: 'Danh sách', icon: <List size={16} /> },
+          { id: 'stats', label: 'Thống kê', icon: <BarChart2 size={16} /> },
+        ]}
+      />
 
       {activeView === 'list' && (
         <div className="bg-white rounded-2xl border border-border shadow-sm flex flex-col flex-1 min-h-0 w-full">
-          {/* ── MOBILE TOOLBAR ── */}
-          <div className="md:hidden flex items-center gap-2 p-3 border-b border-border">
-            <button
-              onClick={() => navigate(-1)}
-              className="p-2 rounded-xl border border-border bg-white text-muted-foreground shrink-0 shadow-sm"
-            >
-              <ChevronLeft size={18} />
-            </button>
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={15} />
-              <input
-                type="text"
-                placeholder="Tìm kiếm . . ."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-9 pr-8 py-2 bg-muted/20 border border-border/80 rounded-xl text-[13px] focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all font-medium"
-              />
-              {searchTerm && (
-                <button onClick={() => setSearchTerm('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                  <X size={14} />
+          <MobilePageHeader
+            searchTerm={searchTerm}
+            setSearchTerm={setSearchTerm}
+            searchPlaceholder="Tìm kiếm..."
+            onFilterClick={openMobileFilter}
+            hasActiveFilters={hasActiveFilters}
+            totalActiveFilters={totalActiveFilters}
+            actions={
+              <div className="relative">
+                <button
+                  id="more-actions-button-orders-report"
+                  onClick={() => setShowMoreActions(!showMoreActions)}
+                  className={clsx(
+                    "p-2 rounded-xl border shrink-0 transition-all active:scale-95 shadow-sm",
+                    showMoreActions ? "bg-slate-100 border-slate-300" : "bg-white border-slate-200 text-slate-600"
+                  )}
+                >
+                  <MoreVertical size={20} />
                 </button>
-              )}
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={openMobileFilter}
-                className={clsx(
-                  'relative p-2 rounded-xl border shrink-0 transition-all shadow-sm',
-                  hasActiveFilters ? 'border-primary bg-primary/5 text-primary' : 'border-border bg-white text-muted-foreground',
+                {showMoreActions && (
+                  <div id="more-actions-menu-orders-report" className="absolute right-0 top-full mt-2 w-48 bg-white rounded-2xl shadow-xl border border-slate-100 py-2 z-[100] animate-in fade-in slide-in-from-top-2 duration-200 origin-top-right">
+                    <div
+                      role="button"
+                      onClick={() => { handleExport(); setShowMoreActions(false); }}
+                      className="w-full flex items-center justify-start gap-4 px-4 py-2.5 text-[14px] font-bold text-slate-700 hover:bg-slate-50 transition-colors text-left cursor-pointer"
+                    >
+                      <div className="w-5 flex justify-center flex-shrink-0">
+                        <Download size={18} className="text-slate-400" />
+                      </div>
+                      Xuất Excel
+                    </div>
+                  </div>
                 )}
-              >
-                <Filter size={18} />
-                {hasActiveFilters && (
-                  <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-primary text-white text-[9px] font-bold flex items-center justify-center">
-                    {totalActiveFilters}
-                  </span>
-                )}
-              </button>
-              <button 
-                onClick={handleExport} 
-                className="p-2 rounded-xl bg-primary text-white shrink-0 shadow-md shadow-primary/20 transition-all hover:bg-primary/90"
-              >
-                <Download size={18} />
-              </button>
-            </div>
-          </div>
+              </div>
+            }
+          />
 
           {/* ── DESKTOP TOOLBAR ── */}
           <div className="hidden md:block p-3 space-y-3">
@@ -613,59 +607,90 @@ const OrdersMonthlyReport = () => {
           </div>
 
           {/* ── MOBILE CARD LIST ── */}
-          <div className="md:hidden flex-1 overflow-y-auto p-3 flex flex-col gap-3">
+          <div className="md:hidden flex-1 overflow-y-auto p-3 pb-4 flex flex-col gap-3">
             {loading ? (
               <div className="py-16 text-center text-[13px] text-muted-foreground italic">Đang tải dữ liệu...</div>
-            ) : filteredData.length === 0 ? (
+            ) : paginatedData.length === 0 ? (
               <div className="py-16 text-center text-[13px] text-muted-foreground italic">Không tìm thấy kết quả phù hợp</div>
             ) : (
-              filteredData.map((item, index) => (
-                <div key={index} className="bg-white border border-primary/15 rounded-2xl p-4 shadow-sm space-y-3">
-                  <div className="flex justify-between items-start">
-                    <div className="flex items-center gap-2">
-                      <Hash className="w-4 h-4 text-primary shrink-0" />
-                      <span className="text-[13px] font-bold text-foreground">{item.ma_don}</span>
+              paginatedData.map((item, index) => (
+                <div key={index} className="rounded-2xl border border-primary/15 bg-white shadow-sm p-4 transition-all duration-200">
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <div className="flex gap-3">
+                      <div>
+                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">#{index + 1}</p>
+                        <h3 className="text-[14px] font-bold text-foreground leading-tight mt-0.5 font-mono">{item.ma_don}</h3>
+                      </div>
                     </div>
                     <span className={clsx(
-                      'inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase',
-                      item.trang_thai === 'HOAN_THANH' ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700'
+                      'inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border',
+                      item.trang_thai === 'HOAN_THANH' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-sky-50 text-sky-600 border-sky-100'
                     )}>
                       {item.trang_thai === 'HOAN_THANH' ? 'Hoàn thành' : 'Đã duyệt'}
                     </span>
                   </div>
 
-                  <div>
-                    <h3 className="text-[14px] font-bold text-foreground leading-snug">{item.ten_khach_hang}</h3>
-                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1">
+                  <div className="grid grid-cols-2 gap-2 mb-3 rounded-xl bg-muted/10 border border-border/60 p-2.5">
+                    <div>
+                      <p className="text-[9px] uppercase tracking-wider text-muted-foreground">Sản phẩm</p>
+                      <p className="text-[12px] text-foreground font-medium">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold border bg-violet-50 text-violet-700 border-violet-200">
+                          SL: {item.so_luong}
+                        </span>
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-[9px] uppercase tracking-wider text-muted-foreground">Doanh thu</p>
+                      <p className="text-[12px] text-primary font-bold">
+                        {formatCurrency(item.thanh_tien)} đ
+                      </p>
+                    </div>
+                    <div className="col-span-2">
+                      <div className="space-y-3 mt-1">
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600 shrink-0">
+                            <Users size={14} />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-[9px] uppercase tracking-wider text-muted-foreground">Khách hàng</p>
+                            <p className="text-[12px] text-foreground font-bold truncate">
+                              {item.ten_khach_hang}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center text-amber-600 shrink-0">
+                            <Warehouse size={14} />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-[9px] uppercase tracking-wider text-muted-foreground">Kho</p>
+                            <p className="text-[12px] text-foreground font-bold truncate">
+                              {item.kho}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-2 border-t border-border/70">
+                    <div className="flex flex-wrap items-center gap-2">
                       <span className={getCategoryBadgeClass(item.loai_khach_hang)}>{getLabel(CUSTOMER_CATEGORIES, item.loai_khach_hang)}</span>
-                      <span className="text-[11px] font-medium text-muted-foreground">{item.ngay_duyet || '---'}</span>
                     </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-y-2 text-xs bg-muted/10 rounded-xl p-2.5 border border-border/60">
-                    <div className="space-y-1">
-                      <p className="text-muted-foreground font-medium flex items-center gap-1.5">
-                        <Package className="w-3.5 h-3.5 text-blue-600" />
-                        SL: <span className="text-foreground font-bold">{item.so_luong}</span>
-                      </p>
-                    </div>
-                    <div className="space-y-1 pl-2 border-l border-border">
-                      <p className="text-muted-foreground font-medium flex items-center gap-1.5">
-                        <Warehouse className="w-3.5 h-3.5 text-muted-foreground" />
-                        {item.kho}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between pt-3 border-t border-border">
-                    <div className="flex flex-col">
-                      <span className="text-[10px] font-bold text-muted-foreground uppercase leading-none mb-1">Doanh thu</span>
-                      <span className="text-[14px] font-bold text-primary">{formatCurrency(item.thanh_tien)} <small className="text-[10px]">đ</small></span>
-                    </div>
-                    <span className="text-xs text-muted-foreground italic font-medium">{item.nhan_vien_kinh_doanh || '-'}</span>
+                    <span className="text-[11px] text-muted-foreground italic font-medium">NVKD: {item.nhan_vien_kinh_doanh || '-'}</span>
                   </div>
                 </div>
               ))
+            )}
+            {/* Sticky Mobile Pagination */}
+            {!loading && (
+              <MobilePagination
+                currentPage={currentPage}
+                setCurrentPage={setCurrentPage}
+                pageSize={pageSize}
+                setPageSize={setPageSize}
+                totalRecords={totalRecords}
+              />
             )}
           </div>
 
@@ -691,10 +716,10 @@ const OrdersMonthlyReport = () => {
               <tbody className="divide-y divide-primary/10">
                 {loading ? (
                   <tr><td colSpan={visibleColumns.length} className="px-4 py-16 text-center text-muted-foreground">Đang tải dữ liệu...</td></tr>
-                ) : filteredData.length === 0 ? (
+                ) : paginatedData.length === 0 ? (
                   <tr><td colSpan={visibleColumns.length} className="px-4 py-16 text-center text-muted-foreground">Không có dữ liệu đơn hàng</td></tr>
                 ) : (
-                  filteredData.map((item, index) => (
+                  paginatedData.map((item, index) => (
                     <tr key={index} className={getRowStyle(item.loai_khach_hang)}>
                       {columnOrder.filter(isColumnVisible).map(colId => (
                         <td key={colId} className={clsx(
@@ -726,22 +751,58 @@ const OrdersMonthlyReport = () => {
             </table>
           </div>
 
-          {/* Footer */}
-          <div className="px-4 py-3 border-t border-border flex items-center justify-between bg-muted/5">
+          {/* Mobile Summary & Footer (Desktop only pagination layout) */}
+          <div className="md:hidden flex flex-col px-4 py-3 border-t border-border bg-muted/5 gap-2">
+            <div className="flex items-center justify-between">
+              <span className="text-[12px] text-muted-foreground font-medium">
+                Tổng <b>{totalRecords}</b> đơn hàng
+              </span>
+              <span className="text-[12px] text-primary font-bold">{formatCurrency(totalRevenue)} đ</span>
+            </div>
+          </div>
+          
+          <div className="hidden md:flex px-4 py-4 border-t border-border items-center justify-between bg-muted/5">
             <div className="flex items-center gap-3 text-[12px] text-muted-foreground font-medium">
-              <span>{filteredData.length > 0 ? `1–${filteredData.length}` : '0'}/Tổng {filteredData.length} đơn</span>
+              <span>{totalRecords > 0 ? `${(currentPage - 1) * pageSize + 1}–${Math.min(currentPage * pageSize, totalRecords)}` : '0'} / Tổng {totalRecords} đơn</span>
               <div className="flex items-center gap-1 ml-2">
-                <span className="text-[11px] font-bold text-muted-foreground/30">│</span>
+                <span className="text-[11px] font-bold">│</span>
                 <span className="text-primary font-bold">{formatCurrency(totalRevenue)} đ</span>
-                <span className="text-muted-foreground/50 ml-2">({totalQuantity} SP)</span>
+                <span className="text-muted-foreground">•</span>
+                <span className="text-violet-600 font-bold">{totalQuantity} SP</span>
               </div>
             </div>
-            <div className="hidden sm:flex items-center gap-1">
-              <button className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted disabled:opacity-20" disabled><ChevronLeft size={16} /><ChevronLeft size={16} className="-ml-2.5" /></button>
-              <button className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted disabled:opacity-20" disabled><ChevronLeft size={16} /></button>
-              <div className="w-8 h-8 rounded-lg bg-primary text-white flex items-center justify-center text-[12px] font-bold shadow-md shadow-primary/25">1</div>
-              <button className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted disabled:opacity-20" disabled><ChevronRight size={16} /></button>
-              <button className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted disabled:opacity-20" disabled><ChevronRight size={16} /><ChevronRight size={16} className="-ml-2.5" /></button>
+            <div className="flex items-center gap-1">
+              <button 
+                onClick={() => setCurrentPage(1)}
+                className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors disabled:opacity-20" 
+                disabled={currentPage === 1}
+              >
+                <ChevronLeft size={16} /><ChevronLeft size={16} className="-ml-2.5" />
+              </button>
+              <button 
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors disabled:opacity-20" 
+                disabled={currentPage === 1}
+              >
+                <ChevronLeft size={16} />
+              </button>
+              <div className="w-8 h-8 rounded-lg bg-primary text-white flex items-center justify-center text-[12px] font-bold shadow-md shadow-primary/25">
+                {currentPage}
+              </div>
+              <button 
+                onClick={() => setCurrentPage(prev => Math.min(Math.ceil(totalRecords / pageSize), prev + 1))}
+                className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors disabled:opacity-20" 
+                disabled={currentPage >= Math.ceil(totalRecords / pageSize)}
+              >
+                <ChevronRight size={16} />
+              </button>
+              <button 
+                onClick={() => setCurrentPage(Math.ceil(totalRecords / pageSize))}
+                className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors disabled:opacity-20" 
+                disabled={currentPage >= Math.ceil(totalRecords / pageSize)}
+              >
+                <ChevronRight size={16} /><ChevronRight size={16} className="-ml-2.5" />
+              </button>
             </div>
           </div>
         </div>

@@ -302,16 +302,16 @@ export default function GoodsReceiptFormModal({ receipt, onClose, onSuccess }) {
                     onClick={(e) => e.stopPropagation()}
                 >
                     {/* Header */}
-                    <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between shrink-0 bg-white sticky top-0 z-20">
+                    <div className="px-4 py-3.5 md:px-5 md:py-4 border-b border-slate-200 flex items-center justify-between shrink-0 bg-white sticky top-0 z-20">
                         <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center text-primary">
-                                <PackagePlus className="w-6 h-6" />
+                            <div className="w-10 h-10 md:w-11 md:h-11 bg-primary/10 rounded-full flex items-center justify-center text-primary shrink-0">
+                                <PackagePlus className="w-5 h-5 md:w-6 md:h-6" />
                             </div>
                             <div>
-                                <h3 className="text-xl font-bold text-slate-900 tracking-tight">
+                                <h3 className="text-[17px] md:text-xl font-bold text-slate-900 tracking-tight leading-tight">
                                     {isEdit ? 'Cập nhật phiếu nhập kho' : 'Tạo phiếu nhập kho'}
                                 </h3>
-                                <p className="text-slate-500 text-xs font-semibold mt-0.5">
+                                <p className="text-slate-500 text-[11px] md:text-xs font-bold mt-0.5 md:mt-1">
                                     Mã phiếu: #{formData.receipt_code}
                                 </p>
                             </div>
@@ -320,15 +320,15 @@ export default function GoodsReceiptFormModal({ receipt, onClose, onSuccess }) {
                             onClick={handleClose}
                             className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all"
                         >
-                            <X className="w-6 h-6" />
+                            <X className="w-5 h-5 md:w-6 md:h-6" />
                         </button>
                     </div>
 
                     {/* Form Body */}
-                    <div className="p-6 overflow-y-auto bg-slate-50 custom-scrollbar flex-1 min-h-0">
-                        <form id="receiptForm" onSubmit={handleSubmit} className="space-y-6">
+                    <div className="p-4 md:p-6 overflow-y-auto bg-slate-50 custom-scrollbar flex-1 min-h-0 pb-20 md:pb-6">
+                        <form id="receiptForm" onSubmit={handleSubmit} className="space-y-4 md:space-y-6">
                             {/* Section 1: Thông tin chung */}
-                            <div className="bg-white rounded-3xl border border-slate-200 p-6 space-y-6 shadow-sm">
+                            <div className="bg-white rounded-2xl md:rounded-3xl border border-slate-200 p-4 md:p-6 space-y-5 md:space-y-6 shadow-sm">
                                 <div className="flex items-center gap-2.5 pb-3 border-b border-slate-100">
                                     <FileText className="w-5 h-5 text-primary" />
                                     <h4 className="text-lg font-extrabold !text-primary">Thông tin phiếu nhập</h4>
@@ -358,7 +358,7 @@ export default function GoodsReceiptFormModal({ receipt, onClose, onSuccess }) {
                                                         : "bg-white border-slate-200 text-slate-500 hover:border-primary/40 hover:text-primary"
                                                 )}
                                             >
-                                                <span>{type.icon}</span>
+                                                <span className="hidden md:inline-block">{type.icon}</span>
                                                 {type.label}
                                             </button>
                                         ))}
@@ -366,7 +366,7 @@ export default function GoodsReceiptFormModal({ receipt, onClose, onSuccess }) {
                                     {isEdit && <p className="text-[10px] text-slate-400 italic text-center">Lưu ý: Không thể đổi loại hàng khi đang sửa phiếu đã có dữ liệu.</p>}
                                 </div>
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5">
                                     <div className="space-y-1.5">
                                         <label className="flex items-center gap-2 text-sm font-bold !text-slate-700 ml-1">
                                             <Users className="w-4 h-4 text-primary" />
@@ -499,7 +499,7 @@ export default function GoodsReceiptFormModal({ receipt, onClose, onSuccess }) {
                             </div>
 
                             {/* Section 2: Danh sách hàng hóa */}
-                            <div className="bg-white rounded-3xl border border-slate-200 p-6 space-y-6 shadow-sm">
+                            <div className="bg-white rounded-2xl md:rounded-3xl border border-slate-200 p-4 md:p-6 space-y-5 md:space-y-6 shadow-sm">
                                 <div className="flex items-center justify-between pb-3 border-b border-slate-100">
                                     <div className="flex items-center gap-2.5">
                                         <Plus className="w-5 h-5 text-primary" />
@@ -509,9 +509,9 @@ export default function GoodsReceiptFormModal({ receipt, onClose, onSuccess }) {
                                         type="button"
                                         disabled={isReadOnly}
                                         onClick={addItem}
-                                        className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/5 text-primary rounded-xl text-xs font-bold hover:bg-primary/10 transition-all border border-primary/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                                        className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/5 text-primary rounded-xl text-xs font-bold hover:bg-primary/10 transition-all border border-primary/20 disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
                                     >
-                                        <Plus className="w-3.5 h-3.5" /> Thêm dòng
+                                        <Plus className="w-3.5 h-3.5 shrink-0" /> Thêm dòng
                                     </button>
                                 </div>
 
@@ -606,7 +606,7 @@ export default function GoodsReceiptFormModal({ receipt, onClose, onSuccess }) {
                                                             onClick={() => setScannerIndex(idx)}
                                                             className="w-11 h-11 bg-primary/5 text-primary border border-primary/20 rounded-xl flex items-center justify-center hover:bg-primary/10 transition-all shrink-0"
                                                         >
-                                                            <Camera className="w-5 h-5" />
+                                                            <Camera className="w-5 h-5 shrink-0" />
                                                         </button>
                                                     </div>
                                                 </div>
@@ -693,11 +693,11 @@ export default function GoodsReceiptFormModal({ receipt, onClose, onSuccess }) {
                     </div>
 
                     {/* Footer */}
-                    <div className="px-6 py-5 bg-white border-t border-slate-200 shrink-0 flex items-center justify-end gap-3 sticky bottom-0 z-20">
+                    <div className="p-4 md:px-6 md:py-5 bg-white border-t border-slate-200 flex items-center justify-end gap-3 sticky bottom-0 z-20 shrink-0 pb-safe">
                         <button
                             type="button"
                             onClick={handleClose}
-                            className="px-6 py-3 bg-slate-100 text-slate-600 rounded-2xl font-bold hover:bg-slate-200 transition-all text-sm"
+                            className="flex-1 md:flex-none px-6 py-3 bg-slate-100 text-slate-600 rounded-2xl font-bold hover:bg-slate-200 transition-all text-sm flex items-center justify-center"
                         >
                             Hủy bỏ
                         </button>
@@ -707,16 +707,16 @@ export default function GoodsReceiptFormModal({ receipt, onClose, onSuccess }) {
                                 form="receiptForm"
                                 disabled={isSubmitting}
                                 className={clsx(
-                                    "px-10 py-3 rounded-2xl font-black text-white shadow-lg transition-all flex items-center gap-2 text-sm",
-                                    isSubmitting ? "bg-slate-400 cursor-not-allowed" : "bg-primary hover:bg-primary/90 active:scale-95"
+                                    "flex-[2] md:flex-none px-6 md:px-10 py-3 rounded-2xl font-black text-white shadow-lg transition-all flex items-center justify-center gap-2 text-sm",
+                                    isSubmitting ? "bg-slate-400 cursor-not-allowed" : "bg-primary hover:bg-primary/90 active:scale-95 shadow-primary/25"
                                 )}
                             >
                                 {isSubmitting ? (
                                     <>Đang lưu...</>
                                 ) : (
                                     <>
-                                        <CheckCircle2 className="w-4 h-4" />
-                                        {isEdit ? 'Cập nhật phiếu' : 'Lưu phiếu nhập'}
+                                        <CheckCircle2 className="w-5 h-5 md:w-4 md:h-4" />
+                                        {isEdit ? 'Cập nhật' : 'Lưu phiếu nhập'}
                                     </>
                                 )}
                             </button>

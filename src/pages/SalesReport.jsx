@@ -35,6 +35,10 @@ import { clsx } from 'clsx';
 import { useReports } from '../hooks/useReports';
 import { exportSalesReport } from '../utils/exportExcel';
 import FilterDropdown from '../components/ui/FilterDropdown';
+import MobileFilterSheet from '../components/ui/MobileFilterSheet';
+import MobilePageHeader from '../components/layout/MobilePageHeader';
+import MobilePagination from '../components/layout/MobilePagination';
+import PageViewSwitcher from '../components/layout/PageViewSwitcher';
 
 // Register Chart.js components
 ChartJS.register(
@@ -77,8 +81,22 @@ const SalesReport = () => {
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
 
+  // Pagination State (Client-side for this report)
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(50);
+
   const [activeDropdown, setActiveDropdown] = useState(null);
   const [filterSearch, setFilterSearch] = useState('');
+
+  // Mobile states
+  const [activeView, setActiveView] = useState('stats');
+  const [showMobileFilter, setShowMobileFilter] = useState(false);
+  const [isClosingFilter, setIsClosingFilter] = useState(false);
+  const [pendingYear, setPendingYear] = useState(selectedYear);
+  const [pendingMonth, setPendingMonth] = useState(selectedMonth);
+  const [pendingWarehouses, setPendingWarehouses] = useState(selectedWarehouses);
+  const [pendingSalespersons, setPendingSalespersons] = useState(selectedSalespersons);
+  const [pendingCategories, setPendingCategories] = useState(selectedCategories);
 
   useEffect(() => {
     loadFilterOptions();
@@ -122,6 +140,13 @@ const SalesReport = () => {
     item.customer_name?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const totalRecords = filteredData.length;
+  const paginatedData = useMemo(() => {
+    const from = (currentPage - 1) * pageSize;
+    const to = from + pageSize;
+    return filteredData.slice(from, to);
+  }, [filteredData, currentPage, pageSize]);
+
   // Stats
   const totalRevenue = filteredData.reduce((sum, item) => sum + (item.doanh_so || 0), 0);
   const totalOrders = filteredData.reduce((sum, item) => sum + (item.so_don_hang || 0), 0);
@@ -162,172 +187,173 @@ const SalesReport = () => {
     exportSalesReport(filteredData, { year: selectedYear, month: selectedMonth });
   };
 
+  const openMobileFilter = () => {
+    setPendingYear(selectedYear);
+    setPendingMonth(selectedMonth);
+    setPendingWarehouses(selectedWarehouses);
+    setPendingSalespersons(selectedSalespersons);
+    setPendingCategories(selectedCategories);
+    setShowMobileFilter(true);
+  };
+
+  const closeMobileFilter = () => {
+    setIsClosingFilter(true);
+    setTimeout(() => {
+      setShowMobileFilter(false);
+      setIsClosingFilter(false);
+    }, 300);
+  };
+
+  const applyMobileFilters = () => {
+    setSelectedYear(pendingYear);
+    setSelectedMonth(pendingMonth);
+    setSelectedWarehouses(pendingWarehouses);
+    setSelectedSalespersons(pendingSalespersons);
+    setSelectedCategories(pendingCategories);
+    closeMobileFilter();
+  };
+
+  const hasActiveFilters = selectedMonth !== '' || selectedWarehouses.length > 0 || selectedSalespersons.length > 0 || selectedCategories.length > 0;
+  const totalActiveFilters = (selectedMonth !== '' ? 1 : 0) + selectedWarehouses.length + selectedSalespersons.length + selectedCategories.length;
+
   return (
-    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 w-full flex-1 flex flex-col p-2 md:p-4 bg-muted/20">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 w-full flex-1 flex flex-col p-2 md:p-4 bg-muted/20 pb-20 md:pb-4">
+      <PageViewSwitcher
+          activeView={activeView}
+          setActiveView={setActiveView}
+          views={[
+              { id: 'stats', label: 'Thống kê', icon: <BarChart2 size={16} /> },
+              { id: 'list', label: 'Danh sách', icon: <List size={16} /> },
+          ]}
+      />
+
+      <MobilePageHeader
+          searchTerm={searchTerm}
+          setSearchTerm={setSearchTerm}
+          searchPlaceholder="Tìm kiếm khách hàng..."
+          onFilterClick={openMobileFilter}
+          hasActiveFilters={hasActiveFilters}
+          totalActiveFilters={totalActiveFilters}
+          actions={
+              <button
+                  onClick={handleExport}
+                  className="p-2 rounded-xl bg-emerald-600 text-white shadow-lg shadow-emerald-600/25 active:scale-95 transition-all"
+                  title="Xuất Excel báo cáo"
+              >
+                  <Download size={20} />
+              </button>
+          }
+      />
+
+      {/* ── DESKTOP HEADER ── */}
+      <div className="hidden md:flex flex-row items-center justify-between gap-4 mb-6">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Báo cáo Doanh số</h1>
           <p className="text-muted-foreground text-sm">Phân tích kết quả kinh doanh theo thời gian và đối tượng</p>
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={handleExport}
-            className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl font-bold text-sm hover:bg-emerald-700 transition-all shadow-md shadow-emerald-600/20"
-          >
-            <Download size={16} /> Xuất Excel
-          </button>
-        </div>
+        <button
+          onClick={handleExport}
+          className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl font-bold text-sm hover:bg-emerald-700 transition-all shadow-md shadow-emerald-600/20"
+        >
+          <Download size={16} /> Xuất Excel
+        </button>
       </div>
 
-      {/* Filters Bar */}
-      <div className="bg-white p-4 rounded-2xl border border-border shadow-sm mb-6">
+      {/* Desktop Filters Bar */}
+      <div className="hidden md:block bg-white p-4 rounded-2xl border border-border shadow-sm mb-6">
         <div className="flex flex-wrap items-center gap-3">
-          {/* Year Select */}
           <div className="min-w-[100px]">
             <label className="block text-[10px] font-bold text-muted-foreground uppercase mb-1 px-1">Năm</label>
-            <select
-              value={selectedYear}
-              onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-              className="w-full bg-muted/30 border border-border rounded-xl px-3 py-2 text-[13px] font-medium outline-none focus:ring-2 focus:ring-primary/10 transition-all"
-            >
+            <select value={selectedYear} onChange={(e) => setSelectedYear(parseInt(e.target.value))} className="w-full bg-muted/30 border border-border rounded-xl px-3 py-2 text-[13px] font-medium outline-none focus:ring-2 focus:ring-primary/10 transition-all">
               {filterOptions.years.map(y => <option key={y} value={y}>{y}</option>)}
             </select>
           </div>
-
-          {/* Month Select */}
           <div className="min-w-[120px]">
             <label className="block text-[10px] font-bold text-muted-foreground uppercase mb-1 px-1">Tháng</label>
-            <select
-              value={selectedMonth}
-              onChange={(e) => setSelectedMonth(e.target.value)}
-              className="w-full bg-muted/30 border border-border rounded-xl px-3 py-2 text-[13px] font-medium outline-none focus:ring-2 focus:ring-primary/10 transition-all"
-            >
+            <select value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} className="w-full bg-muted/30 border border-border rounded-xl px-3 py-2 text-[13px] font-medium outline-none focus:ring-2 focus:ring-primary/10 transition-all">
               <option value="">Tất cả tháng</option>
-              {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
-                <option key={m} value={m}>Tháng {m}</option>
-              ))}
+              {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (<option key={m} value={m}>Tháng {m}</option>))}
             </select>
           </div>
-
-          {/* Warehouse Filter */}
           <div className="relative min-w-[180px]">
             <label className="block text-[10px] font-bold text-muted-foreground uppercase mb-1 px-1">Kho</label>
-            <button
-              onClick={() => setActiveDropdown(activeDropdown === 'warehouse' ? null : 'warehouse')}
-              className={clsx(
-                "w-full flex items-center justify-between gap-2 px-3 py-2 rounded-xl border text-[13px] font-medium transition-all bg-muted/30",
-                selectedWarehouses.length > 0 ? "border-primary/50 text-foreground" : "border-border text-muted-foreground"
-              )}
-            >
-              <div className="flex items-center gap-2 overflow-hidden truncate">
-                <MapPin size={14} className="shrink-0" />
-                <span>{selectedWarehouses.length > 0 ? selectedWarehouses[0] : 'Tất cả kho'}</span>
-              </div>
+            <button onClick={() => setActiveDropdown(activeDropdown === 'warehouse' ? null : 'warehouse')} className={clsx("w-full flex items-center justify-between gap-2 px-3 py-2 rounded-xl border text-[13px] font-medium transition-all bg-muted/30", selectedWarehouses.length > 0 ? "border-primary/50 text-foreground" : "border-border text-muted-foreground")}>
+              <div className="flex items-center gap-2 overflow-hidden truncate"><MapPin size={14} className="shrink-0" /><span>{selectedWarehouses.length > 0 ? selectedWarehouses[0] : 'Tất cả kho'}</span></div>
               <ChevronDown size={14} className={clsx("transition-transform shrink-0", activeDropdown === 'warehouse' && "rotate-180")} />
             </button>
-            {activeDropdown === 'warehouse' && (
-              <FilterDropdown
-                options={filterOptions.warehouses.map(w => ({ id: w.name, label: w.name }))}
-                selected={selectedWarehouses}
-                setSelected={(vals) => { setSelectedWarehouses(vals); setActiveDropdown(null); }}
-                filterSearch={filterSearch}
-                setFilterSearch={setFilterSearch}
-              />
-            )}
+            {activeDropdown === 'warehouse' && (<FilterDropdown options={filterOptions.warehouses.map(w => ({ id: w.name, label: w.name }))} selected={selectedWarehouses} setSelected={(vals) => { setSelectedWarehouses(vals); setActiveDropdown(null); }} filterSearch={filterSearch} setFilterSearch={setFilterSearch} />)}
           </div>
-
-          {/* Salesperson Filter */}
           <div className="relative min-w-[200px]">
             <label className="block text-[10px] font-bold text-muted-foreground uppercase mb-1 px-1">NVKD</label>
-            <button
-              onClick={() => setActiveDropdown(activeDropdown === 'nvkd' ? null : 'nvkd')}
-              className={clsx(
-                "w-full flex items-center justify-between gap-2 px-3 py-2 rounded-xl border text-[13px] font-medium transition-all bg-muted/30",
-                selectedSalespersons.length > 0 ? "border-primary/50 text-foreground" : "border-border text-muted-foreground"
-              )}
-            >
-              <div className="flex items-center gap-2 overflow-hidden truncate">
-                <Briefcase size={14} className="shrink-0" />
-                <span>{selectedSalespersons.length > 0 ? selectedSalespersons[0] : 'Tất cả NVKD'}</span>
-              </div>
+            <button onClick={() => setActiveDropdown(activeDropdown === 'nvkd' ? null : 'nvkd')} className={clsx("w-full flex items-center justify-between gap-2 px-3 py-2 rounded-xl border text-[13px] font-medium transition-all bg-muted/30", selectedSalespersons.length > 0 ? "border-primary/50 text-foreground" : "border-border text-muted-foreground")}>
+              <div className="flex items-center gap-2 overflow-hidden truncate"><Briefcase size={14} className="shrink-0" /><span>{selectedSalespersons.length > 0 ? selectedSalespersons[0] : 'Tất cả NVKD'}</span></div>
               <ChevronDown size={14} className={clsx("transition-transform shrink-0", activeDropdown === 'nvkd' && "rotate-180")} />
             </button>
-            {activeDropdown === 'nvkd' && (
-              <FilterDropdown
-                options={filterOptions.salespersons.map(s => ({ id: s, label: s }))}
-                selected={selectedSalespersons}
-                setSelected={(vals) => { setSelectedSalespersons(vals); setActiveDropdown(null); }}
-                filterSearch={filterSearch}
-                setFilterSearch={setFilterSearch}
-              />
-            )}
+            {activeDropdown === 'nvkd' && (<FilterDropdown options={filterOptions.salespersons.map(s => ({ id: s, label: s }))} selected={selectedSalespersons} setSelected={(vals) => { setSelectedSalespersons(vals); setActiveDropdown(null); }} filterSearch={filterSearch} setFilterSearch={setFilterSearch} />)}
           </div>
-
-          {/* Customer Search */}
           <div className="flex-1 min-w-[250px] relative">
             <label className="block text-[10px] font-bold text-muted-foreground uppercase mb-1 px-1">Tìm khách hàng</label>
             <Search className="absolute left-3 bottom-2.5 text-muted-foreground" size={16} />
-            <input
-              type="text"
-              placeholder="Tên khách hàng..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-8 py-2 bg-muted/30 border border-border rounded-xl text-[13px] font-medium outline-none focus:ring-2 focus:ring-primary/10 transition-all"
-            />
+            <input type="text" placeholder="Tên khách hàng..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-10 pr-8 py-2 bg-muted/30 border border-border rounded-xl text-[13px] font-medium outline-none focus:ring-2 focus:ring-primary/10 transition-all" />
             {searchTerm && <button onClick={() => setSearchTerm('')} className="absolute right-3 bottom-2.5 text-muted-foreground"><X size={14} /></button>}
           </div>
         </div>
       </div>
 
       {/* Stats Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div className="bg-white p-6 rounded-2xl border border-border shadow-sm flex items-center gap-5">
-          <div className="w-14 h-14 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center shadow-sm">
-            <DollarSign size={28} />
+      <div className={clsx("grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-6 mb-6", activeView === 'list' && "hidden md:grid")}>
+        <div className="bg-white p-4 md:p-6 rounded-2xl border border-border shadow-sm flex flex-col md:flex-row md:items-center gap-3 md:gap-5">
+          <div className="w-10 h-10 md:w-14 md:h-14 bg-blue-50 text-blue-600 rounded-xl md:rounded-2xl flex items-center justify-center shadow-sm shrink-0">
+            <DollarSign size={20} className="md:hidden" />
+            <DollarSign size={28} className="hidden md:block" />
           </div>
           <div>
-            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">Tổng doanh số</p>
-            <p className="text-2xl font-black text-foreground">{formatCurrency(totalRevenue)}</p>
+            <p className="text-[10px] md:text-xs font-bold text-muted-foreground uppercase tracking-wider mb-0.5 md:mb-1">Tổng doanh số</p>
+            <p className="text-base md:text-2xl font-black text-foreground">{formatCurrency(totalRevenue)}</p>
           </div>
         </div>
-        <div className="bg-white p-6 rounded-2xl border border-border shadow-sm flex items-center gap-5">
-          <div className="w-14 h-14 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center shadow-sm">
-            <TrendingUp size={28} />
+        <div className="bg-white p-4 md:p-6 rounded-2xl border border-border shadow-sm flex flex-col md:flex-row md:items-center gap-3 md:gap-5">
+          <div className="w-10 h-10 md:w-14 md:h-14 bg-emerald-50 text-emerald-600 rounded-xl md:rounded-2xl flex items-center justify-center shadow-sm shrink-0">
+            <TrendingUp size={20} className="md:hidden" />
+            <TrendingUp size={28} className="hidden md:block" />
           </div>
           <div>
-            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">Tổng số đơn</p>
-            <p className="text-2xl font-black text-foreground">{formatNumber(totalOrders)} đơn</p>
+            <p className="text-[10px] md:text-xs font-bold text-muted-foreground uppercase tracking-wider mb-0.5 md:mb-1">Tổng số đơn</p>
+            <p className="text-base md:text-2xl font-black text-foreground">{formatNumber(totalOrders)} <span className="text-[10px] md:text-sm font-bold opacity-70">đơn</span></p>
           </div>
         </div>
-        <div className="bg-white p-6 rounded-2xl border border-border shadow-sm flex items-center gap-5">
-          <div className="w-14 h-14 bg-purple-50 text-purple-600 rounded-2xl flex items-center justify-center shadow-sm">
-            <Users size={28} />
+        <div className="bg-white p-4 md:p-6 rounded-2xl border border-border shadow-sm flex flex-col md:flex-row md:items-center gap-3 md:gap-5 col-span-2 md:col-span-1">
+          <div className="w-10 h-10 md:w-14 md:h-14 bg-purple-50 text-purple-600 rounded-xl md:rounded-2xl flex items-center justify-center shadow-sm shrink-0">
+            <Users size={20} className="md:hidden" />
+            <Users size={28} className="hidden md:block" />
           </div>
-          <div>
-            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">Số khách hàng</p>
-            <p className="text-2xl font-black text-foreground">{formatNumber(totalCustomers)} khách</p>
+          <div className="flex flex-col">
+            <p className="text-[10px] md:text-xs font-bold text-muted-foreground uppercase tracking-wider mb-0.5 md:mb-1">Khách hàng</p>
+            <p className="text-base md:text-2xl font-black text-foreground">{formatNumber(totalCustomers)} <span className="text-[10px] md:text-sm font-bold opacity-70">khách</span></p>
           </div>
         </div>
       </div>
 
       {/* Main Content Area */}
-      <div className="flex flex-col lg:flex-row gap-6 h-full min-h-0">
-        {/* Left Side: Visualization */}
-        <div className="flex-1 flex flex-col gap-6">
-          <div className="bg-white p-6 rounded-2xl border border-border shadow-sm min-h-[400px] flex flex-col">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="font-bold text-lg flex items-center gap-2">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-6 min-h-0">
+        {/* Left Side: Visualization (2/3 width = 2 cols) */}
+        <div className={clsx(
+          "md:col-span-2 flex flex-col gap-6",
+          activeView === 'list' && "hidden md:flex"
+        )}>
+          <div className="bg-white p-4 md:p-6 rounded-2xl border border-border shadow-sm min-h-[350px] md:min-h-[400px] flex flex-col">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+              <h3 className="font-bold text-base md:text-lg flex items-center gap-2">
                 <BarChart2 size={20} className="text-primary" /> Phân tích doanh số
               </h3>
-              <div className="flex bg-muted/30 p-1 rounded-xl">
-                 <button onClick={() => setActiveTab('customer')} className={clsx("px-4 py-1.5 rounded-lg text-[13px] font-bold transition-all", activeTab === 'customer' || activeTab === 'summary' ? "bg-white text-primary shadow-sm" : "text-muted-foreground hover:text-foreground")}>Khách hàng</button>
-                 <button onClick={() => setActiveTab('nvkd')} className={clsx("px-4 py-1.5 rounded-lg text-[13px] font-bold transition-all", activeTab === 'nvkd' ? "bg-white text-primary shadow-sm" : "text-muted-foreground hover:text-foreground")}>NVKD</button>
-                 <button onClick={() => setActiveTab('category')} className={clsx("px-4 py-1.5 rounded-lg text-[13px] font-bold transition-all", activeTab === 'category' ? "bg-white text-primary shadow-sm" : "text-muted-foreground hover:text-foreground")}>Loại khách</button>
+              <div className="flex bg-muted/40 p-1 rounded-xl overflow-x-auto no-scrollbar">
+                 <button onClick={() => setActiveTab('customer')} className={clsx("whitespace-nowrap px-3 md:px-4 py-1.5 rounded-lg text-[11px] md:text-[13px] font-bold transition-all", activeTab === 'customer' || activeTab === 'summary' ? "bg-white text-primary shadow-sm" : "text-muted-foreground hover:text-foreground")}>Khách hàng</button>
+                 <button onClick={() => setActiveTab('nvkd')} className={clsx("whitespace-nowrap px-3 md:px-4 py-1.5 rounded-lg text-[11px] md:text-[13px] font-bold transition-all", activeTab === 'nvkd' ? "bg-white text-primary shadow-sm" : "text-muted-foreground hover:text-foreground")}>NVKD</button>
+                 <button onClick={() => setActiveTab('category')} className={clsx("whitespace-nowrap px-3 md:px-4 py-1.5 rounded-lg text-[11px] md:text-[13px] font-bold transition-all", activeTab === 'category' ? "bg-white text-primary shadow-sm" : "text-muted-foreground hover:text-foreground")}>Loại khách</button>
               </div>
             </div>
 
-            <div className="flex-1 min-h-[300px]">
+            <div className="flex-1 min-h-[250px] md:min-h-[300px]">
               {activeTab === 'nvkd' ? (
                 <BarChartJS
                   data={{
@@ -399,15 +425,20 @@ const SalesReport = () => {
         </div>
 
         {/* Right Side: Detailed Table */}
-        <div className="lg:w-1/3 flex flex-col min-h-0 bg-white rounded-2xl border border-border shadow-sm overflow-hidden">
-          <div className="p-4 border-b border-border flex items-center justify-between">
-            <h3 className="font-bold text-base flex items-center gap-2">
+        <div className={clsx(
+          "md:col-span-1 flex flex-col min-h-0 bg-white rounded-2xl border border-border shadow-sm overflow-hidden",
+          activeView === 'stats' && "hidden md:flex"
+        )}>
+          <div className="p-3 md:p-4 border-b border-border flex items-center justify-between bg-muted/10">
+            <h3 className="font-bold text-sm md:text-base flex items-center gap-2">
               <List size={18} className="text-primary" /> Bảng chi tiết
             </h3>
-            <span className="px-2 py-0.5 bg-muted text-muted-foreground rounded text-[10px] font-bold">{filteredData.length} Khách</span>
+            <span className="px-2.5 py-0.5 bg-primary/10 text-primary rounded-full text-[10px] font-bold">{filteredData.length} Khách</span>
           </div>
+
           <div className="flex-1 overflow-y-auto">
-            <table className="w-full text-left border-collapse">
+            {/* Desktop Table View */}
+            <table className="hidden md:table w-full text-left border-collapse">
               <thead className="bg-[#F8FAFC] sticky top-0 z-10">
                 <tr>
                   <th className="px-4 py-3 text-[11px] font-bold text-muted-foreground uppercase border-b border-border">Khách hàng / Cơ sở</th>
@@ -437,9 +468,104 @@ const SalesReport = () => {
                 )}
               </tbody>
             </table>
+
+            <div className="md:hidden divide-y divide-border/50">
+               {loading ? (
+                 <div className="px-4 py-12 text-center text-sm italic text-muted-foreground">Đang tải dữ liệu...</div>
+               ) : paginatedData.length === 0 ? (
+                 <div className="px-4 py-12 text-center text-sm italic text-muted-foreground">Không có dữ liệu</div>
+               ) : (
+                 paginatedData.map((item, idx) => (
+                   <div key={idx} className="p-4 hover:bg-muted/10 transition-colors">
+                     <div className="flex items-start justify-between gap-3">
+                       <div className="flex-1">
+                         <h4 className="text-[14px] font-bold text-foreground leading-tight">{item.customer_name}</h4>
+                         <div className="flex flex-wrap items-center gap-2 mt-2">
+                           <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 text-blue-600 rounded text-[10px] font-bold border border-blue-100">
+                             <Briefcase size={10} /> {item.nvkd || 'N/A'}
+                           </span>
+                           <span className="px-2 py-0.5 bg-slate-100 text-slate-600 rounded text-[10px] font-bold">
+                             {CUSTOMER_CATEGORIES[item.loai_khach] || item.loai_khach || 'Vãng lai'}
+                           </span>
+                         </div>
+                       </div>
+                       <div className="text-right shrink-0">
+                         <p className="text-[15px] font-black text-primary">{formatNumber(item.doanh_so)}</p>
+                         <p className="text-[10px] text-muted-foreground font-bold uppercase mt-0.5">{item.so_don_hang} đơn</p>
+                       </div>
+                     </div>
+                   </div>
+                 ))
+               )}
+            </div>
+
+            {/* Sticky Mobile Pagination */}
+            {!loading && activeView === 'list' && (
+              <MobilePagination
+                currentPage={currentPage}
+                setCurrentPage={setCurrentPage}
+                pageSize={pageSize}
+                setPageSize={setPageSize}
+                totalRecords={totalRecords}
+              />
+            )}
           </div>
         </div>
       </div>
+
+      {/* Mobile Filter Sheet */}
+      {showMobileFilter && (
+        <MobileFilterSheet
+          isOpen={showMobileFilter}
+          isClosing={isClosingFilter}
+          onClose={closeMobileFilter}
+          onApply={applyMobileFilters}
+          title="Bộ lọc báo cáo"
+          sections={[
+            {
+              id: 'year',
+              label: 'Năm báo cáo',
+              icon: <Calendar size={18} />,
+              singleSelect: true,
+              options: filterOptions.years.map(y => ({ id: y, label: `Năm ${y}` })),
+              selectedValues: [pendingYear],
+              onSelectionChange: (vals) => setPendingYear(vals[0]),
+              searchable: false
+            },
+            {
+              id: 'month',
+              label: 'Tháng báo cáo',
+              icon: <Calendar size={18} />,
+              singleSelect: true,
+              options: [
+                { id: '', label: 'Tất cả tháng' },
+                ...Array.from({ length: 12 }, (_, i) => ({ id: (i + 1).toString(), label: `Tháng ${i + 1}` }))
+              ],
+              selectedValues: [pendingMonth],
+              onSelectionChange: (vals) => setPendingMonth(vals[0]),
+              searchable: false
+            },
+            {
+              id: 'warehouse',
+              label: 'Kho hàng',
+              icon: <MapPin size={18} />,
+              singleSelect: true,
+              options: filterOptions.warehouses.map(w => ({ id: w.name, label: w.name })),
+              selectedValues: pendingWarehouses,
+              onSelectionChange: setPendingWarehouses
+            },
+            {
+              id: 'nvkd',
+              label: 'Nhân viên kinh doanh',
+              icon: <Briefcase size={18} />,
+              singleSelect: true,
+              options: filterOptions.salespersons.map(s => ({ id: s, label: s })),
+              selectedValues: pendingSalespersons,
+              onSelectionChange: setPendingSalespersons
+            }
+          ]}
+        />
+      )}
     </div>
   );
 };

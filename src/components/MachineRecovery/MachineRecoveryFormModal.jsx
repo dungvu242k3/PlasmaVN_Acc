@@ -596,10 +596,10 @@ export default function MachineRecoveryFormModal({ recovery, onClose, onSuccess,
                                                         setScannerType('order');
                                                         setIsScannerOpen(true);
                                                     }}
-                                                    className="w-11 h-11 flex items-center justify-center bg-primary text-white border border-primary/20 rounded-xl hover:bg-primary-700 transition-all shadow-lg shadow-primary/20"
+                                                    className="w-11 h-11 shrink-0 flex items-center justify-center bg-primary text-white border border-primary/20 rounded-xl hover:bg-primary/90 transition-all shadow-lg shadow-primary/20 active:scale-95"
                                                     title="Quét mã đơn hàng"
                                                 >
-                                                    <ScanLine size={18} />
+                                                    <ScanLine className="w-5 h-5 shrink-0" strokeWidth={2} />
                                                 </button>
                                             )}
                                         </div>
@@ -649,16 +649,16 @@ export default function MachineRecoveryFormModal({ recovery, onClose, onSuccess,
 
                             {/* Machine Items */}
                             <div className="rounded-3xl border border-primary/20 bg-white p-5 sm:p-6 space-y-4 shadow-sm">
-                                <div className="flex items-center justify-between pb-3 border-b border-primary/10">
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0 pb-3 border-b border-primary/10">
                                     <div className="flex items-center gap-2.5">
-                                        <ScanLine className="w-4 h-4 text-primary" strokeWidth={2.5} />
-                                        <h4 className="text-[18px] font-extrabold text-primary">Danh sách máy ({items.length})</h4>
+                                        <ScanLine className="w-5 h-5 text-primary" strokeWidth={2.5} />
+                                        <h4 className="text-[18px] font-extrabold text-primary whitespace-nowrap">Danh sách máy ({items.length})</h4>
                                     </div>
                                     {!isReadOnly && (
                                         <button type="button" onClick={() => {
                                             setScannerType('item');
                                             setIsScannerOpen(true);
-                                        }} className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-white font-bold rounded-xl text-xs shadow-lg shadow-primary/20 transition-all"><ScanLine size={14} strokeWidth={2.5} /> Quét barcode</button>
+                                        }} className="w-full sm:w-auto flex items-center justify-center gap-1.5 px-4 py-2 sm:px-3 sm:py-1.5 bg-primary text-white font-bold rounded-xl text-xs shadow-lg shadow-primary/20 transition-all active:scale-95"><ScanLine size={14} strokeWidth={2.5} /> Quét barcode</button>
                                     )}
                                 </div>
 

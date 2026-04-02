@@ -227,7 +227,7 @@ const CustomerExpiryReport = () => {
   // Mobile filter handlers
   const openMobileFilter = () => { setPendingWarehouses(selectedWarehouses); setPendingDays(selectedDays); setShowMobileFilter(true); };
   const applyMobileFilter = () => { setSelectedWarehouses(pendingWarehouses); setSelectedDays(pendingDays); closeMobileFilter(); };
-  const closeMobileFilter = () => { setMobileFilterClosing(true); setTimeout(() => { setShowMobileFilter(false); setMobileFilterClosing(false); }, 280); };
+  const closeMobileFilter = () => { setMobileFilterClosing(true); setTimeout(() => { setShowMobileFilter(false); setMobileFilterClosing(false); }, 300); };
 
   // Stats calculations
   const statsSummary = {
@@ -268,13 +268,48 @@ const CustomerExpiryReport = () => {
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 w-full flex-1 flex flex-col mt-1 min-h-0 px-1 md:px-1.5">
       {/* Top Tabs */}
-      <div className="flex items-center gap-1 mb-3 mt-1">
-        <button onClick={() => setActiveView('list')} className={clsx("flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-bold transition-all", activeView === 'list' ? "bg-white text-primary shadow-sm ring-1 ring-border" : "text-muted-foreground hover:text-foreground")}>
-          <List size={14} /> Danh sách
-        </button>
-        <button onClick={() => setActiveView('stats')} className={clsx("flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-bold transition-all", activeView === 'stats' ? "bg-white text-primary shadow-sm ring-1 ring-border" : "text-muted-foreground hover:text-foreground")}>
-          <BarChart2 size={14} /> Thống kê
-        </button>
+      {/* View Switcher (Mobile Only) */}
+      <div className="flex md:hidden items-center p-1 bg-white border border-border rounded-xl mb-4 shadow-sm">
+          <button
+              onClick={() => setActiveView('list')}
+              className={clsx(
+                  "flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-[13px] font-bold transition-all",
+                  activeView === 'list' ? "bg-primary text-white shadow-md shadow-primary/20" : "text-muted-foreground"
+              )}
+          >
+              <List size={16} /> Danh sách
+          </button>
+          <button
+              onClick={() => setActiveView('stats')}
+              className={clsx(
+                  "flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-[13px] font-bold transition-all",
+                  activeView === 'stats' ? "bg-primary text-white shadow-md shadow-primary/20" : "text-muted-foreground"
+              )}
+          >
+              <BarChart2 size={16} /> Thống kê
+          </button>
+      </div>
+
+      {/* Desktop-only View Switcher */}
+      <div className="hidden md:flex items-center gap-1 mb-6">
+          <button
+              onClick={() => setActiveView('list')}
+              className={clsx(
+                  "flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-bold transition-all",
+                  activeView === 'list' ? "bg-white text-primary shadow-sm ring-1 ring-border" : "text-muted-foreground hover:text-foreground"
+              )}
+          >
+              <List size={14} /> Danh sách
+          </button>
+          <button
+              onClick={() => setActiveView('stats')}
+              className={clsx(
+                  "flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-bold transition-all",
+                  activeView === 'stats' ? "bg-white text-primary shadow-sm ring-1 ring-border" : "text-muted-foreground hover:text-foreground"
+              )}
+          >
+              <BarChart2 size={14} /> Thống kê
+          </button>
       </div>
 
       {activeView === 'list' && (

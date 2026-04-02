@@ -38,6 +38,9 @@ import { exportMachineStatsReport } from '../utils/exportExcel';
 import FilterDropdown from '../components/ui/FilterDropdown';
 import MobileFilterSheet from '../components/ui/MobileFilterSheet';
 import ColumnPicker from '../components/ui/ColumnPicker';
+import MobilePageHeader from '../components/layout/MobilePageHeader';
+import MobilePagination from '../components/layout/MobilePagination';
+import PageViewSwitcher from '../components/layout/PageViewSwitcher';
 
 // Register Chart.js components
 ChartJS.register(
@@ -69,6 +72,10 @@ const MachineStatsReport = () => {
   const [data, setData] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedIds, setSelectedIds] = useState([]);
+
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(50);
 
   // Filters
   const [selectedWarehouses, setSelectedWarehouses] = useState([]);
@@ -177,6 +184,8 @@ const MachineStatsReport = () => {
     item.loai_may?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const paginatedData = filteredData.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
   const formatNumber = (num) => {
     if (!num) return '0';
     return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
@@ -278,29 +287,45 @@ const MachineStatsReport = () => {
 
       return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 w-full flex-1 flex flex-col mt-1 min-h-0 px-1 md:px-1.5">
-      {/* Top Tabs */}
-      <div className="flex items-center gap-1 mb-3 mt-1">
-        <button onClick={() => setActiveView('list')} className={clsx("flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-bold transition-all", activeView === 'list' ? "bg-white text-primary shadow-sm ring-1 ring-border" : "text-muted-foreground hover:text-foreground")}>
-          <List size={14} /> Danh sách
-        </button>
-        <button onClick={() => setActiveView('stats')} className={clsx("flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-bold transition-all", activeView === 'stats' ? "bg-white text-primary shadow-sm ring-1 ring-border" : "text-muted-foreground hover:text-foreground")}>
-          <BarChart2 size={14} /> Thống kê
-        </button>
-      </div>
+      <PageViewSwitcher
+        activeView={activeView}
+        setActiveView={setActiveView}
+        views={[
+          { id: 'list', label: 'Danh sách', icon: <List size={16} /> },
+          { id: 'stats', label: 'Thống kê', icon: <BarChart2 size={16} /> },
+        ]}
+      />
 
       {activeView === 'list' && (
         <div className="bg-white rounded-2xl border border-border shadow-sm flex flex-col flex-1 min-h-0 w-full">
           {/* MOBILE TOOLBAR */}
-          <div className="md:hidden flex items-center gap-2 p-3 border-b border-border">
-            <button onClick={() => navigate(-1)} className="p-2 rounded-xl border border-border bg-white text-muted-foreground shrink-0"><ChevronLeft size={18} /></button>
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={15} />
-              <input type="text" placeholder="Tìm kiếm . . ." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-9 pr-8 py-2 bg-muted/20 border border-border/80 rounded-xl text-[13px] focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all font-medium" />
-              {searchTerm && <button onClick={() => setSearchTerm('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"><X size={14} /></button>}
-            </div>
-            <button onClick={openMobileFilter} className={clsx('relative p-2 rounded-xl border shrink-0 transition-all', hasActiveFilters ? 'border-primary bg-primary/5 text-primary' : 'border-border bg-white text-muted-foreground')}><Filter size={18} />{hasActiveFilters && <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-primary text-white text-[9px] font-bold flex items-center justify-center">{totalActiveFilters}</span>}</button>
-            <button onClick={handleExport} className="p-2 rounded-xl bg-emerald-600 text-white shrink-0 shadow-md shadow-emerald-600/20"><Download size={18} /></button>
-          </div>
+          <MobilePageHeader
+              searchTerm={searchTerm}
+              setSearchTerm={setSearchTerm}
+              searchPlaceholder="Tìm kiếm . . ."
+              onFilterClick={openMobileFilter}
+              hasActiveFilters={hasActiveFilters}
+              totalActiveFilters={totalActiveFilters}
+              actions={
+                  <button onClick={handleExport} className="p-2 rounded-xl bg-emerald-600 text-white shrink-0 shadow-md shadow-emerald-600/20 active:scale-95 transition-all">
+                      <Download size={20} />
+                  </button>
+              }
+              selectionBar={
+                  selectedIds.length > 0 ? (
+                      <div className="flex items-center justify-between px-1 mt-3 pt-3 border-t border-slate-100 animate-in slide-in-from-top-2 duration-300">
+                          <span className="text-[13px] font-bold text-slate-600">
+                              Đã chọn <span className="text-primary">{selectedIds.length}</span> máy
+                          </span>
+                          <div className="flex items-center gap-2">
+                              <button onClick={toggleSelectAll} className="text-[12px] font-bold text-primary hover:underline px-2 py-1">
+                                  Bỏ chọn
+                              </button>
+                          </div>
+                      </div>
+                  ) : null
+              }
+          />
 
           {/* DESKTOP TOOLBAR */}
           <div className="hidden md:block p-3 space-y-3">
@@ -370,10 +395,12 @@ const MachineStatsReport = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-primary/10">
-                {loading ? (<tr><td colSpan={visibleColumns.length + 1} className="px-4 py-16 text-center text-muted-foreground italic">Đang tải dữ liệu...</td></tr>) : filteredData.length === 0 ? (<tr><td colSpan={visibleColumns.length + 1} className="px-4 py-16 text-center text-muted-foreground italic">Không tìm thấy dữ liệu</td></tr>) : (
-                  filteredData.map((item, index) => (
-                    <tr key={index} className={clsx("group transition-all hover:bg-blue-50/40", selectedIds.includes(index) && "bg-blue-50/60")}>
-                      <td className="px-4 py-4 sticky left-0 bg-white group-hover:bg-blue-50/40 z-10"><div className="flex items-center justify-center"><input type="checkbox" className="w-4 h-4 rounded border-border text-primary focus:ring-primary/20" checked={selectedIds.includes(index)} onChange={() => toggleSelect(index)} /></div></td>
+                {loading ? (<tr><td colSpan={visibleColumns.length + 1} className="px-4 py-16 text-center text-muted-foreground italic">Đang tải dữ liệu...</td></tr>) : paginatedData.length === 0 ? (<tr><td colSpan={visibleColumns.length + 1} className="px-4 py-16 text-center text-muted-foreground italic">Không tìm thấy dữ liệu</td></tr>) : (
+                  paginatedData.map((item, index) => {
+                    const globalIndex = (currentPage - 1) * pageSize + index;
+                    return (
+                    <tr key={globalIndex} className={clsx("group transition-all hover:bg-blue-50/40", selectedIds.includes(globalIndex) && "bg-blue-50/60")}>
+                      <td className="px-4 py-4 sticky left-0 bg-white group-hover:bg-blue-50/40 z-10"><div className="flex items-center justify-center"><input type="checkbox" className="w-4 h-4 rounded border-border text-primary focus:ring-primary/20" checked={selectedIds.includes(globalIndex)} onChange={() => toggleSelect(globalIndex)} /></div></td>
                       {columnOrder.filter(isColumnVisible).map(colKey => {
                         if (colKey === 'serial_may') return <td key={colKey} className="px-4 py-4"><span className="text-[13px] font-bold text-primary">{item.serial_may}</span></td>;
                         if (colKey === 'loai_may') return <td key={colKey} className="px-4 py-4"><span className="text-[13px] font-medium text-foreground">{item.loai_may}</span></td>;
@@ -389,64 +416,126 @@ const MachineStatsReport = () => {
                         return null;
                       })}
                     </tr>
-                  ))
+                    );
+                  })
                 )}
               </tbody>
             </table>
           </div>
 
           {/* MOBILE LIST */}
-          <div className="md:hidden flex-1 overflow-y-auto p-3 flex flex-col gap-3 bg-muted/5">
-            {loading ? (<div className="py-16 text-center italic text-muted-foreground">Đang tải...</div>) : filteredData.length === 0 ? (<div className="py-16 text-center italic text-muted-foreground">Không tìm thấy dữ liệu</div>) : (
-              filteredData.map((item, index) => (
-                <div key={index} className="bg-white border border-primary/10 rounded-2xl p-4 shadow-sm">
-                  <div className="flex justify-between items-start mb-3">
-                    <div className="flex items-center gap-2">
-                      <input type="checkbox" className="w-4 h-4 rounded border-border text-primary focus:ring-primary/20" checked={selectedIds.includes(index)} onChange={() => toggleSelect(index)} />
-                      <span className="text-[12px] font-bold text-primary">{item.serial_may}</span>
+          <div className="md:hidden flex-1 overflow-y-auto p-3 pb-4 flex flex-col gap-3">
+            {loading ? (<div className="py-16 text-center text-[13px] text-muted-foreground italic">Đang tải...</div>) : paginatedData.length === 0 ? (<div className="py-16 text-center text-[13px] text-muted-foreground italic">Không tìm thấy dữ liệu</div>) : (
+              paginatedData.map((item, index) => {
+                const globalIndex = (currentPage - 1) * pageSize + index;
+                return (
+                  <div key={globalIndex} className={clsx(
+                      "rounded-2xl border shadow-sm p-4 transition-all duration-200",
+                      selectedIds.includes(globalIndex)
+                          ? "border-primary bg-primary/[0.05] ring-1 ring-primary/20"
+                          : "border-primary/15 bg-white"
+                  )}>
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <div className="flex gap-3">
+                          <div className="pt-1">
+                              <input 
+                                  type="checkbox" 
+                                  className="w-5 h-5 rounded-md border-border text-primary focus:ring-primary/20 transition-all cursor-pointer" 
+                                  checked={selectedIds.includes(globalIndex)} 
+                                  onChange={() => toggleSelect(globalIndex)} 
+                              />
+                          </div>
+                          <div>
+                              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">#{globalIndex + 1}</p>
+                              <h3 className="text-[14px] font-bold text-foreground leading-tight mt-0.5 font-mono">{item.serial_may}</h3>
+                          </div>
+                      </div>
+                      <span className={getStatusBadgeClass(item.trang_thai)}>
+                        {item.trang_thai || '-'}
+                      </span>
                     </div>
-                    <span className={getStatusBadgeClass(item.trang_thai)}>
-                      {item.trang_thai || '-'}
-                    </span>
+                    
+                    <div className="grid grid-cols-2 gap-2 mb-0 rounded-xl bg-muted/10 border border-border/60 p-2.5">
+                      <div className="col-span-2">
+                          <div className="space-y-3">
+                              <div className="flex items-center gap-2">
+                                  <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600 shrink-0">
+                                      <Monitor size={14} />
+                                  </div>
+                                  <div className="min-w-0 flex-1">
+                                      <p className="text-[9px] uppercase tracking-wider text-muted-foreground">Loại máy</p>
+                                      <p className="text-[12px] text-foreground font-bold truncate">
+                                          {item.loai_may}
+                                      </p>
+                                  </div>
+                              </div>
+                              
+                              <div className="flex items-center gap-2">
+                                  <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600 shrink-0">
+                                      <Package size={14} />
+                                  </div>
+                                  <div className="min-w-0 flex-1">
+                                      <p className="text-[9px] uppercase tracking-wider text-muted-foreground">Khách hàng</p>
+                                      <p className="text-[12px] text-foreground font-bold truncate">
+                                          {item.khach_hang || 'Chưa bàn giao'}
+                                      </p>
+                                  </div>
+                              </div>
+                              
+                              <div className="flex items-center gap-2">
+                                  <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center text-amber-600 shrink-0">
+                                      <MapPin size={14} />
+                                  </div>
+                                  <div className="min-w-0 flex-1">
+                                      <p className="text-[9px] uppercase tracking-wider text-muted-foreground">Kho</p>
+                                      <p className="text-[12px] text-foreground font-bold truncate">
+                                          {item.kho || '-'}
+                                      </p>
+                                  </div>
+                              </div>
+                          </div>
+                      </div>
+                    </div>
                   </div>
-                  <div className="space-y-1.5">
-                    <div className="flex items-center gap-2 text-[13px]">
-                      <Monitor size={14} className="text-muted-foreground" />
-                      <span className="font-medium">{item.loai_may}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-[13px]">
-                      <Package size={14} className="text-muted-foreground" />
-                      <span className="text-foreground">{item.khach_hang || 'Chưa bàn giao'}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-[12px] text-muted-foreground">
-                      <MapPin size={13} />
-                      <span>{item.kho || '-'}</span>
-                    </div>
-                  </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
 
-          {/* FOOTER */}
+          {/* Sticky Mobile Pagination */}
+          {!loading && (
+              <MobilePagination
+                  currentPage={currentPage}
+                  setCurrentPage={setCurrentPage}
+                  pageSize={pageSize}
+                  setPageSize={setPageSize}
+                  totalRecords={filteredData.length}
+              />
+          )}
+
+          {/* FOOTER Desktop*/}
           <div className="hidden md:flex px-4 py-4 border-t border-border items-center justify-between bg-muted/5">
             <div className="flex items-center gap-3 text-[12px] text-muted-foreground font-medium">
-              <span>{filteredData.length > 0 ? `1–${filteredData.length}` : '0'}/Tổng {filteredData.length}</span>
+              <span>{filteredData.length > 0 ? `${(currentPage - 1) * pageSize + 1}–${Math.min(currentPage * pageSize, filteredData.length)}` : '0'} / Tổng {filteredData.length}</span>
             </div>
             <div className="flex items-center gap-1">
-              <button className="p-1.5 rounded-lg text-muted-foreground opacity-20" disabled><ChevronLeft size={16} /><ChevronLeft size={16} className="-ml-2.5" /></button>
-              <button className="p-1.5 rounded-lg text-muted-foreground opacity-20" disabled><ChevronLeft size={16} /></button>
-              <div className="w-8 h-8 rounded-lg bg-primary text-white flex items-center justify-center text-[12px] font-bold">1</div>
-              <button className="p-1.5 rounded-lg text-muted-foreground opacity-20" disabled><ChevronRight size={16} /></button>
-              <button className="p-1.5 rounded-lg text-muted-foreground opacity-20" disabled><ChevronRight size={16} /><ChevronRight size={16} className="-ml-2.5" /></button>
-            </div>
-          </div>
-          <div className="md:hidden px-4 py-3 border-t border-border flex items-center justify-between bg-muted/5">
-            <span className="text-[12px] text-muted-foreground font-medium">Tổng {filteredData.length} máy</span>
-            <div className="flex items-center gap-1">
-              <button className="p-1.5 rounded-lg text-muted-foreground opacity-20" disabled><ChevronLeft size={15} /></button>
-              <div className="w-7 h-7 rounded-lg bg-primary text-white flex items-center justify-center text-[11px] font-bold">1</div>
-              <button className="p-1.5 rounded-lg text-muted-foreground opacity-20" disabled><ChevronRight size={15} /></button>
+              <button onClick={() => setCurrentPage(1)} className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors disabled:opacity-20" disabled={currentPage === 1} title="Trang đầu">
+                <ChevronLeft size={16} />
+                <ChevronLeft size={16} className="-ml-2.5" />
+              </button>
+              <button onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))} className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors disabled:opacity-20" disabled={currentPage === 1} title="Trang trước">
+                <ChevronLeft size={16} />
+              </button>
+              <div className="w-8 h-8 rounded-lg bg-primary text-white flex items-center justify-center text-[12px] font-bold shadow-md shadow-primary/25">
+                {currentPage}
+              </div>
+              <button onClick={() => setCurrentPage(prev => Math.min(Math.ceil(filteredData.length / pageSize), prev + 1))} className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors disabled:opacity-20" disabled={currentPage >= Math.ceil(filteredData.length / pageSize)} title="Trang sau">
+                <ChevronRight size={16} />
+              </button>
+              <button onClick={() => setCurrentPage(Math.ceil(filteredData.length / pageSize))} className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors disabled:opacity-20" disabled={currentPage >= Math.ceil(filteredData.length / pageSize)} title="Trang cuối">
+                <ChevronRight size={16} />
+                <ChevronRight size={16} className="-ml-2.5" />
+              </button>
             </div>
           </div>
         </div>
@@ -457,10 +546,12 @@ const MachineStatsReport = () => {
           {/* Header Parity with List View */}
           <div className="space-y-0 text-left">
             {/* Mobile Header */}
-            <div className="md:hidden flex items-center gap-2 p-3 border-b border-border">
-              <button onClick={() => navigate(-1)} className="p-2 rounded-xl border border-border bg-white text-muted-foreground shrink-0"><ChevronLeft size={18} /></button>
-              <h2 className="text-base font-bold text-foreground flex-1 text-center">Thống kê báo cáo máy</h2>
-              <button onClick={openMobileFilter} className={clsx('relative p-2 rounded-xl border shrink-0 transition-all', hasActiveFilters ? 'border-primary bg-primary/5 text-primary' : 'border-border bg-white text-muted-foreground')}><Filter size={18} />{hasActiveFilters && <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-primary text-white text-[9px] font-bold flex items-center justify-center">{totalActiveFilters}</span>}</button>
+            <div className="md:hidden flex flex-col p-3 border-b border-border glass-header sticky top-0 z-30">
+              <div className="flex items-center gap-2">
+                <button onClick={() => navigate(-1)} className="p-2 rounded-xl border border-border bg-white text-muted-foreground shrink-0 active:scale-95 transition-all shadow-sm"><ChevronLeft size={18} /></button>
+                <h2 className="text-base font-bold text-foreground flex-1 text-center">Thống kê báo cáo máy</h2>
+                <button onClick={openMobileFilter} className={clsx('relative p-2 rounded-xl border shrink-0 transition-all active:scale-95 shadow-sm', hasActiveFilters ? 'border-primary bg-primary/5 text-primary' : 'border-border bg-white text-muted-foreground')}><Filter size={18} />{hasActiveFilters && <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-primary text-white text-[9px] font-bold flex items-center justify-center ring-1 ring-white">{totalActiveFilters}</span>}</button>
+              </div>
             </div>
 
             {/* Desktop Header */}

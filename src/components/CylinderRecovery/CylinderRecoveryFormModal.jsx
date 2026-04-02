@@ -743,10 +743,10 @@ export default function CylinderRecoveryFormModal({ recovery, onClose, onSuccess
                                                     setScannerType('order');
                                                     setIsScannerOpen(true);
                                                 }}
-                                                className="w-12 h-12 flex items-center justify-center bg-primary/10 text-primary border border-primary/20 rounded-2xl hover:bg-primary/20 transition-all shadow-sm"
+                                                className="w-12 h-12 flex-shrink-0 flex items-center justify-center bg-primary/10 text-primary border border-primary/20 rounded-2xl hover:bg-primary/20 transition-all shadow-sm"
                                                 title="Quét mã đơn hàng"
                                             >
-                                                <ScanLine size={20} />
+                                                <ScanLine size={20} className="shrink-0" />
                                             </button>
                                         )}
                                     </div>
@@ -815,26 +815,28 @@ export default function CylinderRecoveryFormModal({ recovery, onClose, onSuccess
 
                             {/* Section 2: Items List */}
                             <div className="rounded-3xl border border-primary/20 bg-white p-5 sm:p-6 space-y-5 shadow-sm">
-                                <div className="flex items-center justify-between pb-3 border-b border-primary/10">
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-primary/10">
                                     <div className="flex items-center gap-2.5">
-                                        <ScanLine className="w-4 h-4 text-primary/80" strokeWidth={2.5} />
-                                        <h4 className="text-[18px] !font-extrabold !text-primary uppercase tracking-tight">Danh sách vỏ ({items.length})</h4>
-                                        <div className="px-2 py-0.5 bg-emerald-50 text-emerald-600 rounded-lg text-[10px] font-black border border-emerald-100">
+                                        <ScanLine className="w-4 h-4 text-primary/80 shrink-0" strokeWidth={2.5} />
+                                        <h4 className="text-[16px] sm:text-[18px] !font-extrabold !text-primary uppercase tracking-tight">Danh sách vỏ ({items.length})</h4>
+                                    </div>
+                                    <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto">
+                                        <div className="px-2 py-0.5 bg-emerald-50 text-emerald-600 rounded-lg text-[10px] font-black border border-emerald-100 shrink-0">
                                             THỰC TẾ: {items.length}
                                         </div>
+                                        {!isReadOnly && (
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setScannerType('item');
+                                                    setIsScannerOpen(true);
+                                                }}
+                                                className="flex items-center gap-1.5 px-3 py-1.5 bg-primary hover:bg-primary/90 text-white font-bold rounded-xl text-xs transition-all shadow-lg shadow-primary/20 shrink-0"
+                                            >
+                                                <ScanLine size={14} strokeWidth={2.5} /> Quét
+                                            </button>
+                                        )}
                                     </div>
-                                    {!isReadOnly && (
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                setScannerType('item');
-                                                setIsScannerOpen(true);
-                                            }}
-                                            className="flex items-center gap-1.5 px-3 py-1.5 bg-primary hover:bg-primary/90 text-white font-bold rounded-xl text-xs transition-all shadow-lg shadow-primary/20"
-                                        >
-                                            <ScanLine size={14} strokeWidth={2.5} /> Quét
-                                        </button>
-                                    )}
                                 </div>
 
                                 <div className="space-y-3">

@@ -105,6 +105,13 @@ button.p-1 {
   padding: 4px 8px !important;
 }
 
+button.btn-compact {
+  height: auto !important;
+  padding: 0 !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+}
+
 /* Small descriptive text / subtitles */
 .text-\[10px\],
 .text-\[11px\],

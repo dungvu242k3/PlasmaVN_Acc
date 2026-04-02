@@ -37,6 +37,9 @@ import { exportSalespersonReport } from '../utils/exportExcel';
 import FilterDropdown from '../components/ui/FilterDropdown';
 import MobileFilterSheet from '../components/ui/MobileFilterSheet';
 import ColumnPicker from '../components/ui/ColumnPicker';
+import MobilePageHeader from '../components/layout/MobilePageHeader';
+import MobilePagination from '../components/layout/MobilePagination';
+import PageViewSwitcher from '../components/layout/PageViewSwitcher';
 
 // Register Chart.js components
 ChartJS.register(
@@ -72,6 +75,10 @@ const SalespersonReport = () => {
   const [data, setData] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedIds, setSelectedIds] = useState([]);
+
+  // Pagination State (Client-side for this report)
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(50);
 
   // Filters
   const [selectedWarehouses, setSelectedWarehouses] = useState([]);
@@ -179,6 +186,13 @@ const SalespersonReport = () => {
     item.so_dien_thoai?.includes(searchTerm)
   );
 
+  const totalRecords = filteredData.length;
+  const paginatedData = useMemo(() => {
+    const from = (currentPage - 1) * pageSize;
+    const to = from + pageSize;
+    return filteredData.slice(from, to);
+  }, [filteredData, currentPage, pageSize]);
+
   const formatNumber = (num) => {
     if (!num) return '0';
     return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
@@ -210,7 +224,7 @@ const SalespersonReport = () => {
   // Mobile filter handlers
   const openMobileFilter = () => { setPendingWarehouses(selectedWarehouses); setShowMobileFilter(true); };
   const applyMobileFilter = () => { setSelectedWarehouses(pendingWarehouses); closeMobileFilter(); };
-  const closeMobileFilter = () => { setMobileFilterClosing(true); setTimeout(() => { setShowMobileFilter(false); setMobileFilterClosing(false); }, 280); };
+  const closeMobileFilter = () => { setMobileFilterClosing(true); setTimeout(() => { setShowMobileFilter(false); setMobileFilterClosing(false); }, 300); };
 
   // Stats calculations
   const stats_summary = {
@@ -253,28 +267,52 @@ const SalespersonReport = () => {
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 w-full flex-1 flex flex-col mt-1 min-h-0 px-1 md:px-1.5">
       {/* Top Tabs */}
-      <div className="flex items-center gap-1 mb-3 mt-1">
-        <button onClick={() => setActiveView('list')} className={clsx("flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-bold transition-all", activeView === 'list' ? "bg-white text-primary shadow-sm ring-1 ring-border" : "text-muted-foreground hover:text-foreground")}>
-          <List size={14} /> Danh sách
-        </button>
-        <button onClick={() => setActiveView('stats')} className={clsx("flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-bold transition-all", activeView === 'stats' ? "bg-white text-primary shadow-sm ring-1 ring-border" : "text-muted-foreground hover:text-foreground")}>
-          <BarChart2 size={14} /> Thống kê
-        </button>
-      </div>
+      <PageViewSwitcher
+          activeView={activeView}
+          setActiveView={setActiveView}
+          views={[
+              { id: 'list', label: 'Danh sách', icon: <List size={16} /> },
+              { id: 'stats', label: 'Thống kê', icon: <BarChart2 size={16} /> },
+          ]}
+      />
 
       {activeView === 'list' && (
         <div className="bg-white rounded-2xl border border-border shadow-sm flex flex-col flex-1 min-h-0 w-full">
           {/* MOBILE TOOLBAR */}
-          <div className="md:hidden flex items-center gap-2 p-3 border-b border-border">
-            <button onClick={() => navigate(-1)} className="p-2 rounded-xl border border-border bg-white text-muted-foreground shrink-0"><ChevronLeft size={18} /></button>
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={15} />
-              <input type="text" placeholder="Tìm kiếm nhân viên . . ." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-9 pr-8 py-2 bg-muted/20 border border-border/80 rounded-xl text-[13px] focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all font-medium" />
-              {searchTerm && <button onClick={() => setSearchTerm('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"><X size={14} /></button>}
-            </div>
-            <button onClick={openMobileFilter} className={clsx('relative p-2 rounded-xl border shrink-0 transition-all', hasActiveFilters ? 'border-primary bg-primary/5 text-primary' : 'border-border bg-white text-muted-foreground')}><Filter size={18} />{hasActiveFilters && <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-primary text-white text-[9px] font-bold flex items-center justify-center">{totalActiveFilters}</span>}</button>
-            <button onClick={handleExport} className="p-2 rounded-xl bg-emerald-600 text-white shrink-0 shadow-md shadow-emerald-600/20"><Download size={18} /></button>
-          </div>
+          <MobilePageHeader
+            searchTerm={searchTerm}
+            setSearchTerm={setSearchTerm}
+            searchPlaceholder="Tìm kiếm nhân viên..."
+            onFilterClick={openMobileFilter}
+            hasActiveFilters={hasActiveFilters}
+            totalActiveFilters={totalActiveFilters}
+            actions={
+              <button
+                onClick={handleExport}
+                className="p-2 rounded-xl bg-emerald-600 text-white shadow-lg shadow-emerald-600/25 active:scale-95 transition-all"
+                title="Xuất Excel báo cáo"
+              >
+                <Download size={20} />
+              </button>
+            }
+            selectionBar={
+              selectedIds.length > 0 ? (
+                <div className="flex items-center justify-between px-1 mt-3 pt-3 border-t border-slate-100 animate-in slide-in-from-top-2 duration-300">
+                  <span className="text-[13px] font-bold text-slate-600">
+                    Đã chọn <span className="text-primary">{selectedIds.length}</span> nhân viên
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={toggleSelectAll}
+                      className="text-[12px] font-bold text-primary hover:underline px-2 py-1"
+                    >
+                      Bỏ chọn
+                    </button>
+                  </div>
+                </div>
+              ) : null
+            }
+          />
 
           {/* DESKTOP TOOLBAR */}
           <div className="hidden md:block p-3 space-y-3">
@@ -338,10 +376,10 @@ const SalespersonReport = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-primary/10">
-                {loading ? (<tr><td colSpan={visibleColumns.length + 1} className="px-4 py-16 text-center text-muted-foreground italic">Đang tải dữ liệu...</td></tr>) : filteredData.length === 0 ? (<tr><td colSpan={visibleColumns.length + 1} className="px-4 py-16 text-center text-muted-foreground italic">Không tìm thấy dữ liệu</td></tr>) : (
-                  filteredData.map((item, index) => (
-                    <tr key={index} className={clsx("group transition-all hover:bg-blue-50/40", selectedIds.includes(index) && "bg-blue-50/60")}>
-                      <td className="px-4 py-4 sticky left-0 bg-white group-hover:bg-blue-50/40 z-10"><div className="flex items-center justify-center"><input type="checkbox" className="w-4 h-4 rounded border-border text-primary focus:ring-primary/20" checked={selectedIds.includes(index)} onChange={() => toggleSelect(index)} /></div></td>
+                {loading ? (<tr><td colSpan={visibleColumns.length + 1} className="px-4 py-16 text-center text-muted-foreground italic">Đang tải dữ liệu...</td></tr>) : paginatedData.length === 0 ? (<tr><td colSpan={visibleColumns.length + 1} className="px-4 py-16 text-center text-muted-foreground italic">Không tìm thấy dữ liệu</td></tr>) : (
+                  paginatedData.map((item, index) => (
+                    <tr key={index} className={clsx("group transition-all hover:bg-blue-50/40", selectedIds.includes((currentPage - 1) * pageSize + index) && "bg-blue-50/60")}>
+                      <td className="px-4 py-4 sticky left-0 bg-white group-hover:bg-blue-50/40 z-10"><div className="flex items-center justify-center"><input type="checkbox" className="w-4 h-4 rounded border-border text-primary focus:ring-primary/20" checked={selectedIds.includes((currentPage - 1) * pageSize + index)} onChange={() => toggleSelect((currentPage - 1) * pageSize + index)} /></div></td>
                       {columnOrder.filter(isColumnVisible).map(colKey => {
                         if (colKey === 'ten_nhan_vien') return <td key={colKey} className="px-4 py-4"><span className="text-[13px] font-bold text-foreground">{item.ten_nhan_vien}</span></td>;
                         if (colKey === 'so_dien_thoai') return <td key={colKey} className="px-4 py-4"><span className="text-[13px] text-muted-foreground font-medium">{item.so_dien_thoai || '-'}</span></td>;
@@ -361,56 +399,112 @@ const SalespersonReport = () => {
             </table>
           </div>
 
-          {/* MOBILE LIST */}
           <div className="md:hidden flex-1 overflow-y-auto p-3 flex flex-col gap-3 bg-muted/5">
-            {loading ? (<div className="py-16 text-center italic text-muted-foreground">Đang tải...</div>) : filteredData.length === 0 ? (<div className="py-16 text-center italic text-muted-foreground">Không tìm thấy dữ liệu</div>) : (
-              filteredData.map((item, index) => (
-                <div key={index} className="bg-white border border-primary/10 rounded-2xl p-4 shadow-sm">
-                  <div className="flex justify-between items-start mb-3">
-                    <div className="flex items-center gap-2">
-                      <input type="checkbox" className="w-4 h-4 rounded border-border text-primary focus:ring-primary/20" checked={selectedIds.includes(index)} onChange={() => toggleSelect(index)} />
-                      <div className="bg-primary/10 p-1.5 rounded-lg">
-                        <User className="w-4 h-4 text-primary" />
+            {loading ? (<div className="py-16 text-center italic text-muted-foreground">Đang tải...</div>) : paginatedData.length === 0 ? (<div className="py-16 text-center italic text-muted-foreground">Không tìm thấy dữ liệu</div>) : (
+              paginatedData.map((item, index) => {
+                const itemIndex = (currentPage - 1) * pageSize + index;
+                return (
+                  <div key={itemIndex} className="bg-white border border-primary/10 rounded-2xl p-4 shadow-sm">
+                    <div className="flex justify-between items-start mb-3">
+                      <div className="flex items-center gap-2">
+                        <input type="checkbox" className="w-4 h-4 rounded border-border text-primary focus:ring-primary/20" checked={selectedIds.includes(itemIndex)} onChange={() => toggleSelect(itemIndex)} />
+                        <div className="bg-primary/10 p-2 rounded-xl">
+                          <User className="w-4 h-4 text-primary" />
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-[14px] font-bold text-foreground leading-tight">{item.ten_nhan_vien}</span>
+                          <span className="text-[11px] text-muted-foreground font-medium flex items-center gap-1 mt-0.5">
+                            <Phone size={10} className="text-muted-foreground/60" />
+                            {item.so_dien_thoai || '-'}
+                          </span>
+                        </div>
                       </div>
-                      <span className="text-[14px] font-bold text-foreground">{item.ten_nhan_vien}</span>
+                      <div className="bg-blue-50 text-blue-700 px-2.5 py-1 rounded-lg border border-blue-100 flex items-center gap-1.5">
+                        <Users size={12} className="text-blue-500" />
+                        <span className="text-[11px] font-black">{formatNumber(item.tong_khach_hang)} KH</span>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 mt-4 bg-muted/10 rounded-xl p-2.5 border border-border/60">
+                      <div className="text-center bg-white/50 rounded-lg py-2 border border-border/40">
+                        <p className="text-[9px] text-muted-foreground font-bold uppercase mb-0.5 tracking-wider">Đơn Bán</p>
+                        <p className="text-sm font-bold text-blue-600">{formatNumber(item.don_xuat_ban)}</p>
+                      </div>
+                      <div className="text-center bg-white/50 rounded-lg py-2 border border-border/40">
+                        <p className="text-[9px] text-muted-foreground font-bold uppercase mb-0.5 tracking-wider">Bình Bán</p>
+                        <p className="text-sm font-bold text-emerald-600">{formatNumber(item.binh_ban)}</p>
+                      </div>
+                      <div className="text-center bg-white/50 rounded-lg py-2 border border-border/40">
+                        <p className="text-[9px] text-muted-foreground font-bold uppercase mb-0.5 tracking-wider">Bình Demo</p>
+                        <p className="text-sm font-bold text-orange-600">{formatNumber(item.binh_demo)}</p>
+                      </div>
+                      <div className="text-center bg-white/50 rounded-lg py-2 border border-border/40">
+                        <p className="text-[9px] text-muted-foreground font-bold uppercase mb-0.5 tracking-wider">Bình Thu Hồi</p>
+                        <p className="text-sm font-bold text-violet-600">{formatNumber(item.binh_thu_hoi)}</p>
+                      </div>
+                      <div className="text-center bg-white/50 rounded-lg py-2 border border-border/40">
+                        <p className="text-[9px] text-muted-foreground font-bold uppercase mb-0.5 tracking-wider">Máy Bán</p>
+                        <p className="text-sm font-bold text-rose-600">{formatNumber(item.may_ban)}</p>
+                      </div>
+                      <div className="text-center bg-white/50 rounded-lg py-2 border border-border/40">
+                        <p className="text-[9px] text-muted-foreground font-bold uppercase mb-0.5 tracking-wider">Máy Đang Dùng</p>
+                        <p className="text-sm font-bold text-indigo-600">{formatNumber(item.may_dang_su_dung)}</p>
+                      </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 text-muted-foreground mb-3 text-[13px]">
-                    <Phone size={14} className="text-muted-foreground/60" />
-                    <span>{item.so_dien_thoai || '-'}</span>
-                  </div>
-                  <div className="grid grid-cols-3 gap-2 bg-muted/10 rounded-xl p-2.5 border border-border/60">
-                    <div className="text-center"><p className="text-[9px] text-muted-foreground font-bold uppercase mb-0.5">KH</p><p className="text-[12px] font-bold text-primary">{formatNumber(item.tong_khach_hang)}</p></div>
-                    <div className="text-center border-l border-border/60"><p className="text-[9px] text-muted-foreground font-bold uppercase mb-0.5">Đơn Bán</p><p className="text-[12px] font-bold text-blue-600">{formatNumber(item.don_xuat_ban)}</p></div>
-                    <div className="text-center border-l border-border/60"><p className="text-[9px] text-muted-foreground font-bold uppercase mb-0.5">Bình Bán</p><p className="text-[12px] font-bold text-emerald-600">{formatNumber(item.binh_ban)}</p></div>
-                    <div className="text-center pt-2 mt-2 border-t border-border/60"><p className="text-[9px] text-muted-foreground font-bold uppercase mb-0.5">Bình Demo</p><p className="text-[12px] font-bold text-orange-600">{formatNumber(item.binh_demo)}</p></div>
-                    <div className="text-center pt-2 mt-2 border-t border-l border-border/60"><p className="text-[9px] text-muted-foreground font-bold uppercase mb-0.5">Máy Bán</p><p className="text-[12px] font-bold text-rose-600">{formatNumber(item.may_ban)}</p></div>
-                    <div className="text-center pt-2 mt-2 border-t border-l border-border/60"><p className="text-[9px] text-muted-foreground font-bold uppercase mb-0.5">Máy Dùng</p><p className="text-[12px] font-bold text-indigo-600">{formatNumber(item.may_dang_su_dung)}</p></div>
-                  </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
 
-          {/* FOOTER */}
+          {/* Sticky Mobile Pagination */}
+          {!loading && (
+            <MobilePagination
+              currentPage={currentPage}
+              setCurrentPage={setCurrentPage}
+              pageSize={pageSize}
+              setPageSize={setPageSize}
+              totalRecords={totalRecords}
+            />
+          )}
+
+          {/* DESKTOP FOOTER */}
           <div className="hidden md:flex px-4 py-4 border-t border-border items-center justify-between bg-muted/5">
             <div className="flex items-center gap-3 text-[12px] text-muted-foreground font-medium">
-              <span>{filteredData.length > 0 ? `1–${filteredData.length}` : '0'}/Tổng {filteredData.length}</span>
+              <span>{totalRecords > 0 ? `${(currentPage - 1) * pageSize + 1}–${Math.min(currentPage * pageSize, totalRecords)}` : '0'}/Tổng {totalRecords}</span>
             </div>
             <div className="flex items-center gap-1">
-              <button className="p-1.5 rounded-lg text-muted-foreground opacity-20" disabled><ChevronLeft size={16} /><ChevronLeft size={16} className="-ml-2.5" /></button>
-              <button className="p-1.5 rounded-lg text-muted-foreground opacity-20" disabled><ChevronLeft size={16} /></button>
-              <div className="w-8 h-8 rounded-lg bg-primary text-white flex items-center justify-center text-[12px] font-bold">1</div>
-              <button className="p-1.5 rounded-lg text-muted-foreground opacity-20" disabled><ChevronRight size={16} /></button>
-              <button className="p-1.5 rounded-lg text-muted-foreground opacity-20" disabled><ChevronRight size={16} /><ChevronRight size={16} className="-ml-2.5" /></button>
-            </div>
-          </div>
-          <div className="md:hidden px-4 py-3 border-t border-border flex items-center justify-between bg-muted/5">
-            <span className="text-[12px] text-muted-foreground font-medium">Tổng {filteredData.length} NVKD</span>
-            <div className="flex items-center gap-1">
-              <button className="p-1.5 rounded-lg text-muted-foreground opacity-20" disabled><ChevronLeft size={15} /></button>
-              <div className="w-7 h-7 rounded-lg bg-primary text-white flex items-center justify-center text-[11px] font-bold">1</div>
-              <button className="p-1.5 rounded-lg text-muted-foreground opacity-20" disabled><ChevronRight size={15} /></button>
+              <button
+                onClick={() => setCurrentPage(1)}
+                disabled={currentPage === 1}
+                className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors disabled:opacity-20"
+              >
+                <ChevronLeft size={16} />
+                <ChevronLeft size={16} className="-ml-2.5" />
+              </button>
+              <button
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                disabled={currentPage === 1}
+                className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors disabled:opacity-20"
+              >
+                <ChevronLeft size={16} />
+              </button>
+              <div className="w-8 h-8 rounded-lg bg-primary text-white flex items-center justify-center text-[12px] font-bold shadow-md shadow-primary/25">{currentPage}</div>
+              <button
+                onClick={() => setCurrentPage(prev => Math.min(Math.ceil(totalRecords / pageSize), prev + 1))}
+                disabled={currentPage >= Math.ceil(totalRecords / pageSize)}
+                className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors disabled:opacity-20"
+              >
+                <ChevronRight size={16} />
+              </button>
+              <button
+                onClick={() => setCurrentPage(Math.ceil(totalRecords / pageSize))}
+                disabled={currentPage >= Math.ceil(totalRecords / pageSize)}
+                className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors disabled:opacity-20"
+              >
+                <ChevronRight size={16} />
+                <ChevronRight size={16} className="-ml-2.5" />
+              </button>
             </div>
           </div>
         </div>

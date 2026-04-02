@@ -19,13 +19,17 @@ import {
     User,
     X,
     Download,
-    Upload
+    Upload,
+    MoreVertical
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { useEffect, useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { clsx } from 'clsx';
+import MobilePageHeader from '../components/layout/MobilePageHeader';
+import MobilePagination from '../components/layout/MobilePagination';
+import PageViewSwitcher from '../components/layout/PageViewSwitcher';
 import CylinderRecoveryPrintTemplate from '../components/CylinderRecovery/CylinderRecoveryPrintTemplate';
 import CylinderRecoveryFormModal from '../components/CylinderRecovery/CylinderRecoveryFormModal';
 import ColumnPicker from '../components/ui/ColumnPicker';
@@ -86,6 +90,10 @@ const CylinderRecoveries = () => {
     // UI States
     const [selectedIds, setSelectedIds] = useState([]);
     const [isFormModalOpen, setIsFormModalOpen] = useState(false);
+    
+    // Pagination State
+    const [currentPage, setCurrentPage] = useState(1);
+    const [pageSize, setPageSize] = useState(50);
     const [recoveryToEdit, setRecoveryToEdit] = useState(null);
     const [recoveriesToPrint, setRecoveriesToPrint] = useState(null);
     const [activeDropdown, setActiveDropdown] = useState(null);
@@ -96,6 +104,7 @@ const CylinderRecoveries = () => {
     const [pendingStatuses, setPendingStatuses] = useState([]);
     const [pendingCustomers, setPendingCustomers] = useState([]);
     const [pendingWarehouses, setPendingWarehouses] = useState([]);
+    const [showMoreActions, setShowMoreActions] = useState(false);
 
     // Filter State
     const [selectedStatuses, setSelectedStatuses] = useState([]);
@@ -317,6 +326,9 @@ const CylinderRecoveries = () => {
         return matchesSearch && matchesStatus && matchesCustomer && matchesWarehouse;
     });
 
+    const totalRecords = filteredRecoveries.length;
+    const paginatedRecoveries = filteredRecoveries.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
     // Statistics Data
     const getStatusStats = () => {
         return RECOVERY_STATUSES.map(status => ({
@@ -360,6 +372,9 @@ const CylinderRecoveries = () => {
                     setActiveDropdown(null);
                 }
             }
+            if (!event.target.closest('#more-actions-menu-recoveries') && !event.target.closest('#more-actions-btn-recoveries')) {
+                setShowMoreActions(false);
+            }
         };
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
@@ -398,130 +413,145 @@ const CylinderRecoveries = () => {
         }
     };
 
-    const getFilterIconClass = (id, active) => {
-        if (!active) {
-            switch (id) {
-                case 'status': return "text-blue-500/70";
-                case 'customers': return "text-cyan-500/70";
-                case 'warehouses': return "text-violet-500/70";
-                default: return "text-slate-400";
-            }
-        }
-        switch (id) {
-            case 'status': return "text-blue-700";
-            case 'customers': return "text-cyan-700";
-            case 'warehouses': return "text-violet-700";
-            default: return "text-primary";
-        }
-    };
-
-    const getFilterCountBadgeClass = (id) => {
-        switch (id) {
-            case 'status': return "bg-blue-600 text-white";
-            case 'customers': return "bg-cyan-600 text-white";
-            case 'warehouses': return "bg-violet-600 text-white";
-            default: return "bg-primary text-white";
-        }
-    };
-
     const formatNumber = (num) => new Intl.NumberFormat('vi-VN').format(num || 0);
 
     return (
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 w-full flex-1 flex flex-col mt-1 min-h-0 px-1 md:px-1.5">
-            {/* View Switching Tabs */}
-            <div className="flex items-center gap-1 mb-3 mt-1">
-                <button
-                    onClick={() => setActiveView('list')}
-                    className={clsx(
-                        "flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-bold transition-all",
-                        activeView === 'list'
-                            ? "bg-primary text-white shadow-md shadow-primary/20"
-                            : "bg-white text-muted-foreground hover:bg-muted/10 border border-border"
-                    )}
-                >
-                    <List size={16} />
-                    Danh sách
-                </button>
-                <button
-                    onClick={() => setActiveView('stats')}
-                    className={clsx(
-                        "flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-bold transition-all",
-                        activeView === 'stats'
-                            ? "bg-primary text-white shadow-md shadow-primary/20"
-                            : "bg-white text-muted-foreground hover:bg-muted/10 border border-border"
-                    )}
-                >
-                    <BarChart2 size={16} />
-                    Thống kê
-                </button>
-            </div>
+            <PageViewSwitcher
+                activeView={activeView}
+                setActiveView={setActiveView}
+                views={[
+                    { id: 'list', label: 'Danh sách', icon: <List size={16} /> },
+                    { id: 'stats', label: 'Thống kê', icon: <BarChart2 size={16} /> },
+                ]}
+            />
 
             {activeView === 'list' && (
-                <div className="bg-white rounded-2xl border border-border shadow-sm flex flex-col flex-1 min-h-0 w-full overflow-hidden">
-                    {/* ── MOBILE TOOLBAR ── */}
-                    <div className="md:hidden flex items-center gap-2 p-3 border-b border-border">
-                        <div className="relative flex-1">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
-                            <input
-                                type="text"
-                                placeholder="Tìm kiếm . . ."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full pl-9 pr-8 py-2 bg-muted/20 border border-border/80 rounded-xl text-[13px] focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all font-medium"
-                            />
-                            {searchTerm && (
-                                <button onClick={() => setSearchTerm('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                                    <X size={14} />
+                <div className="bg-white rounded-2xl border border-border shadow-sm flex flex-col flex-1 min-h-0 w-full relative">
+                    <MobilePageHeader
+                        searchTerm={searchTerm}
+                        setSearchTerm={setSearchTerm}
+                        searchPlaceholder="Tìm kiếm mã phiếu, khách hàng..."
+                        onFilterClick={openMobileFilter}
+                        hasActiveFilters={hasActiveFilters}
+                        totalActiveFilters={totalActiveFilters}
+                        actions={
+                            <>
+                                <div className="relative">
+                                    <button
+                                        id="more-actions-btn-recoveries"
+                                        onClick={() => setShowMoreActions(!showMoreActions)}
+                                        className={clsx(
+                                            "p-2 rounded-xl border shrink-0 transition-all active:scale-95 shadow-sm",
+                                            showMoreActions ? "bg-slate-100 border-slate-300" : "bg-white border-slate-200 text-slate-600"
+                                        )}
+                                    >
+                                        <MoreVertical size={20} />
+                                    </button>
+
+                                    {showMoreActions && (
+                                        <div id="more-actions-menu-recoveries" className="absolute right-0 top-full mt-2 w-48 bg-white rounded-2xl shadow-xl border border-slate-100 py-2 z-[100] animate-in fade-in slide-in-from-top-2 duration-200 origin-top-right">
+                                            <div
+                                                role="button"
+                                                onClick={() => { handleDownloadTemplate(); setShowMoreActions(false); }}
+                                                className="w-full flex items-center justify-start gap-4 px-4 py-2.5 text-[14px] font-bold text-slate-700 hover:bg-slate-50 transition-colors text-left cursor-pointer"
+                                            >
+                                                <div className="w-5 flex justify-center flex-shrink-0">
+                                                    <Download size={18} className="text-slate-400" />
+                                                </div>
+                                                Tải mẫu Excel
+                                            </div>
+
+                                            <label className="w-full flex items-center justify-start gap-4 px-4 py-2.5 text-[14px] font-bold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer text-left">
+                                                <div className="w-5 flex justify-center flex-shrink-0">
+                                                    <Upload size={18} className="text-slate-400" />
+                                                </div>
+                                                Import Excel
+                                                <input
+                                                    type="file"
+                                                    accept=".xlsx, .xls"
+                                                    onChange={(e) => { handleImportExcel(e); setShowMoreActions(false); }}
+                                                    className="hidden"
+                                                />
+                                            </label>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <button
+                                    onClick={() => { setRecoveryToEdit(null); setIsFormModalOpen(true); }}
+                                    className="p-2 rounded-xl bg-primary text-white shrink-0 shadow-lg shadow-primary/30 active:scale-95 transition-all"
+                                >
+                                    <Plus size={20} />
                                 </button>
-                            )}
-                        </div>
-                        <button
-                            onClick={openMobileFilter}
-                            className={clsx(
-                                'relative p-2 rounded-xl border shrink-0 transition-all',
-                                hasActiveFilters ? 'border-primary bg-primary/5 text-primary shadow-sm shadow-primary/10' : 'border-border bg-white text-muted-foreground',
-                            )}
-                        >
-                            <Filter size={18} />
-                            {hasActiveFilters && (
-                                <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-primary text-white text-[9px] font-bold flex items-center justify-center ring-2 ring-white">
-                                    {totalActiveFilters}
-                                </span>
-                            )}
-                        </button>
-                        <button
-                            onClick={() => { setRecoveryToEdit(null); setIsFormModalOpen(true); }}
-                            className="p-2 rounded-xl bg-primary text-white shrink-0 shadow-md shadow-primary/20"
-                        >
-                            <Plus size={18} />
-                        </button>
-                    </div>
+                            </>
+                        }
+                        selectionBar={
+                            selectedIds.length > 0 ? (
+                                <div className="flex items-center justify-between px-1 mt-3 pt-3 border-t border-slate-100 animate-in slide-in-from-top-2 duration-300">
+                                    <span className="text-[13px] font-bold text-slate-600">
+                                        Đã chọn <span className="text-primary">{selectedIds.length}</span> phiếu
+                                    </span>
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            onClick={toggleSelectAll}
+                                            className="text-[12px] font-bold text-primary hover:underline px-2 py-1"
+                                        >
+                                            Bỏ chọn
+                                        </button>
+                                        <button
+                                            onClick={handleBatchPrint}
+                                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 text-blue-600 text-[12px] font-bold border border-blue-100"
+                                        >
+                                            <Printer size={14} /> In phiếu
+                                        </button>
+                                        <button
+                                            onClick={handleBulkDelete}
+                                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-50 text-rose-600 text-[12px] font-bold border border-rose-100"
+                                        >
+                                            <Trash2 size={14} /> Xóa
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : null
+                        }
+                    />
 
                     {/* ── MOBILE CARD LIST ── */}
-                    <div className="md:hidden flex-1 overflow-y-auto p-3 flex flex-col gap-3">
+                    <div className="md:hidden flex-1 overflow-y-auto p-3 pb-4 flex flex-col gap-3">
                         {loading ? (
                             <div className="py-16 text-center text-[13px] text-muted-foreground italic font-medium">Đang tải dữ liệu...</div>
-                        ) : filteredRecoveries.length === 0 ? (
+                        ) : paginatedRecoveries.length === 0 ? (
                             <div className="py-16 text-center text-[13px] text-muted-foreground italic font-medium font-sans border-2 border-dashed border-border rounded-2xl mx-1 bg-muted/5">
                                 <PackageCheck className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3" />
                                 Không tìm thấy kết quả phù hợp
                             </div>
                         ) : (
-                            filteredRecoveries.map((recovery) => {
+                            paginatedRecoveries.map((recovery, index) => {
                                 const status = RECOVERY_STATUSES.find(s => s.id === recovery.status) || RECOVERY_STATUSES[0];
                                 return (
-                                    <div key={recovery.id} className="bg-white border border-primary/15 rounded-2xl p-4 shadow-sm hover:border-primary/30 transition-all duration-300">
+                                    <div key={recovery.id} className={clsx(
+                                        "rounded-2xl border shadow-sm p-4 transition-all duration-200",
+                                        selectedIds.includes(recovery.id)
+                                            ? "border-primary bg-primary/[0.05] ring-1 ring-primary/20"
+                                            : "border-primary/15 bg-white"
+                                    )}>
                                         <div className="flex justify-between items-start mb-3">
-                                            <div className="flex items-center gap-2">
-                                                <input
-                                                    type="checkbox"
-                                                    className="w-4 h-4 rounded border-border text-primary focus:ring-primary/20"
-                                                    checked={selectedIds.includes(recovery.id)}
-                                                    onChange={() => toggleSelect(recovery.id)}
-                                                />
-                                                <span className="text-[13px] font-bold text-foreground">{recovery.recovery_code}</span>
+                                            <div className="flex gap-3">
+                                                <div className="pt-1">
+                                                    <input
+                                                        type="checkbox"
+                                                        className="w-5 h-5 rounded-md border-border text-primary focus:ring-primary/20 transition-all cursor-pointer"
+                                                        checked={selectedIds.includes(recovery.id)}
+                                                        onChange={() => toggleSelect(recovery.id)}
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">#{((currentPage - 1) * pageSize) + index + 1}</p>
+                                                    <h3 className="text-[14px] font-bold text-foreground leading-tight mt-0.5">{recovery.recovery_code}</h3>
+                                                </div>
                                             </div>
-                                            <span className={clsx(getStatusBadgeClass(status.color), 'text-[10px] uppercase')}>
+                                            <span className={clsx(getStatusBadgeClass(status.color), 'inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border whitespace-nowrap')}>
                                                 {status.label}
                                             </span>
                                         </div>
@@ -566,7 +596,7 @@ const CylinderRecoveries = () => {
                                                 {recovery.status === 'CHO_PHAN_CONG' && (
                                                     <button
                                                         onClick={() => handleEdit(recovery)}
-                                                        className="p-2 text-blue-700 bg-blue-50 border border-blue-100 rounded-xl flex items-center gap-1 font-bold text-[11px]"
+                                                        className="p-2 text-blue-700 bg-blue-50 border border-blue-100 rounded-lg flex items-center gap-1 font-bold text-[11px]"
                                                         title="Phân công"
                                                     >
                                                         Phân công
@@ -575,7 +605,7 @@ const CylinderRecoveries = () => {
                                                 {recovery.status === 'DANG_THU_HOI' && (
                                                     <button
                                                         onClick={() => handleEdit(recovery)}
-                                                        className="p-2 text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-xl flex items-center gap-1 font-bold text-[11px]"
+                                                        className="p-2 text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-lg flex items-center gap-1 font-bold text-[11px]"
                                                         title="Hoàn thành"
                                                     >
                                                         Hoàn thành
@@ -583,16 +613,24 @@ const CylinderRecoveries = () => {
                                                 )}
                                                 <button
                                                     onClick={() => handlePrintSingle(recovery)}
-                                                    className="p-2 text-muted-foreground hover:text-primary hover:bg-primary/5 rounded-xl transition-colors bg-slate-50 border border-slate-100"
+                                                    className="p-2 text-muted-foreground hover:text-primary hover:bg-primary/5 rounded-lg transition-colors bg-slate-50 border border-slate-100"
                                                 >
                                                     <Printer className="w-4 h-4" />
                                                 </button>
                                                 <button
                                                     onClick={() => handleEdit(recovery)}
-                                                    className="p-2 text-amber-700 bg-amber-50 border border-amber-100 rounded-xl"
+                                                    className="p-2 text-amber-700 bg-amber-50 border border-amber-100 rounded-lg"
                                                 >
                                                     <Edit className="w-4 h-4" />
                                                 </button>
+                                                {(role === 'admin' || role === 'manager') && (
+                                                    <button 
+                                                        onClick={() => handleDelete(recovery.id, recovery.recovery_code)} 
+                                                        className="p-2 text-red-700 bg-red-50 border border-red-100 rounded-lg"
+                                                    >
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </button>
+                                                )}
                                             </div>
                                         </div>
                                     </div>
@@ -601,13 +639,24 @@ const CylinderRecoveries = () => {
                         )}
                     </div>
 
+                    {/* Sticky Mobile Pagination */}
+                    {!loading && (
+                        <MobilePagination
+                            currentPage={currentPage}
+                            setCurrentPage={setCurrentPage}
+                            pageSize={pageSize}
+                            setPageSize={setPageSize}
+                            totalRecords={totalRecords}
+                        />
+                    )}
+
                     {/* ── DESKTOP TOOLBAR ── */}
-                    <div className="hidden md:block p-3 space-y-3 bg-muted/5 border-b border-border">
+                    <div className="hidden md:block p-4 space-y-4 bg-muted/5 border-b border-border">
                         <div className="flex items-center justify-between gap-4">
-                            <div className="flex items-center gap-2 flex-1 max-w-2xl">
+                            <div className="flex items-center gap-2 flex-1">
                                 <button
                                     onClick={() => navigate(-1)}
-                                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-border hover:bg-white text-muted-foreground text-[12px] font-bold transition-all bg-muted/10 shadow-sm shrink-0"
+                                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-border hover:bg-white text-muted-foreground text-[12px] font-bold transition-all bg-white shadow-sm shrink-0"
                                 >
                                     <ChevronLeft size={16} />
                                     Quay lại
@@ -629,49 +678,18 @@ const CylinderRecoveries = () => {
                                 </div>
                             </div>
                             <div className="flex items-center gap-2">
-                                {selectedIds.length > 0 && (
-                                    <div className="flex items-center gap-1.5 bg-muted/20 p-1 rounded-xl border border-border shrink-0">
-                                        <button
-                                            onClick={handleBatchPrint}
-                                            className="flex items-center gap-2 px-3 py-1 bg-white border border-border rounded-lg text-slate-700 text-[12px] font-bold hover:bg-slate-50 transition-all"
-                                        >
-                                            <Printer size={14} /> In ({selectedIds.length})
-                                        </button>
-                                        <button
-                                            onClick={handleBulkDelete}
-                                            className="flex items-center gap-2 px-3 py-1 bg-white border border-rose-200 rounded-lg text-rose-600 text-[12px] font-bold hover:bg-rose-50 transition-all"
-                                        >
-                                            <Trash2 size={14} /> Xóa ({selectedIds.length})
-                                        </button>
-                                    </div>
-                                )}
-                                
-                                <div className="flex items-center gap-1.5 border-l border-border pl-2 shrink-0">
-                                    <button
-                                        onClick={handleDownloadTemplate}
-                                        className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-indigo-100 bg-indigo-50/50 text-indigo-700 text-[12px] font-bold hover:bg-indigo-100/50 transition-all"
-                                        title="Tải mẫu Excel"
-                                    >
-                                        <Download size={15} />
-                                        Tải mẫu
-                                    </button>
-                                    <label className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-blue-100 bg-blue-50/50 text-blue-700 text-[12px] font-bold hover:bg-blue-100/50 transition-all cursor-pointer" title="Nhập Excel">
-                                        <Upload size={15} />
-                                        Nhập file
-                                        <input type="file" accept=".xlsx, .xls" onChange={handleImportExcel} className="hidden" />
-                                    </label>
-                                </div>
-
-                                <div className="relative shrink-0" ref={columnPickerRef}>
+                                <div className="relative" ref={columnPickerRef}>
                                     <button
                                         onClick={() => setShowColumnPicker(prev => !prev)}
                                         className={clsx(
-                                            'flex items-center gap-2 px-3 py-1.5 rounded-xl border text-[12px] font-bold transition-all bg-white shadow-sm',
-                                            showColumnPicker ? 'border-primary bg-primary/5 text-primary' : 'border-border text-muted-foreground hover:bg-muted/10'
+                                            'flex items-center gap-2 px-4 h-10 rounded-lg border text-[13px] font-bold transition-all bg-white shadow-sm',
+                                            showColumnPicker
+                                                ? 'border-primary bg-primary/5 text-primary'
+                                                : 'border-border text-muted-foreground hover:bg-muted/20'
                                         )}
                                     >
-                                        <SlidersHorizontal size={15} />
-                                        Cột ({visibleColumns.length})
+                                        <SlidersHorizontal size={16} />
+                                        Cột ({visibleTableColumns.length}/{RECOVERY_TABLE_COLUMNS.length})
                                     </button>
                                     {showColumnPicker && (
                                         <ColumnPicker
@@ -684,33 +702,60 @@ const CylinderRecoveries = () => {
                                         />
                                     )}
                                 </div>
+
                                 <button
-                                    onClick={() => { setRecoveryToEdit(null); setIsFormModalOpen(true); }}
-                                    className="flex items-center gap-2 px-4 py-1.5 rounded-xl bg-primary text-white text-[12px] font-black hover:bg-primary/90 shadow-md shadow-primary/20 transition-all shrink-0 uppercase tracking-tight"
+                                    onClick={() => {
+                                        setRecoveryToEdit(null);
+                                        setIsFormModalOpen(true);
+                                    }}
+                                    className="flex items-center gap-2 px-6 h-10 rounded-lg bg-primary text-white text-[13px] font-bold hover:bg-primary/90 shadow-md shadow-primary/20 transition-all active:scale-95"
                                 >
                                     <Plus size={18} />
-                                    Tạo phiếu
+                                    Thêm
                                 </button>
+
+                                <button
+                                    onClick={handleDownloadTemplate}
+                                    className="flex items-center gap-2 px-4 h-10 rounded-lg border border-indigo-200 bg-indigo-50 text-indigo-700 text-[13px] font-bold hover:bg-indigo-100 shadow-sm transition-all active:scale-95"
+                                    title="Tải file Excel mẫu"
+                                >
+                                    <Download size={16} />
+                                    Tải mẫu
+                                </button>
+
+                                <div className="relative">
+                                    <input
+                                        type="file"
+                                        accept=".xlsx, .xls"
+                                        onChange={handleImportExcel}
+                                        className="hidden"
+                                        id="excel-import"
+                                    />
+                                    <label
+                                        htmlFor="excel-import"
+                                        className="flex items-center gap-2 px-4 h-10 rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 text-[13px] font-bold hover:bg-emerald-100 cursor-pointer shadow-sm transition-all active:scale-95 select-none"
+                                        title="Import dữ liệu từ file Excel"
+                                    >
+                                        <Upload size={16} />
+                                        Nhập Excel
+                                    </label>
+                                </div>
                             </div>
                         </div>
 
-                        {/* Secondary Filters */}
                         <div className="flex flex-wrap items-center gap-2" ref={listDropdownRef}>
                             <div className="relative">
                                 <button
-                                    onClick={() => {
-                                        if (activeDropdown !== 'status') setFilterSearch('');
-                                        setActiveDropdown(activeDropdown === 'status' ? null : 'status');
-                                    }}
+                                    onClick={() => setActiveDropdown(activeDropdown === 'status' ? null : 'status')}
                                     className={clsx(
                                         "flex items-center gap-2.5 px-4 py-2 rounded-xl border text-[13px] font-bold transition-all bg-white shadow-sm",
                                         getFilterButtonClass('status', activeDropdown === 'status' || selectedStatuses.length > 0)
                                     )}
                                 >
-                                    <Filter size={14} className={getFilterIconClass('status', activeDropdown === 'status' || selectedStatuses.length > 0)} />
+                                    <Filter size={14} className="text-primary" />
                                     Trạng thái
                                     {selectedStatuses.length > 0 && (
-                                        <span className={clsx('px-1.5 py-0.5 rounded-full text-[10px] font-bold', getFilterCountBadgeClass('status'))}>
+                                        <span className="px-1.5 py-0.5 rounded-full bg-primary text-white text-[10px] font-bold">
                                             {selectedStatuses.length}
                                         </span>
                                     )}
@@ -729,19 +774,16 @@ const CylinderRecoveries = () => {
 
                             <div className="relative">
                                 <button
-                                    onClick={() => {
-                                        if (activeDropdown !== 'customers') setFilterSearch('');
-                                        setActiveDropdown(activeDropdown === 'customers' ? null : 'customers');
-                                    }}
+                                    onClick={() => setActiveDropdown(activeDropdown === 'customers' ? null : 'customers')}
                                     className={clsx(
                                         "flex items-center gap-2.5 px-4 py-2 rounded-xl border text-[13px] font-bold transition-all bg-white shadow-sm",
                                         getFilterButtonClass('customers', activeDropdown === 'customers' || selectedCustomers.length > 0)
                                     )}
                                 >
-                                    <User size={14} className={getFilterIconClass('customers', activeDropdown === 'customers' || selectedCustomers.length > 0)} />
+                                    <User size={14} className="text-cyan-600" />
                                     Khách hàng
                                     {selectedCustomers.length > 0 && (
-                                        <span className={clsx('px-1.5 py-0.5 rounded-full text-[10px] font-bold', getFilterCountBadgeClass('customers'))}>
+                                        <span className="px-1.5 py-0.5 rounded-full bg-cyan-600 text-white text-[10px] font-bold">
                                             {selectedCustomers.length}
                                         </span>
                                     )}
@@ -760,19 +802,16 @@ const CylinderRecoveries = () => {
 
                             <div className="relative">
                                 <button
-                                    onClick={() => {
-                                        if (activeDropdown !== 'warehouses') setFilterSearch('');
-                                        setActiveDropdown(activeDropdown === 'warehouses' ? null : 'warehouses');
-                                    }}
+                                    onClick={() => setActiveDropdown(activeDropdown === 'warehouses' ? null : 'warehouses')}
                                     className={clsx(
                                         "flex items-center gap-2.5 px-4 py-2 rounded-xl border text-[13px] font-bold transition-all bg-white shadow-sm",
                                         getFilterButtonClass('warehouses', activeDropdown === 'warehouses' || selectedWarehouses.length > 0)
                                     )}
                                 >
-                                    <MapPin size={14} className={getFilterIconClass('warehouses', activeDropdown === 'warehouses' || selectedWarehouses.length > 0)} />
+                                    <MapPin size={14} className="text-violet-600" />
                                     Kho nhận
                                     {selectedWarehouses.length > 0 && (
-                                        <span className={clsx('px-1.5 py-0.5 rounded-full text-[10px] font-bold', getFilterCountBadgeClass('warehouses'))}>
+                                        <span className="px-1.5 py-0.5 rounded-full bg-violet-600 text-white text-[10px] font-bold">
                                             {selectedWarehouses.length}
                                         </span>
                                     )}
@@ -801,6 +840,26 @@ const CylinderRecoveries = () => {
                                     <X size={14} />
                                     Xóa bộ lọc
                                 </button>
+                            )}
+
+                            {/* Desktop Bulk Actions */}
+                            {selectedIds.length > 0 && (
+                                <div className="flex items-center gap-2 ml-auto bg-muted/20 p-1 rounded-xl border border-border">
+                                    <button
+                                        onClick={handleBatchPrint}
+                                        className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white border border-border hover:bg-muted text-muted-foreground text-[11px] font-black transition-all shadow-sm active:scale-95"
+                                    >
+                                        <Printer size={14} />
+                                        In phiếu ({selectedIds.length})
+                                    </button>
+                                    <button
+                                        onClick={handleBulkDelete}
+                                        className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-rose-50 text-rose-600 text-[11px] font-black hover:bg-rose-100 transition-all active:scale-95"
+                                    >
+                                        <Trash2 size={14} />
+                                        Xóa ({selectedIds.length})
+                                    </button>
+                                </div>
                             )}
                         </div>
                     </div>
@@ -841,7 +900,7 @@ const CylinderRecoveries = () => {
                                             Đang tải dữ liệu...
                                         </td>
                                     </tr>
-                                ) : filteredRecoveries.length === 0 ? (
+                                ) : paginatedRecoveries.length === 0 ? (
                                     <tr>
                                         <td colSpan={visibleTableColumns.length + 2} className="px-4 py-20 text-center text-muted-foreground bg-muted/5 font-sans">
                                             <PackageCheck className="w-16 h-16 text-muted-foreground/20 mx-auto mb-4" />
@@ -849,7 +908,7 @@ const CylinderRecoveries = () => {
                                             <p className="text-sm">Hãy kiểm tra lại bộ lọc hoặc tạo phiếu mới</p>
                                         </td>
                                     </tr>
-                                ) : filteredRecoveries.map((recovery) => {
+                                ) : paginatedRecoveries.map((recovery) => {
                                     const status = RECOVERY_STATUSES.find(s => s.id === recovery.status) || RECOVERY_STATUSES[0];
                                     return (
                                         <tr key={recovery.id} className={getRowStyle(selectedIds.includes(recovery.id))}>
@@ -907,40 +966,40 @@ const CylinderRecoveries = () => {
                                                                 {recovery.driver_name || '—'}
                                                             </td>
                                                         );
-                                            case 'requested_quantity':
-                                                return (
-                                                    <td key={col.key} className="px-4 py-4">
-                                                        <span className="text-[13px] font-bold text-slate-500 flex items-center gap-1.5">
-                                                            <Package className="w-4 h-4 text-slate-400" />
-                                                            {recovery.requested_quantity || 0}
-                                                        </span>
-                                                    </td>
-                                                );
-                                            case 'total_items':
-                                                return (
-                                                    <td key={col.key} className="px-4 py-4">
-                                                        <span className="text-[13px] font-bold text-emerald-600 flex items-center gap-1.5">
-                                                            <PackageCheck className="w-4 h-4 text-emerald-500" />
-                                                            {recovery.total_items || 0}
-                                                        </span>
-                                                    </td>
-                                                );
-                                            case 'created_by':
-                                                return (
-                                                    <td key={col.key} className="px-4 py-4 text-[12px] text-muted-foreground font-medium truncate max-w-[120px]">
-                                                        {recovery.created_by || '—'}
-                                                    </td>
-                                                );
-                                            case 'status':
-                                                return (
-                                                    <td key={col.key} className="px-4 py-4">
-                                                        <span className={clsx(getStatusBadgeClass(status.color), "uppercase text-[10px] tracking-wider")}>
-                                                            {status.label}
-                                                        </span>
-                                                    </td>
-                                                );
-                                            default:
-                                                return <td key={col.key} className="px-4 py-4">—</td>;
+                                                    case 'requested_quantity':
+                                                        return (
+                                                            <td key={col.key} className="px-4 py-4">
+                                                                <span className="text-[13px] font-bold text-slate-500 flex items-center gap-1.5">
+                                                                    <Package className="w-4 h-4 text-slate-400" />
+                                                                    {recovery.requested_quantity || 0}
+                                                                </span>
+                                                            </td>
+                                                        );
+                                                    case 'total_items':
+                                                        return (
+                                                            <td key={col.key} className="px-4 py-4">
+                                                                <span className="text-[13px] font-bold text-emerald-600 flex items-center gap-1.5">
+                                                                    <PackageCheck className="w-4 h-4 text-emerald-500" />
+                                                                    {recovery.total_items || 0}
+                                                                </span>
+                                                            </td>
+                                                        );
+                                                    case 'created_by':
+                                                        return (
+                                                            <td key={col.key} className="px-4 py-4 text-[12px] text-muted-foreground font-medium truncate max-w-[120px]">
+                                                                {recovery.created_by || '—'}
+                                                            </td>
+                                                        );
+                                                    case 'status':
+                                                        return (
+                                                            <td key={col.key} className="px-4 py-4">
+                                                                <span className={clsx(getStatusBadgeClass(status.color), "uppercase text-[10px] tracking-wider")}>
+                                                                    {status.label}
+                                                                </span>
+                                                            </td>
+                                                        );
+                                                    default:
+                                                        return <td key={col.key} className="px-4 py-4">—</td>;
                                                 }
                                             })}
                                             <td className="sticky right-0 z-20 bg-white group-hover:bg-blue-50/40 px-4 py-4 text-center shadow-[-6px_0_10px_-8px_rgba(15,23,42,0.25)] before:content-[''] before:absolute before:left-0 before:top-0 before:bottom-0 before:w-[3px] before:bg-slate-300">
@@ -994,21 +1053,45 @@ const CylinderRecoveries = () => {
                     {/* Footer / Pagination matching Orders.jsx */}
                     <div className="hidden md:flex px-4 py-4 border-t border-border items-center justify-between bg-muted/5">
                         <div className="flex items-center gap-3 text-[12px] text-muted-foreground font-medium font-sans">
-                            <span>{filteredRecoveries.length > 0 ? `1–${filteredRecoveries.length}` : '0'}/Tổng {filteredRecoveries.length}</span>
+                            <span>
+                                {totalRecords > 0 ? `${(currentPage - 1) * pageSize + 1}–${Math.min(currentPage * pageSize, totalRecords)}` : '0'} / Tổng {totalRecords}
+                            </span>
                         </div>
                         <div className="flex items-center gap-1">
-                            <button className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors disabled:opacity-20" disabled>
+                            <button 
+                                onClick={() => setCurrentPage(1)}
+                                className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors disabled:opacity-20" 
+                                disabled={currentPage === 1}
+                                title="Trang đầu"
+                            >
                                 <ChevronLeft size={16} />
                                 <ChevronLeft size={16} className="-ml-2.5" />
                             </button>
-                            <button className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors disabled:opacity-20" disabled>
+                            <button 
+                                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                                className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors disabled:opacity-20" 
+                                disabled={currentPage === 1}
+                                title="Trang trước"
+                            >
                                 <ChevronLeft size={16} />
                             </button>
-                            <div className="w-8 h-8 rounded-lg bg-primary text-white flex items-center justify-center text-[12px] font-bold shadow-md shadow-primary/25">1</div>
-                            <button className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors disabled:opacity-20" disabled>
+                            <div className="w-8 h-8 rounded-lg bg-primary text-white flex items-center justify-center text-[12px] font-bold shadow-md shadow-primary/25">
+                                {currentPage}
+                            </div>
+                            <button 
+                                onClick={() => setCurrentPage(prev => Math.min(Math.ceil(totalRecords / pageSize), prev + 1))}
+                                className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors disabled:opacity-20" 
+                                disabled={currentPage >= Math.ceil(totalRecords / pageSize) || totalRecords === 0}
+                                title="Trang sau"
+                            >
                                 <ChevronRight size={16} />
                             </button>
-                            <button className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors disabled:opacity-20" disabled>
+                            <button 
+                                onClick={() => setCurrentPage(Math.max(1, Math.ceil(totalRecords / pageSize)))}
+                                className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors disabled:opacity-20" 
+                                disabled={currentPage >= Math.ceil(totalRecords / pageSize) || totalRecords === 0}
+                                title="Trang cuối"
+                            >
                                 <ChevronRight size={16} />
                                 <ChevronRight size={16} className="-ml-2.5" />
                             </button>
@@ -1018,17 +1101,17 @@ const CylinderRecoveries = () => {
             )}
 
             {activeView === 'stats' && (
-                <div className="bg-white rounded-2xl border border-border shadow-sm flex flex-col w-full animate-in fade-in slide-in-from-bottom-4 duration-500 overflow-hidden">
-                    <div className="space-y-0 flex flex-col">
+                <div className="flex-1 flex flex-col gap-6 min-h-0">
+                    <div className="bg-white rounded-2xl border border-border shadow-sm flex flex-col w-full animate-in fade-in slide-in-from-bottom-4 duration-500 overflow-hidden">
                         {/* Mobile Header */}
                         <div className="md:hidden flex items-center gap-2 p-3 border-b border-border bg-white">
                             <button
-                                onClick={() => setActiveView('list')}
-                                className="p-2 rounded-xl border border-border bg-white text-muted-foreground shrink-0"
+                                onClick={() => navigate(-1)}
+                                className="p-2 -ml-1 text-muted-foreground hover:text-foreground transition-colors"
                             >
-                                <ChevronLeft size={18} />
+                                <ChevronLeft size={20} />
                             </button>
-                            <h2 className="text-base font-bold text-foreground flex-1 text-center font-sans tracking-tight">Thống kê dữ liệu</h2>
+                            <h2 className="text-base font-bold text-foreground flex-1 text-center font-sans tracking-tight pr-8">Thống kê dữ liệu</h2>
                             <button
                                 onClick={openMobileFilter}
                                 className={clsx(
@@ -1045,32 +1128,28 @@ const CylinderRecoveries = () => {
                             </button>
                         </div>
 
-                        {/* Desktop Header */}
+                        {/* Desktop Stats Toolbar */}
                         <div className="hidden md:block p-4 border-b border-border bg-muted/5" ref={statsDropdownRef}>
                             <div className="flex flex-wrap items-center gap-2">
                                 <button
-                                    onClick={() => setActiveView('list')}
-                                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-border hover:bg-white text-muted-foreground text-[12px] font-bold transition-all bg-muted/10 shadow-sm shrink-0"
+                                    onClick={() => navigate(-1)}
+                                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-border hover:bg-white text-muted-foreground text-[12px] font-bold transition-all bg-white shadow-sm shrink-0"
                                 >
                                     <ChevronLeft size={16} />
                                     Quay lại
                                 </button>
-
                                 <div className="relative">
                                     <button
-                                        onClick={() => {
-                                            if (activeDropdown !== 'status') setFilterSearch('');
-                                            setActiveDropdown(activeDropdown === 'status' ? null : 'status');
-                                        }}
+                                        onClick={() => setActiveDropdown(activeDropdown === 'status' ? null : 'status')}
                                         className={clsx(
                                             "flex items-center gap-2.5 px-4 py-2 rounded-xl border text-[13px] font-bold transition-all bg-white shadow-sm",
                                             getFilterButtonClass('status', activeDropdown === 'status' || selectedStatuses.length > 0)
                                         )}
                                     >
-                                        <Filter size={14} className={getFilterIconClass('status', activeDropdown === 'status' || selectedStatuses.length > 0)} />
+                                        <Filter size={14} className="text-primary" />
                                         Trạng thái
                                         {selectedStatuses.length > 0 && (
-                                            <span className={clsx('px-1.5 py-0.5 rounded-full text-[10px] font-bold', getFilterCountBadgeClass('status'))}>
+                                            <span className="px-1.5 py-0.5 rounded-full bg-primary text-white text-[10px] font-bold">
                                                 {selectedStatuses.length}
                                             </span>
                                         )}
@@ -1089,19 +1168,16 @@ const CylinderRecoveries = () => {
 
                                 <div className="relative">
                                     <button
-                                        onClick={() => {
-                                            if (activeDropdown !== 'customers') setFilterSearch('');
-                                            setActiveDropdown(activeDropdown === 'customers' ? null : 'customers');
-                                        }}
+                                        onClick={() => setActiveDropdown(activeDropdown === 'customers' ? null : 'customers')}
                                         className={clsx(
                                             "flex items-center gap-2.5 px-4 py-2 rounded-xl border text-[13px] font-bold transition-all bg-white shadow-sm",
                                             getFilterButtonClass('customers', activeDropdown === 'customers' || selectedCustomers.length > 0)
                                         )}
                                     >
-                                        <User size={14} className={getFilterIconClass('customers', activeDropdown === 'customers' || selectedCustomers.length > 0)} />
+                                        <User size={14} className="text-cyan-600" />
                                         Khách hàng
                                         {selectedCustomers.length > 0 && (
-                                            <span className={clsx('px-1.5 py-0.5 rounded-full text-[10px] font-bold', getFilterCountBadgeClass('customers'))}>
+                                            <span className="px-1.5 py-0.5 rounded-full bg-cyan-600 text-white text-[10px] font-bold">
                                                 {selectedCustomers.length}
                                             </span>
                                         )}
@@ -1120,19 +1196,16 @@ const CylinderRecoveries = () => {
 
                                 <div className="relative">
                                     <button
-                                        onClick={() => {
-                                            if (activeDropdown !== 'warehouses') setFilterSearch('');
-                                            setActiveDropdown(activeDropdown === 'warehouses' ? null : 'warehouses');
-                                        }}
+                                        onClick={() => setActiveDropdown(activeDropdown === 'warehouses' ? null : 'warehouses')}
                                         className={clsx(
                                             "flex items-center gap-2.5 px-4 py-2 rounded-xl border text-[13px] font-bold transition-all bg-white shadow-sm",
                                             getFilterButtonClass('warehouses', activeDropdown === 'warehouses' || selectedWarehouses.length > 0)
                                         )}
                                     >
-                                        <MapPin size={14} className={getFilterIconClass('warehouses', activeDropdown === 'warehouses' || selectedWarehouses.length > 0)} />
+                                        <MapPin size={14} className="text-violet-600" />
                                         Kho nhận
                                         {selectedWarehouses.length > 0 && (
-                                            <span className={clsx('px-1.5 py-0.5 rounded-full text-[10px] font-bold', getFilterCountBadgeClass('warehouses'))}>
+                                            <span className="px-1.5 py-0.5 rounded-full bg-violet-600 text-white text-[10px] font-bold">
                                                 {selectedWarehouses.length}
                                             </span>
                                         )}

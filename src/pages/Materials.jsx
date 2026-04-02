@@ -19,6 +19,7 @@ import {
     Edit,
     Filter,
     List,
+    MoreVertical,
     PackageOpen,
     Plus,
     Search,
@@ -32,6 +33,9 @@ import * as XLSX from 'xlsx';
 import { Bar as BarChartJS, Pie as PieChartJS } from 'react-chartjs-2';
 import { useNavigate } from 'react-router-dom';
 import { clsx } from 'clsx';
+import MobilePageHeader from '../components/layout/MobilePageHeader';
+import MobilePagination from '../components/layout/MobilePagination';
+import PageViewSwitcher from '../components/layout/PageViewSwitcher';
 import MaterialFormModal from '../components/Materials/MaterialFormModal';
 import ColumnPicker from '../components/ui/ColumnPicker';
 import FilterDropdown from '../components/ui/FilterDropdown';
@@ -62,6 +66,11 @@ const Materials = () => {
     const [isFormModalOpen, setIsFormModalOpen] = useState(false);
     const [selectedMaterial, setSelectedMaterial] = useState(null);
     const [selectedIds, setSelectedIds] = useState([]);
+    const [showMoreActions, setShowMoreActions] = useState(false);
+
+    // Pagination State
+    const [currentPage, setCurrentPage] = useState(1);
+    const [pageSize, setPageSize] = useState(50);
 
     const [selectedCategories, setSelectedCategories] = useState([]);
     const [pendingCategories, setPendingCategories] = useState([]);
@@ -112,10 +121,17 @@ const Materials = () => {
             if (columnPickerRef.current && !columnPickerRef.current.contains(event.target)) {
                 setShowColumnPicker(false);
             }
+            if (showMoreActions) {
+                const menu = document.getElementById('more-actions-menu-materials');
+                const btn = document.getElementById('more-actions-button-materials');
+                if (menu && !menu.contains(event.target) && btn && !btn.contains(event.target)) {
+                    setShowMoreActions(false);
+                }
+            }
         };
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
+    }, [showMoreActions]);
 
     useEffect(() => {
         localStorage.setItem('columns_materials', JSON.stringify(visibleColumns));
@@ -386,6 +402,7 @@ const Materials = () => {
     });
 
     const filteredMaterialsCount = filteredMaterials.length;
+    const paginatedMaterials = filteredMaterials.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
     const statsMaterials = selectedCategories.length === 0
         ? allMaterials
@@ -472,114 +489,106 @@ const Materials = () => {
 
     return (
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 w-full flex-1 flex flex-col mt-1 min-h-0 px-1 md:px-1.5">
-            <div className="flex items-center gap-1 mb-3 mt-1">
-                <button
-                    onClick={() => setActiveView('list')}
-                    className={clsx(
-                        'flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-bold transition-all',
-                        activeView === 'list'
-                            ? 'bg-white text-primary shadow-sm ring-1 ring-border'
-                            : 'text-muted-foreground hover:text-foreground'
-                    )}
-                >
-                    <List size={14} />
-                    Danh sách
-                </button>
-                <button
-                    onClick={() => setActiveView('stats')}
-                    className={clsx(
-                        'flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-bold transition-all',
-                        activeView === 'stats'
-                            ? 'bg-white text-primary shadow-sm ring-1 ring-border'
-                            : 'text-muted-foreground hover:text-foreground'
-                    )}
-                >
-                    <BarChart2 size={14} />
-                    Thống kê
-                </button>
-            </div>
+            <PageViewSwitcher
+                activeView={activeView}
+                setActiveView={setActiveView}
+                views={[
+                    { id: 'list', label: 'Danh sách', icon: <List size={16} /> },
+                    { id: 'stats', label: 'Thống kê', icon: <BarChart2 size={16} /> },
+                ]}
+            />
 
             {activeView === 'list' && (
                 <div className="bg-white rounded-2xl border border-border shadow-sm flex flex-col flex-1 min-h-0 w-full">
-                    <div className="md:hidden flex items-center gap-2 p-3 border-b border-border">
-                        <div className="flex items-center gap-2 shrink-0 pr-1">
-                            <input
-                                type="checkbox"
-                                checked={selectedIds.length === filteredMaterials.length && filteredMaterials.length > 0}
-                                onChange={toggleSelectAll}
-                                className="w-5 h-5 rounded-md border-border text-primary focus:ring-primary/20 transition-all cursor-pointer"
-                            />
-                        </div>
-                        <button
-                            onClick={() => navigate(-1)}
-                            className="p-2 rounded-xl border border-border bg-white text-muted-foreground shrink-0"
-                        >
-                            <ChevronLeft size={18} />
-                        </button>
-                        <div className="relative flex-1">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={15} />
-                            <input
-                                type="text"
-                                placeholder="Tìm kiếm . . ."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full pl-9 pr-8 py-2 bg-muted/20 border border-border/80 rounded-xl text-[13px] focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all font-medium"
-                            />
-                            {searchTerm && (
-                                <button onClick={() => setSearchTerm('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                                    <X size={14} />
+                    <MobilePageHeader
+                        searchTerm={searchTerm}
+                        setSearchTerm={setSearchTerm}
+                        searchPlaceholder="Tìm kiếm..."
+                        onFilterClick={openMobileFilter}
+                        hasActiveFilters={hasActiveFilters}
+                        totalActiveFilters={selectedCategories.length}
+                        actions={
+                            <>
+                                <div className="relative">
+                                    <button
+                                        id="more-actions-button-materials"
+                                        onClick={() => setShowMoreActions(!showMoreActions)}
+                                        className={clsx(
+                                            "p-2 rounded-xl border shrink-0 transition-all active:scale-95 shadow-sm",
+                                            showMoreActions ? "bg-slate-100 border-slate-300" : "bg-white border-slate-200 text-slate-600"
+                                        )}
+                                    >
+                                        <MoreVertical size={20} />
+                                    </button>
+                                    {showMoreActions && (
+                                        <div id="more-actions-menu-materials" className="absolute right-0 top-full mt-2 w-48 bg-white rounded-2xl shadow-xl border border-slate-100 py-2 z-[100] animate-in fade-in slide-in-from-top-2 duration-200 origin-top-right">
+                                            <div
+                                                role="button"
+                                                onClick={() => { downloadTemplate(); setShowMoreActions(false); }}
+                                                className="w-full flex items-center justify-start gap-4 px-4 py-2.5 text-[14px] font-bold text-slate-700 hover:bg-slate-50 transition-colors text-left cursor-pointer"
+                                            >
+                                                <div className="w-5 flex justify-center flex-shrink-0">
+                                                    <Download size={18} className="text-slate-400" />
+                                                </div>
+                                                Tải mẫu Excel
+                                            </div>
+                                            <label className="w-full flex items-center justify-start gap-4 px-4 py-2.5 text-[14px] font-bold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer text-left">
+                                                <div className="w-5 flex justify-center flex-shrink-0">
+                                                    <Upload size={18} className="text-slate-400" />
+                                                </div>
+                                                Nhập Excel
+                                                <input
+                                                    type="file"
+                                                    accept=".xlsx, .xls"
+                                                    onChange={(e) => { handleImportExcel(e); setShowMoreActions(false); }}
+                                                    className="hidden"
+                                                />
+                                            </label>
+                                        </div>
+                                    )}
+                                </div>
+                                <button
+                                    onClick={() => { setSelectedMaterial(null); setIsFormModalOpen(true); }}
+                                    className="p-2 rounded-xl bg-primary text-white shadow-lg shadow-primary/30 active:scale-95 transition-all"
+                                >
+                                    <Plus size={20} />
                                 </button>
-                            )}
-                        </div>
-                        <button
-                            onClick={downloadTemplate}
-                            className="p-2 rounded-xl border border-indigo-200 bg-indigo-50 text-indigo-700 shrink-0"
-                            title="Tải mẫu Excel"
-                        >
-                            <Download size={18} />
-                        </button>
-                        <div className="relative">
-                            <input
-                                type="file"
-                                accept=".xlsx, .xls"
-                                onChange={handleImportExcel}
-                                className="hidden"
-                                id="material-import-mobile"
-                            />
-                            <label
-                                htmlFor="material-import-mobile"
-                                className="p-2 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-700 flex items-center justify-center cursor-pointer shadow-sm transition-all"
-                                title="Import Excel"
-                            >
-                                <Upload size={18} />
-                            </label>
-                        </div>
-                        {selectedIds.length > 0 && (
-                            <button
-                                onClick={handleBulkDelete}
-                                className="p-2 rounded-xl bg-rose-50 text-rose-600 border border-rose-200 shrink-0 shadow-sm animate-in zoom-in-95 duration-200"
-                                title="Xóa các mục đã chọn"
-                            >
-                                <Trash2 size={18} />
-                            </button>
-                        )}
-                        <button
-                            onClick={() => {
-                                setSelectedMaterial(null);
-                                setIsFormModalOpen(true);
-                            }}
-                            className="p-2 rounded-xl bg-primary text-white shrink-0 shadow-md shadow-primary/20"
-                        >
-                            <Plus size={18} />
-                        </button>
-                    </div>
+                            </>
+                        }
+                        selectionBar={
+                            selectedIds.length > 0 ? (
+                                <div className="flex items-center justify-between px-1 mt-3 pt-3 border-t border-slate-100 animate-in slide-in-from-top-2 duration-300">
+                                    <span className="text-[13px] font-bold text-slate-600">
+                                        Đã chọn <span className="text-primary">{selectedIds.length}</span> vật tư
+                                    </span>
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            onClick={toggleSelectAll}
+                                            className="text-[12px] font-bold text-primary hover:underline px-2 py-1"
+                                        >
+                                            Bỏ chọn
+                                        </button>
+                                        <button
+                                            onClick={handleBulkDelete}
+                                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-50 text-rose-600 text-[12px] font-bold border border-rose-100"
+                                        >
+                                            <Trash2 size={14} /> Xóa tất cả
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : null
+                        }
+                    />
 
-                    <div className="p-3 border-b border-border md:hidden">
-                        <div className="relative w-full md:w-72">
+                    <div className="p-3 border-b border-border md:hidden bg-slate-50 border-t">
+                        <div className="relative w-full">
                             <select
                                 value={categoryFilter}
-                                onChange={(e) => setCategoryFilter(e.target.value)}
-                                className="w-full pl-4 pr-10 py-2.5 md:py-2 bg-white border border-border rounded-xl text-[13px] font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all appearance-none"
+                                onChange={(e) => {
+                                    setCategoryFilter(e.target.value);
+                                    setCurrentPage(1);
+                                }}
+                                className="w-full pl-4 pr-10 py-2.5 bg-white border border-border rounded-xl text-[13px] font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all appearance-none shadow-sm"
                             >
                                 {MATERIAL_CATEGORIES.map(category => (
                                     <option key={category.id} value={category.id}>{category.label}</option>
@@ -595,7 +604,7 @@ const Materials = () => {
                         ) : filteredMaterials.length === 0 ? (
                             <div className="py-16 text-center text-[13px] text-muted-foreground italic">Không tìm thấy kết quả phù hợp</div>
                         ) : (
-                            filteredMaterials.map((material) => (
+                            paginatedMaterials.map((material) => (
                                 <div key={material.id} className={clsx(
                                     "rounded-2xl border shadow-sm p-4 transition-all duration-200",
                                     selectedIds.includes(material.id) 
@@ -644,6 +653,17 @@ const Materials = () => {
                         )}
                     </div>
 
+                    {/* Sticky Mobile Pagination */}
+                    {!isLoading && (
+                        <MobilePagination
+                            currentPage={currentPage}
+                            setCurrentPage={setCurrentPage}
+                            pageSize={pageSize}
+                            setPageSize={setPageSize}
+                            totalRecords={filteredMaterialsCount}
+                        />
+                    )}
+
                     <div className="hidden md:block p-4 border-b border-border">
                         <div className="flex items-start justify-between gap-4">
                             <div className="flex-1 space-y-2.5">
@@ -689,7 +709,7 @@ const Materials = () => {
                                     <button
                                         onClick={() => setShowColumnPicker(prev => !prev)}
                                         className={clsx(
-                                            'flex items-center gap-2 px-4 py-1.5 rounded-xl border text-[13px] font-bold transition-all bg-white shadow-sm',
+                                            'flex items-center gap-2 px-4 h-10 rounded-lg border text-[13px] font-bold transition-all bg-white shadow-sm',
                                             showColumnPicker
                                                 ? 'border-primary bg-primary/5 text-primary'
                                                 : 'border-border text-muted-foreground hover:bg-muted/20'
@@ -725,7 +745,7 @@ const Materials = () => {
                                         setSelectedMaterial(null);
                                         setIsFormModalOpen(true);
                                     }}
-                                    className="flex items-center gap-2 px-6 py-1.5 rounded-xl bg-primary text-white text-[13px] font-bold hover:bg-primary/90 shadow-md shadow-primary/20 transition-all"
+                                    className="flex items-center gap-2 px-6 h-10 rounded-lg bg-primary text-white text-[13px] font-bold hover:bg-primary/90 shadow-md shadow-primary/20 transition-all active:scale-95"
                                 >
                                     <Plus size={18} />
                                     Thêm
@@ -734,7 +754,7 @@ const Materials = () => {
                                 {selectedIds.length > 0 && (
                                     <button
                                         onClick={handleBulkDelete}
-                                        className="flex items-center gap-2 px-4 py-1.5 rounded-xl border border-rose-200 bg-rose-50 text-rose-600 text-[13px] font-bold hover:bg-rose-100 shadow-sm transition-all animate-in slide-in-from-right-4"
+                                        className="flex items-center gap-2 px-4 h-10 rounded-lg border border-rose-200 bg-rose-50 text-rose-600 text-[13px] font-bold hover:bg-rose-100 shadow-sm transition-all active:scale-95 animate-in slide-in-from-right-4"
                                     >
                                         <Trash2 size={16} />
                                         Xóa ({selectedIds.length})
@@ -743,7 +763,7 @@ const Materials = () => {
 
                                 <button
                                     onClick={downloadTemplate}
-                                    className="flex items-center gap-2 px-4 py-1.5 rounded-xl border border-indigo-200 bg-indigo-50 text-indigo-700 text-[13px] font-bold hover:bg-indigo-100 shadow-sm transition-all"
+                                    className="flex items-center gap-2 px-4 h-10 rounded-lg border border-indigo-200 bg-indigo-50 text-indigo-700 text-[13px] font-bold hover:bg-indigo-100 shadow-sm transition-all active:scale-95"
                                     title="Tải file Excel mẫu"
                                 >
                                     <Download size={16} />
@@ -760,7 +780,7 @@ const Materials = () => {
                                     />
                                     <label
                                         htmlFor="excel-import"
-                                        className="flex items-center gap-2 px-4 py-1.5 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-700 text-[13px] font-bold hover:bg-emerald-100 cursor-pointer shadow-sm transition-all"
+                                        className="flex items-center gap-2 px-4 h-10 rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 text-[13px] font-bold hover:bg-emerald-100 shadow-sm transition-all cursor-pointer select-none active:scale-95"
                                         title="Import dữ liệu từ file Excel"
                                     >
                                         <Upload size={16} />
@@ -888,17 +908,11 @@ const Materials = () => {
                             <h2 className="text-base font-bold text-foreground flex-1 text-center">Thống kê</h2>
                             <button
                                 onClick={openMobileFilter}
-                                className={clsx(
-                                    'relative p-2 rounded-xl border shrink-0 transition-all',
-                                    hasActiveFilters ? getFilterButtonClass('categories', true) : getFilterButtonClass('categories', false),
-                                )}
+                                className="relative p-2 rounded-xl border border-border bg-white text-muted-foreground shrink-0 shadow-sm transition-all"
                             >
-                                <Filter size={18} className={getFilterIconClass('categories', hasActiveFilters)} />
+                                <Filter size={18} />
                                 {hasActiveFilters && (
-                                    <span className={clsx(
-                                        'absolute -top-1 -right-1 w-4 h-4 rounded-full text-[9px] font-bold flex items-center justify-center',
-                                        getFilterCountBadgeClass('categories')
-                                    )}>
+                                    <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full text-[9px] font-bold flex items-center justify-center bg-primary text-white">
                                         {selectedCategories.length}
                                     </span>
                                 )}

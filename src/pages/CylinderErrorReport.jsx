@@ -39,6 +39,9 @@ import { exportCylinderErrorReport } from '../utils/exportExcel';
 import FilterDropdown from '../components/ui/FilterDropdown';
 import MobileFilterSheet from '../components/ui/MobileFilterSheet';
 import ColumnPicker from '../components/ui/ColumnPicker';
+import MobilePageHeader from '../components/layout/MobilePageHeader';
+import MobilePagination from '../components/layout/MobilePagination';
+import PageViewSwitcher from '../components/layout/PageViewSwitcher';
 
 // Register Chart.js components
 ChartJS.register(
@@ -71,6 +74,10 @@ const CylinderErrorReport = () => {
   const [data, setData] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedIds, setSelectedIds] = useState([]);
+
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(50);
 
   // Filters
   const [selectedWarehouses, setSelectedWarehouses] = useState([]);
@@ -129,7 +136,8 @@ const CylinderErrorReport = () => {
   // Mobile filter sheet state
   const [showMobileFilter, setShowMobileFilter] = useState(false);
   const [mobileFilterClosing, setMobileFilterClosing] = useState(false);
-  const [pendingWarehouses, setPendingWarehouses] = useState([]);
+  const [pendingWarehouses, setPendingWarehouses] = useState(selectedWarehouses);
+  const [pendingDateRange, setPendingDateRange] = useState(dateRange);
 
   useEffect(() => {
     loadFilterOptions();
@@ -177,6 +185,8 @@ const CylinderErrorReport = () => {
     item.ly_do_loi?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const paginatedData = filteredData.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
   const formatNumber = (num) => {
     if (!num) return '0';
     return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
@@ -206,8 +216,16 @@ const CylinderErrorReport = () => {
   };
 
   // Mobile filter handlers
-  const openMobileFilter = () => { setPendingWarehouses(selectedWarehouses); setShowMobileFilter(true); };
-  const applyMobileFilter = () => { setSelectedWarehouses(pendingWarehouses); closeMobileFilter(); };
+  const openMobileFilter = () => { 
+    setPendingWarehouses(selectedWarehouses); 
+    setPendingDateRange(dateRange);
+    setShowMobileFilter(true); 
+  };
+  const applyMobileFilter = () => { 
+    setSelectedWarehouses(pendingWarehouses); 
+    setDateRange(pendingDateRange);
+    closeMobileFilter(); 
+  };
   const closeMobileFilter = () => { setMobileFilterClosing(true); setTimeout(() => { setShowMobileFilter(false); setMobileFilterClosing(false); }, 280); };
 
   // Stats calculations
@@ -259,52 +277,66 @@ const CylinderErrorReport = () => {
   const totalActiveFilters = selectedWarehouses.length + (dateRange.start_date ? 1 : 0) + (dateRange.end_date ? 1 : 0);
 
   const filterSections = useMemo(() => [
-    { id: 'warehouses', label: 'Kho quản lý', icon: <MapPin size={16} />, options: warehouseOptions, selectedValues: pendingWarehouses, onSelectionChange: setPendingWarehouses }
-  ], [warehouseOptions, pendingWarehouses]);
+    { 
+      id: 'dateRange', 
+      label: 'Thời gian', 
+      icon: <Calendar size={16} />, 
+      type: 'dateRange',
+      value: pendingDateRange,
+      onValueChange: setPendingDateRange,
+      selectedValues: (pendingDateRange.start_date || pendingDateRange.end_date) ? [1] : [] // To show badge in MobileFilterSheet
+    },
+    { 
+      id: 'warehouses', 
+      label: 'Kho quản lý', 
+      icon: <MapPin size={16} />, 
+      options: warehouseOptions, 
+      selectedValues: pendingWarehouses, 
+      onSelectionChange: setPendingWarehouses 
+    }
+  ], [warehouseOptions, pendingWarehouses, pendingDateRange]);
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 w-full flex-1 flex flex-col mt-1 min-h-0 px-1 md:px-1.5 font-sans">
-      {/* Top Tabs */}
-      <div className="flex items-center gap-1 mb-3 mt-1">
-        <button 
-          onClick={() => setActiveView('list')} 
-          className={clsx(
-            "flex items-center gap-2 px-4 py-2 rounded-xl text-[13px] font-bold transition-all", 
-            activeView === 'list' ? "bg-white text-primary shadow-sm ring-1 ring-primary/20" : "text-muted-foreground hover:text-foreground"
-          )}
-        >
-          <List size={14} /> Danh sách
-        </button>
-        <button 
-          onClick={() => setActiveView('stats')} 
-          className={clsx(
-            "flex items-center gap-2 px-4 py-2 rounded-xl text-[13px] font-bold transition-all", 
-            activeView === 'stats' ? "bg-white text-primary shadow-sm ring-1 ring-primary/20" : "text-muted-foreground hover:text-foreground"
-          )}
-        >
-          <BarChart2 size={14} /> Thống kê
-        </button>
-      </div>
+      <PageViewSwitcher
+        activeView={activeView}
+        setActiveView={setActiveView}
+        views={[
+          { id: 'list', label: 'Danh sách', icon: <List size={16} /> },
+          { id: 'stats', label: 'Thống kê', icon: <BarChart2 size={16} /> },
+        ]}
+      />
 
       {activeView === 'list' && (
         <div className="bg-white rounded-xl border border-border shadow-sm flex flex-col flex-1 min-h-0 w-full overflow-hidden">
           {/* MOBILE TOOLBAR */}
-          <div className="md:hidden flex items-center gap-2 p-3 border-b border-border bg-white">
-            <button onClick={() => navigate(-1)} className="p-2 rounded-lg border border-border bg-white text-muted-foreground shrink-0"><ChevronLeft size={18} /></button>
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={15} />
-              <input 
-                type="text" 
-                placeholder="Tìm mã bình, KH..." 
-                value={searchTerm} 
-                onChange={(e) => setSearchTerm(e.target.value)} 
-                className="w-full pl-9 pr-8 py-2 bg-muted/20 border border-border rounded-lg text-[13px] focus:outline-none focus:ring-1 focus:ring-primary transition-all font-medium" 
-              />
-              {searchTerm && <button onClick={() => setSearchTerm('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"><X size={14} /></button>}
-            </div>
-            <button onClick={openMobileFilter} className={clsx('relative p-2 rounded-lg border shrink-0 transition-all', hasActiveFilters ? 'border-primary bg-primary/5 text-primary' : 'border-border bg-white text-muted-foreground')}><Filter size={18} />{hasActiveFilters && <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-primary text-white text-[9px] font-bold flex items-center justify-center">{totalActiveFilters}</span>}</button>
-            <button onClick={handleExport} className="p-2 rounded-lg bg-emerald-600 text-white shrink-0"><Download size={18} /></button>
-          </div>
+          <MobilePageHeader
+              searchTerm={searchTerm}
+              setSearchTerm={setSearchTerm}
+              searchPlaceholder="Tìm mã bình, KH..."
+              onFilterClick={openMobileFilter}
+              hasActiveFilters={hasActiveFilters}
+              totalActiveFilters={totalActiveFilters}
+              actions={
+                  <button onClick={handleExport} className="p-2 rounded-xl bg-emerald-600 text-white shrink-0 shadow-md shadow-emerald-600/20 active:scale-95 transition-all">
+                      <Download size={20} />
+                  </button>
+              }
+              selectionBar={
+                  selectedIds.length > 0 ? (
+                      <div className="flex items-center justify-between px-1 mt-3 pt-3 border-t border-slate-100 animate-in slide-in-from-top-2 duration-300">
+                          <span className="text-[13px] font-bold text-slate-600">
+                              Đã chọn <span className="text-primary">{selectedIds.length}</span> bình lỗi
+                          </span>
+                          <div className="flex items-center gap-2">
+                              <button onClick={toggleSelectAll} className="text-[12px] font-bold text-primary hover:underline px-2 py-1">
+                                  Bỏ chọn
+                              </button>
+                          </div>
+                      </div>
+                  ) : null
+              }
+          />
 
           {/* DESKTOP TOOLBAR */}
           <div className="hidden md:block p-3 space-y-3 bg-white border-b border-border">
@@ -400,12 +432,14 @@ const CylinderErrorReport = () => {
               <tbody className="divide-y divide-border">
                 {loading ? (
                   <tr><td colSpan={visibleTableColumns.length + 1} className="px-4 py-20"><div className="flex flex-col items-center justify-center text-muted-foreground animate-pulse font-medium"><Clock className="w-8 h-8 mb-2 animate-spin text-primary/40" /> Đang tải dữ liệu báo cáo...</div></td></tr>
-                ) : filteredData.length === 0 ? (
+                ) : paginatedData.length === 0 ? (
                   <tr><td colSpan={visibleTableColumns.length + 1} className="px-4 py-20"><div className="flex flex-col items-center justify-center text-muted-foreground italic gap-2"><History size={40} className="opacity-20" /> Không tìm thấy bình lỗi nào</div></td></tr>
                 ) : (
-                  filteredData.map((item, index) => (
-                    <tr key={index} className={clsx("group transition-colors hover:bg-slate-50", selectedIds.includes(index) && "bg-primary/5")}>
-                      <td className="px-4 py-3 sticky left-0 bg-white group-hover:bg-slate-50 z-10"><div className="flex items-center justify-center"><input type="checkbox" className="w-4 h-4 rounded border-border text-primary focus:ring-primary/20" checked={selectedIds.includes(index)} onChange={() => toggleSelect(index)} /></div></td>
+                  paginatedData.map((item, index) => {
+                    const globalIndex = (currentPage - 1) * pageSize + index;
+                    return (
+                    <tr key={globalIndex} className={clsx("group transition-colors hover:bg-slate-50", selectedIds.includes(globalIndex) && "bg-primary/5")}>
+                      <td className="px-4 py-3 sticky left-0 bg-white group-hover:bg-slate-50 z-10"><div className="flex items-center justify-center"><input type="checkbox" className="w-4 h-4 rounded border-border text-primary focus:ring-primary/20" checked={selectedIds.includes(globalIndex)} onChange={() => toggleSelect(globalIndex)} /></div></td>
                       {columnOrder.filter(isColumnVisible).map(colKey => {
                         if (colKey === 'ma_binh') return <td key={colKey} className="px-4 py-3"><span className="text-[13px] font-bold text-primary">{item.ma_binh}</span></td>;
                         if (colKey === 'ly_do_loi') return <td key={colKey} className="px-4 py-3"><span className="text-[13px] text-foreground inline-block max-w-[200px] truncate">{item.ly_do_loi || '-'}</span></td>;
@@ -422,77 +456,146 @@ const CylinderErrorReport = () => {
                         return null;
                       })}
                     </tr>
-                  ))
+                    );
+                  })
                 )}
               </tbody>
             </table>
           </div>
 
           {/* MOBILE LIST */}
-          <div className="md:hidden flex-1 overflow-y-auto p-3 flex flex-col gap-3 bg-muted/5">
+          <div className="md:hidden flex-1 overflow-y-auto p-3 pb-4 flex flex-col gap-3">
             {loading ? (
               <div className="py-20 text-center italic text-muted-foreground animate-pulse">Đang tải dữ liệu...</div>
-            ) : filteredData.length === 0 ? (
+            ) : paginatedData.length === 0 ? (
               <div className="py-20 text-center italic text-muted-foreground flex flex-col items-center gap-2">
                 <AlertTriangle size={32} className="text-amber-500 opacity-50" />
                 <span>Không có dữ liệu phù hợp</span>
               </div>
             ) : (
-              filteredData.map((item, index) => (
-                <div key={index} className="bg-white border border-border rounded-xl p-4 shadow-sm relative overflow-hidden">
-                  <div className={clsx("absolute top-0 left-0 w-1.5 h-full", item.ngay_sua_xong ? "bg-emerald-500" : item.so_ngay_chua_sua > 7 ? "bg-red-500" : "bg-amber-500")}></div>
-                  <div className="flex justify-between items-start mb-2 ml-2">
-                    <div className="flex items-center gap-2">
-                      <input type="checkbox" className="w-4 h-4 rounded border-border text-primary" checked={selectedIds.includes(index)} onChange={() => toggleSelect(index)} />
-                      <span className="text-[14px] font-bold text-primary flex items-center gap-1"><Hash size={14} />{item.ma_binh}</span>
+              paginatedData.map((item, index) => {
+                const globalIndex = (currentPage - 1) * pageSize + index;
+                return (
+                  <div key={globalIndex} className={clsx(
+                      "rounded-2xl border shadow-sm p-4 transition-all duration-200 relative overflow-hidden",
+                      selectedIds.includes(globalIndex)
+                          ? "border-primary bg-primary/[0.05] ring-1 ring-primary/20"
+                          : "border-primary/15 bg-white"
+                  )}>
+                    <div className={clsx("absolute top-0 left-0 w-1.5 h-full", item.ngay_sua_xong ? "bg-emerald-500" : item.so_ngay_chua_sua > 7 ? "bg-red-500" : "bg-amber-500")}></div>
+                    <div className="flex items-start justify-between gap-2 mb-2 ml-2">
+                        <div className="flex gap-3">
+                            <div className="pt-1">
+                                <input 
+                                    type="checkbox" 
+                                    className="w-5 h-5 rounded-md border-border text-primary focus:ring-primary/20 transition-all cursor-pointer" 
+                                    checked={selectedIds.includes(globalIndex)} 
+                                    onChange={() => toggleSelect(globalIndex)} 
+                                />
+                            </div>
+                            <div>
+                                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">#{globalIndex + 1}</p>
+                                <h3 className="text-[14px] font-bold text-foreground leading-tight mt-0.5 flex items-center gap-1 font-mono"><Hash size={14} className="text-muted-foreground" />{item.ma_binh}</h3>
+                            </div>
+                        </div>
+                        <span className={clsx('inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border', getStatusBadgeClass(item))}>
+                            {item.so_ngay_chua_sua} ngày
+                        </span>
                     </div>
-                    <span className={clsx("px-2 py-0.5 rounded text-[10px] font-bold border", getStatusBadgeClass(item))}>
-                      {item.so_ngay_chua_sua} ngày
-                    </span>
-                  </div>
-                  <div className="ml-2 space-y-2">
-                    <p className="text-[13px] font-bold text-foreground line-clamp-2">{item.ly_do_loi || 'Không có lý do'}</p>
-                    <div className="flex items-center justify-between pt-2 border-t border-border/50 text-[12px] text-muted-foreground">
-                      <span className="flex items-center gap-1 font-medium italic">{item.khach_hang || 'Vô danh'}</span>
-                      <span className="flex items-center gap-1"><Calendar size={12} />{item.ngay_phat_hien_loi}</span>
+
+                    <div className="ml-2 space-y-2 mt-3">
+                      <div className="bg-red-50/50 p-2.5 rounded-xl border border-red-100/50">
+                        <p className="text-[13px] font-bold text-red-700/80 leading-relaxed max-w-full overflow-hidden text-ellipsis">{item.ly_do_loi || 'Không có lý do'}</p>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 mt-2">
+                        <div className="bg-slate-50 p-2 rounded-lg border border-slate-100 flex flex-col justify-center">
+                          <p className="text-[9px] uppercase tracking-wider text-muted-foreground mb-0.5 flex items-center gap-1"><History size={10} /> Ngày phát hiện</p>
+                          <p className="text-[11px] font-bold text-slate-700">{item.ngay_phat_hien_loi}</p>
+                        </div>
+                        <div className="bg-slate-50 p-2 rounded-lg border border-slate-100 flex flex-col justify-center">
+                          <p className="text-[9px] uppercase tracking-wider text-muted-foreground mb-0.5 flex items-center gap-1"><CheckCircle2 size={10} /> Ngày sửa xong</p>
+                          <p className={clsx("text-[11px] font-bold", item.ngay_sua_xong ? "text-emerald-600" : "text-muted-foreground")}>{item.ngay_sua_xong || 'Chưa sửa'}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 pt-2 text-[12px] text-muted-foreground border-t border-border/40">
+                        <Calendar size={13} className="text-primary/70" />
+                        <span className="font-bold flex-1">{item.khach_hang || 'Vô danh'}</span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
 
-          {/* FOOTER */}
-          <div className="px-4 py-3 border-t border-border flex items-center justify-between bg-muted/5">
-            <span className="text-[12px] text-muted-foreground font-medium">Hiển thị {filteredData.length} kết quả</span>
+          {/* Sticky Mobile Pagination */}
+          {!loading && (
+              <MobilePagination
+                  currentPage={currentPage}
+                  setCurrentPage={setCurrentPage}
+                  pageSize={pageSize}
+                  setPageSize={setPageSize}
+                  totalRecords={filteredData.length}
+              />
+          )}
+
+          {/* FOOTER Desktop*/}
+          <div className="hidden md:flex px-4 py-4 border-t border-border items-center justify-between bg-muted/5">
+            <div className="flex items-center gap-3 text-[12px] text-muted-foreground font-medium">
+              <span>{filteredData.length > 0 ? `${(currentPage - 1) * pageSize + 1}–${Math.min(currentPage * pageSize, filteredData.length)}` : '0'} / Tổng {filteredData.length}</span>
+            </div>
             <div className="flex items-center gap-1">
-              <button className="p-1.5 rounded-lg text-muted-foreground opacity-30 cursor-not-allowed" disabled><ChevronLeft size={16} /></button>
-              <div className="px-2.5 py-1 rounded-lg bg-primary text-white text-[12px] font-bold shadow-sm">1</div>
-              <button className="p-1.5 rounded-lg text-muted-foreground opacity-30 cursor-not-allowed" disabled><ChevronRight size={16} /></button>
+              <button onClick={() => setCurrentPage(1)} className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors disabled:opacity-20" disabled={currentPage === 1} title="Trang đầu">
+                <ChevronLeft size={16} />
+                <ChevronLeft size={16} className="-ml-2.5" />
+              </button>
+              <button onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))} className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors disabled:opacity-20" disabled={currentPage === 1} title="Trang trước">
+                <ChevronLeft size={16} />
+              </button>
+              <div className="w-8 h-8 rounded-lg bg-primary text-white flex items-center justify-center text-[12px] font-bold shadow-md shadow-primary/25">
+                {currentPage}
+              </div>
+              <button onClick={() => setCurrentPage(prev => Math.min(Math.ceil(filteredData.length / pageSize), prev + 1))} className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors disabled:opacity-20" disabled={currentPage >= Math.ceil(filteredData.length / pageSize)} title="Trang sau">
+                <ChevronRight size={16} />
+              </button>
+              <button onClick={() => setCurrentPage(Math.ceil(filteredData.length / pageSize))} className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors disabled:opacity-20" disabled={currentPage >= Math.ceil(filteredData.length / pageSize)} title="Trang cuối">
+                <ChevronRight size={16} />
+                <ChevronRight size={16} className="-ml-2.5" />
+              </button>
             </div>
           </div>
         </div>
       )}
 
       {activeView === 'stats' && (
-        <div className="bg-white rounded-xl border border-border shadow-sm flex flex-col w-full overflow-hidden">
-          {/* Stats Toolbar */}
-          <div className="p-4 border-b border-border bg-white" ref={statsDropdownRef}>
-            <div className="flex flex-wrap items-center gap-3">
-              <button onClick={() => navigate(-1)} className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-border hover:bg-muted text-muted-foreground text-[12px] font-bold transition-all bg-white shadow-sm shrink-0"><ChevronLeft size={16} /> Quay lại</button>
-              <div className="relative">
-                <button onClick={() => { setActiveDropdown(activeDropdown === 'warehouses_stats' ? null : 'warehouses_stats'); setFilterSearch(''); }} className={clsx("flex items-center gap-2.5 px-3 py-1.5 rounded-lg border text-[13px] font-bold transition-all", getFilterButtonClass('warehouses', selectedWarehouses.length > 0))}>
-                  <MapPin size={14} className="text-primary" /> {selectedWarehouses.length > 0 ? `Kho (${selectedWarehouses.length})` : 'Tất cả kho'} <ChevronDown size={14} className={clsx("transition-transform", activeDropdown === 'warehouses_stats' ? "rotate-180" : "")} />
-                </button>
-                {activeDropdown === 'warehouses_stats' && <FilterDropdown options={warehouseOptions} selected={selectedWarehouses} setSelected={setSelectedWarehouses} filterSearch={filterSearch} setFilterSearch={setFilterSearch} />}
+        <div className="bg-white rounded-2xl border border-border shadow-sm flex flex-col w-full">
+          {/* Header Parity with List View */}
+          <div className="space-y-0 text-left">
+            {/* Mobile Header */}
+            <div className="md:hidden flex items-center gap-2 p-3 border-b border-border">
+              <button onClick={() => navigate(-1)} className="p-2 rounded-xl border border-border bg-white text-muted-foreground shrink-0"><ChevronLeft size={18} /></button>
+              <h2 className="text-base font-bold text-foreground flex-1 text-center">Thống kê vỏ lỗi</h2>
+              <button onClick={openMobileFilter} className={clsx('relative p-2 rounded-xl border shrink-0 transition-all', hasActiveFilters ? 'border-primary bg-primary/5 text-primary' : 'border-border bg-white text-muted-foreground')}><Filter size={18} />{hasActiveFilters && <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-primary text-white text-[9px] font-bold flex items-center justify-center">{totalActiveFilters}</span>}</button>
+            </div>
+
+            {/* Desktop Header */}
+            <div className="hidden md:block p-4 border-b border-border" ref={statsDropdownRef}>
+              <div className="flex flex-wrap items-center gap-3">
+                <button onClick={() => navigate(-1)} className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-border hover:bg-muted text-muted-foreground text-[12px] font-bold transition-all bg-white shadow-sm shrink-0"><ChevronLeft size={16} /> Quay lại</button>
+                <div className="relative">
+                  <button onClick={() => { setActiveDropdown(activeDropdown === 'warehouses_stats' ? null : 'warehouses_stats'); setFilterSearch(''); }} className={clsx("flex items-center gap-2.5 px-3 py-1.5 rounded-lg border text-[13px] font-bold transition-all", getFilterButtonClass('warehouses', selectedWarehouses.length > 0))}>
+                    <MapPin size={14} className="text-primary" /> {selectedWarehouses.length > 0 ? `Kho (${selectedWarehouses.length})` : 'Tất cả kho'} <ChevronDown size={14} className={clsx("transition-transform", activeDropdown === 'warehouses_stats' ? "rotate-180" : "")} />
+                  </button>
+                  {activeDropdown === 'warehouses_stats' && <FilterDropdown options={warehouseOptions} selected={selectedWarehouses} setSelected={setSelectedWarehouses} filterSearch={filterSearch} setFilterSearch={setFilterSearch} />}
+                </div>
+                <div className="flex items-center gap-2 bg-muted/20 border border-border rounded-lg px-2 py-1">
+                  <Calendar size={14} className="text-primary" />
+                  <input type="date" value={dateRange.start_date} onChange={(e) => setDateRange(prev => ({ ...prev, start_date: e.target.value }))} className="bg-transparent text-[12px] focus:outline-none" />
+                  <span className="text-muted-foreground">-</span>
+                  <input type="date" value={dateRange.end_date} onChange={(e) => setDateRange(prev => ({ ...prev, end_date: e.target.value }))} className="bg-transparent text-[12px] focus:outline-none" />
+                </div>
+                {hasActiveFilters && <button onClick={() => { setSelectedWarehouses([]); setDateRange({ start_date: '', end_date: '' }); }} className="flex items-center gap-1.5 text-red-500 text-[12px] font-bold hover:bg-red-50 px-2 py-1 rounded-md"><X size={14} /> Xóa bộ lọc</button>}
               </div>
-              <div className="flex items-center gap-2 bg-muted/20 border border-border rounded-lg px-2 py-1">
-                <Calendar size={14} className="text-primary" />
-                <input type="date" value={dateRange.start_date} onChange={(e) => setDateRange(prev => ({ ...prev, start_date: e.target.value }))} className="bg-transparent text-[12px] focus:outline-none" />
-                <span className="text-muted-foreground">-</span>
-                <input type="date" value={dateRange.end_date} onChange={(e) => setDateRange(prev => ({ ...prev, end_date: e.target.value }))} className="bg-transparent text-[12px] focus:outline-none" />
-              </div>
-              {hasActiveFilters && <button onClick={() => { setSelectedWarehouses([]); setDateRange({ start_date: '', end_date: '' }); }} className="flex items-center gap-1.5 text-red-500 text-[12px] font-bold hover:bg-red-50 px-2 py-1 rounded-md"><X size={14} /> Xóa bộ lọc</button>}
             </div>
           </div>
 

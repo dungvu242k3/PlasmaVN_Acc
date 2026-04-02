@@ -33,6 +33,9 @@ import { useEffect, useRef, useState } from 'react';
 import { Bar as BarChartJS } from 'react-chartjs-2';
 import { useNavigate } from 'react-router-dom';
 import * as XLSX from 'xlsx';
+import MobilePageHeader from '../components/layout/MobilePageHeader';
+import MobilePagination from '../components/layout/MobilePagination';
+import PageViewSwitcher from '../components/layout/PageViewSwitcher';
 import SupplierDetailsModal from '../components/Suppliers/SupplierDetailsModal';
 import SupplierFormModal from '../components/Suppliers/SupplierFormModal';
 import ColumnPicker from '../components/ui/ColumnPicker';
@@ -69,6 +72,8 @@ const Suppliers = () => {
     const [isFormModalOpen, setIsFormModalOpen] = useState(false);
     const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
     const [selectedSupplier, setSelectedSupplier] = useState(null);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [pageSize, setPageSize] = useState(50);
     const columnPickerRef = useRef(null);
 
     const defaultColOrder = TABLE_COLUMNS_DEF.map(col => col.key);
@@ -98,8 +103,6 @@ const Suppliers = () => {
     });
     const [showColumnPicker, setShowColumnPicker] = useState(false);
     const [showMoreActions, setShowMoreActions] = useState(false);
-    const [isSearchExpanded, setIsSearchExpanded] = useState(false);
-    const searchInputRef = useRef(null);
     const [selectedIds, setSelectedIds] = useState([]);
     const visibleTableColumns = columnOrder
         .filter(key => visibleColumns.includes(key))
@@ -110,14 +113,13 @@ const Suppliers = () => {
     const totalCount = defaultColOrder.length;
 
     useEffect(() => {
-        if (isSearchExpanded && searchInputRef.current) {
-            searchInputRef.current.focus();
-        }
-    }, [isSearchExpanded]);
-
-    useEffect(() => {
         fetchSuppliers();
     }, []);
+
+    useEffect(() => {
+        // Reset to first page when search changes
+        setCurrentPage(1);
+    }, [searchTerm]);
 
     useEffect(() => {
         if (location.pathname === '/nha-cung-cap/tao') {
@@ -305,6 +307,7 @@ const Suppliers = () => {
     });
 
     const filteredSuppliersCount = filteredSuppliers.length;
+    const paginatedSuppliers = filteredSuppliers.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
     const handleDeleteSupplier = async (id, name) => {
         if (!window.confirm(`Bạn có chắc chắn muốn xóa đối tác "${name}" không? Dữ liệu liên quan có thể bị ảnh hưởng và không thể khôi phục.`)) {
@@ -371,119 +374,31 @@ const Suppliers = () => {
 
     return (
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 w-full flex-1 flex flex-col mt-1 min-h-0 px-1 md:px-1.5">
-            <div className="flex items-center gap-1 mb-3 mt-1">
-                <button
-                    onClick={() => setActiveView('list')}
-                    className={clsx(
-                        'flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-bold transition-all',
-                        activeView === 'list'
-                            ? 'bg-white text-primary shadow-sm ring-1 ring-border'
-                            : 'text-muted-foreground hover:text-foreground'
-                    )}
-                >
-                    <List size={14} />
-                    Danh sách
-                </button>
-                <button
-                    onClick={() => setActiveView('stats')}
-                    className={clsx(
-                        'flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-bold transition-all',
-                        activeView === 'stats'
-                            ? 'bg-white text-primary shadow-sm ring-1 ring-border'
-                            : 'text-muted-foreground hover:text-foreground'
-                    )}
-                >
-                    <BarChart2 size={14} />
-                    Thống kê
-                </button>
-            </div>
+            <PageViewSwitcher
+                activeView={activeView}
+                setActiveView={setActiveView}
+                views={[
+                    { id: 'list', label: 'Danh sách', icon: <List size={16} /> },
+                    { id: 'stats', label: 'Thống kê', icon: <BarChart2 size={16} /> },
+                ]}
+            />
 
             {activeView === 'list' && (
-                <div className="bg-white rounded-2xl border border-border shadow-sm flex flex-col flex-1 min-h-0 w-full">
-                    <div className="md:hidden flex flex-col p-3 border-b border-border bg-white sticky top-0 z-30 shadow-subtle">
-                        {/* Row 1: Back, Title, Plus */}
-                        <div className="flex items-center justify-between mb-3 gap-3">
-                            <div className="flex items-center gap-3">
-                                <button
-                                    onClick={() => navigate(-1)}
-                                    className="p-2.5 rounded-xl border border-border bg-white text-muted-foreground flex items-center justify-center shadow-sm active:scale-95 transition-all"
-                                >
-                                    <ChevronLeft size={20} />
-                                </button>
-                                <h1 className="text-lg font-black text-slate-900 tracking-tight">Nhà cung cấp</h1>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <button
-                                    onClick={() => {
-                                        setSelectedSupplier(null);
-                                        setIsFormModalOpen(true);
-                                    }}
-                                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary text-white text-[13px] font-black shadow-lg shadow-primary/20 active:scale-95 transition-all"
-                                >
-                                    <Plus size={18} />
-                                    <span>Tạo mới</span>
-                                </button>
-                            </div>
-                        </div>
+                <div className="bg-white rounded-2xl border border-border shadow-sm flex flex-col flex-1 min-h-0 w-full text-left">
 
-                        {/* Row 2: Selection, Search, More Actions */}
-                        <div className="flex items-center gap-2 min-h-[44px]">
-                            {!isSearchExpanded ? (
-                                <>
-                                    <div className="flex items-center gap-2 pr-1">
-                                        <input
-                                            type="checkbox"
-                                            checked={selectedIds.length === filteredSuppliers.length && filteredSuppliers.length > 0}
-                                            onChange={toggleSelectAll}
-                                            className="w-5 h-5 rounded-md border-border text-primary focus:ring-primary/20 transition-all cursor-pointer"
-                                        />
-                                    </div>
-                                    <div className="flex-1"></div>
-                                    <button
-                                        onClick={() => setIsSearchExpanded(true)}
-                                        className="p-2.5 rounded-xl border border-slate-200 bg-white text-slate-600 flex items-center justify-center shadow-sm active:scale-95 transition-all"
-                                    >
-                                        <Search size={20} />
-                                    </button>
-                                </>
-                            ) : (
-                                <div className="relative flex-1 group animate-in slide-in-from-right-2 duration-200">
-                                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-primary" size={16} />
-                                    <input
-                                        ref={searchInputRef}
-                                        type="text"
-                                        placeholder="Tìm tên, mã, số ĐT..."
-                                        value={searchTerm}
-                                        onChange={(e) => setSearchTerm(e.target.value)}
-                                        onBlur={() => { if (!searchTerm) setIsSearchExpanded(false); }}
-                                        className="w-full pl-10 pr-20 py-2.5 bg-white border-2 border-primary/30 rounded-xl text-[14px] text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all font-semibold shadow-sm"
-                                    />
-                                    <div className="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
-                                        {searchTerm && (
-                                            <button 
-                                                onClick={() => setSearchTerm('')} 
-                                                className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400 hover:text-rose-500 transition-all"
-                                            >
-                                                <X size={15} />
-                                            </button>
-                                        )}
-                                        <button 
-                                            onClick={() => setIsSearchExpanded(false)} 
-                                            className="px-2 py-1 text-[12px] font-black text-primary hover:bg-primary/5 rounded-lg transition-all"
-                                        >
-                                            Đóng
-                                        </button>
-                                    </div>
-                                </div>
-                            )}
 
-                            {!isSearchExpanded && (
+                    <MobilePageHeader
+                        searchTerm={searchTerm}
+                        setSearchTerm={setSearchTerm}
+                        searchPlaceholder="Tìm kiếm..."
+                        actions={
+                            <>
                                 <div className="relative">
                                     <button
                                         id="more-actions-btn"
                                         onClick={() => setShowMoreActions(!showMoreActions)}
                                         className={clsx(
-                                            "p-2.5 rounded-xl border shrink-0 transition-all active:scale-95 shadow-sm",
+                                            "p-2 rounded-xl border shrink-0 transition-all active:scale-95 shadow-sm",
                                             showMoreActions ? "bg-slate-100 border-slate-300" : "bg-white border-slate-200 text-slate-600"
                                         )}
                                     >
@@ -492,16 +407,21 @@ const Suppliers = () => {
 
                                     {showMoreActions && (
                                         <div id="more-actions-menu" className="absolute right-0 top-full mt-2 w-48 bg-white rounded-2xl shadow-xl border border-slate-100 py-2 z-[100] animate-in fade-in slide-in-from-top-2 duration-200 origin-top-right">
-                                            <button
+                                            <div
+                                                role="button"
                                                 onClick={() => { downloadTemplate(); setShowMoreActions(false); }}
-                                                className="w-full flex items-center gap-3 px-4 py-2.5 text-[14px] font-bold text-slate-700 hover:bg-slate-50 transition-colors"
+                                                className="w-full flex items-center justify-start gap-4 px-4 py-2.5 text-[14px] font-bold text-slate-700 hover:bg-slate-50 transition-colors text-left cursor-pointer"
                                             >
-                                                <Download size={18} className="text-slate-400" />
+                                                <div className="w-5 flex justify-center flex-shrink-0">
+                                                    <Download size={18} className="text-slate-400" />
+                                                </div>
                                                 Tải mẫu Excel
-                                            </button>
+                                            </div>
 
-                                            <label className="w-full flex items-center gap-3 px-4 py-2.5 text-[14px] font-bold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer">
-                                                <Upload size={18} className="text-slate-400" />
+                                            <label className="w-full flex items-center justify-start gap-4 px-4 py-2.5 text-[14px] font-bold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer text-left">
+                                                <div className="w-5 flex justify-center flex-shrink-0">
+                                                    <Upload size={18} className="text-slate-400" />
+                                                </div>
                                                 Import Excel
                                                 <input
                                                     type="file"
@@ -513,28 +433,65 @@ const Suppliers = () => {
                                             </label>
 
                                             {selectedIds.length > 0 && (
-                                                <button
+                                                <div
+                                                    role="button"
                                                     onClick={() => { handleBulkDelete(); setShowMoreActions(false); }}
-                                                    className="w-full flex items-center gap-3 px-4 py-2.5 text-[14px] font-bold text-rose-600 hover:bg-rose-50 transition-colors"
+                                                    className="w-full flex items-center justify-start gap-4 px-4 py-2.5 text-[14px] font-bold text-rose-600 hover:bg-rose-50 transition-colors text-left cursor-pointer"
                                                 >
-                                                    <Trash2 size={18} />
+                                                    <div className="w-5 flex justify-center flex-shrink-0">
+                                                        <Trash2 size={18} />
+                                                    </div>
                                                     Xóa ({selectedIds.length})
-                                                </button>
+                                                </div>
                                             )}
                                         </div>
                                     )}
                                 </div>
-                            )}
-                        </div>
-                    </div>
 
-                    <div className="md:hidden flex-1 overflow-y-auto p-3 flex flex-col gap-3">
+                                <button
+                                    onClick={() => {
+                                        setSelectedSupplier(null);
+                                        setIsFormModalOpen(true);
+                                    }}
+                                    className="p-2 rounded-xl bg-primary text-white shadow-lg shadow-primary/25 active:scale-95 transition-all shrink-0"
+                                    title="Thêm nhà cung cấp"
+                                >
+                                    <Plus size={20} />
+                                </button>
+                            </>
+                        }
+                        selectionBar={
+                            selectedIds.length > 0 ? (
+                                <div className="flex items-center justify-between mt-3 px-1 py-2 bg-primary/5 rounded-xl border border-primary/10 animate-in slide-in-from-top-2">
+                                    <div className="flex items-center gap-3 pl-2">
+                                        <input
+                                            type="checkbox"
+                                            checked={selectedIds.length === paginatedSuppliers.length && paginatedSuppliers.length > 0}
+                                            onChange={toggleSelectAll}
+                                            className="w-4 h-4 rounded border-slate-300 text-primary focus:ring-primary/20 transition-all cursor-pointer"
+                                        />
+                                        <span className="text-[12px] font-bold text-primary">
+                                            Đã chọn {selectedIds.length} NCC
+                                        </span>
+                                    </div>
+                                    <button
+                                        onClick={handleBulkDelete}
+                                        className="mr-1 p-1.5 px-3 rounded-lg bg-rose-50 text-rose-600 text-[11px] font-black hover:bg-rose-100 transition-all active:scale-95"
+                                    >
+                                        Xóa tất cả
+                                    </button>
+                                </div>
+                            ) : null
+                        }
+                    />
+
+                    <div className="md:hidden flex-1 overflow-y-auto p-3 pb-4 flex flex-col gap-3">
                         {isLoading ? (
                             <div className="py-16 text-center text-[13px] text-muted-foreground italic">Đang tải dữ liệu...</div>
                         ) : filteredSuppliers.length === 0 ? (
                             <div className="py-16 text-center text-[13px] text-muted-foreground italic">Không tìm thấy kết quả phù hợp</div>
                         ) : (
-                            filteredSuppliers.map((supplier) => (
+                            paginatedSuppliers.map((supplier, index) => (
                                 <div key={supplier.id} className={clsx(
                                     "rounded-2xl border bg-gradient-to-br shadow-sm p-4 transition-all duration-200",
                                     selectedIds.includes(supplier.id)
@@ -552,7 +509,7 @@ const Suppliers = () => {
                                                 />
                                             </div>
                                             <div>
-                                                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Nhà cung cấp</p>
+                                                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">#{((currentPage - 1) * pageSize) + index + 1}</p>
                                                 <h3 className="text-[15px] font-bold text-foreground leading-tight mt-0.5">{supplier.name}</h3>
                                             </div>
                                         </div>
@@ -589,34 +546,16 @@ const Suppliers = () => {
                                         </div>
                                     </div>
 
-                                    <div className="flex items-center justify-between pt-3 border-t border-border/70 mt-1">
-                                        <div className="flex flex-col">
-                                            <span className="text-[10px] font-bold text-muted-foreground uppercase leading-none mb-1 opacity-70">Thao tác</span>
-                                            <span className="text-[12px] font-bold text-slate-800 tracking-tight">Quản trị NCC</span>
+                                    <div className="flex items-center justify-between pt-2 border-t border-border/70 mt-1">
+                                        <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+                                            <Phone size={12} />
+                                            <span>NCC #{supplier.id.slice(0, 5)}</span>
                                         </div>
-                                        <div className="flex items-center gap-2">
-                                            <button 
-                                                onClick={() => handleViewSupplier(supplier)} 
-                                                className="w-9 h-9 rounded-xl flex items-center justify-center text-slate-950 bg-blue-50 border border-blue-100 shadow-sm transition-all"
-                                                title="Xem chi tiết"
-                                            >
-                                                <Eye size={18} />
-                                            </button>
-                                            <button 
-                                                onClick={() => handleEditSupplier(supplier)} 
-                                                className="w-9 h-9 rounded-xl flex items-center justify-center text-slate-950 bg-amber-50 border border-amber-100 shadow-sm transition-all"
-                                                title="Chỉnh sửa"
-                                            >
-                                                <Edit size={18} />
-                                            </button>
+                                        <div className="flex items-center gap-3">
+                                            <button onClick={() => handleViewSupplier(supplier)} className="p-2 text-blue-700 bg-blue-50 border border-blue-100 rounded-lg shadow-sm active:scale-95 transition-all"><Eye size={16} /></button>
+                                            <button onClick={() => handleEditSupplier(supplier)} className="p-2 text-amber-700 bg-amber-50 border border-amber-100 rounded-lg shadow-sm active:scale-95 transition-all"><Edit size={16} /></button>
                                             {(role === 'admin' || role === 'manager') && (
-                                                <button 
-                                                    onClick={() => handleDeleteSupplier(supplier.id, supplier.name)} 
-                                                    className="w-9 h-9 rounded-xl flex items-center justify-center text-slate-950 bg-rose-50 border border-rose-100 shadow-sm transition-all"
-                                                    title="Xóa"
-                                                >
-                                                    <Trash2 size={18} />
-                                                </button>
+                                                <button onClick={() => handleDeleteSupplier(supplier.id, supplier.name)} className="p-2 text-red-700 bg-red-50 border border-red-100 rounded-lg shadow-sm active:scale-95 transition-all"><Trash2 size={16} /></button>
                                             )}
                                         </div>
                                     </div>
@@ -624,6 +563,17 @@ const Suppliers = () => {
                             ))
                         )}
                     </div>
+
+                    {/* Sticky Mobile Pagination */}
+                    {!isLoading && (
+                        <MobilePagination
+                            currentPage={currentPage}
+                            setCurrentPage={setCurrentPage}
+                            pageSize={pageSize}
+                            setPageSize={setPageSize}
+                            totalRecords={filteredSuppliersCount}
+                        />
+                    )}
 
                     <div className="hidden md:block p-4 space-y-4">
                         <div className="flex items-center justify-between gap-4">
@@ -698,9 +648,9 @@ const Suppliers = () => {
                                     </button>
                                 )}
 
-                                <button
+                                 <button
                                     onClick={downloadTemplate}
-                                    className="flex items-center gap-2 px-4 py-1.5 rounded-xl border border-indigo-200 bg-indigo-50 text-indigo-700 text-[13px] font-bold hover:bg-indigo-100 shadow-sm transition-all"
+                                    className="flex items-center gap-2 px-4 h-10 rounded-lg border border-indigo-200 bg-indigo-50 text-indigo-700 text-[13px] font-bold hover:bg-indigo-100 shadow-sm transition-all active:scale-95"
                                     title="Tải file Excel mẫu"
                                 >
                                     <Download size={16} />
@@ -717,7 +667,7 @@ const Suppliers = () => {
                                     />
                                     <label
                                         htmlFor="excel-import"
-                                        className="flex items-center gap-2 px-4 py-1.5 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-700 text-[13px] font-bold hover:bg-emerald-100 cursor-pointer shadow-sm transition-all"
+                                        className="flex items-center gap-2 px-4 h-10 rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 text-[13px] font-bold hover:bg-emerald-100 cursor-pointer shadow-sm transition-all active:scale-95 select-none"
                                         title="Import dữ liệu từ file Excel"
                                     >
                                         <Upload size={16} />
@@ -745,7 +695,7 @@ const Suppliers = () => {
                                             {col.label}
                                         </th>
                                     ))}
-                                    <th className="sticky right-0 z-30 bg-[#F1F5FF] px-4 py-3.5 text-[10px] font-black text-muted-foreground text-center uppercase tracking-widest shadow-[-6px_0_10px_-8px_rgba(15,23,42,0.35)] before:content-[''] before:absolute before:left-0 before:top-0 before:bottom-0 before:w-[3px] before:bg-slate-300">Quản trị</th>
+                                    <th className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] text-center border-l border-slate-100">Thao tác</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-primary/5">
@@ -761,7 +711,7 @@ const Suppliers = () => {
                                             Không tìm thấy nhà cung cấp nào
                                         </td>
                                     </tr>
-                                ) : filteredSuppliers.map((supplier) => (
+                                ) : paginatedSuppliers.map((supplier) => (
                                     <tr key={supplier.id} className={clsx(
                                         "hover:bg-primary/[0.02] transition-colors group",
                                         selectedIds.includes(supplier.id) && "bg-primary/[0.05]"
@@ -779,29 +729,29 @@ const Suppliers = () => {
                                         {isColumnVisible('email') && <td className="px-4 py-4 text-[13px] font-bold text-slate-500">{supplier.email || '—'}</td>}
                                         {isColumnVisible('phone') && <td className="px-4 py-4 text-[13px] font-bold text-slate-500 tabular-nums">{supplier.phone || '—'}</td>}
                                         {isColumnVisible('address') && <td className="px-4 py-4 text-[13px] font-bold text-slate-500">{supplier.address || '—'}</td>}
-                                        <td className="sticky right-0 z-20 bg-white group-hover:bg-blue-50/40 px-4 py-4 text-center shadow-[-6px_0_10px_-8px_rgba(15,23,42,0.25)] before:content-[''] before:absolute before:left-0 before:top-0 before:bottom-0 before:w-[3px] before:bg-slate-300">
-                                            <div className="flex items-center justify-center gap-2">
+                                        <td className="px-4 py-4 text-center border-l border-primary/20">
+                                            <div className="flex items-center justify-center gap-3">
                                                 <button 
                                                     onClick={() => handleViewSupplier(supplier)} 
-                                                    className="w-9 h-9 rounded-xl flex items-center justify-center text-slate-950 bg-blue-50 border border-blue-100 shadow-sm hover:bg-blue-600 hover:text-white hover:shadow-md transition-all duration-300" 
+                                                    className="text-blue-600/80 hover:text-blue-700 transition-colors p-1 rounded hover:bg-blue-50" 
                                                     title="Xem chi tiết"
                                                 >
-                                                    <Eye className="w-4.5 h-4.5" />
+                                                    <Eye className="w-4 h-4" />
                                                 </button>
                                                 <button 
                                                     onClick={() => handleEditSupplier(supplier)} 
-                                                    className="w-9 h-9 rounded-xl flex items-center justify-center text-slate-950 bg-amber-50 border border-amber-100 shadow-sm hover:bg-amber-500 hover:text-white hover:shadow-md transition-all duration-300" 
+                                                    className="text-amber-600/80 hover:text-amber-700 transition-colors p-1 rounded hover:bg-amber-50" 
                                                     title="Chỉnh sửa"
                                                 >
-                                                    <Edit className="w-4.5 h-4.5" />
+                                                    <Edit className="w-4 h-4" />
                                                 </button>
                                                 {(role === 'admin' || role === 'manager') && (
                                                     <button 
                                                         onClick={() => handleDeleteSupplier(supplier.id, supplier.name)} 
-                                                        className="w-9 h-9 rounded-xl flex items-center justify-center text-slate-950 bg-rose-50 border border-rose-100 shadow-sm hover:bg-rose-600 hover:text-white hover:shadow-md transition-all duration-300" 
+                                                        className="text-red-600/80 hover:text-red-700 transition-colors p-1 rounded hover:bg-red-50" 
                                                         title="Xóa"
                                                     >
-                                                        <Trash2 className="w-4.5 h-4.5" />
+                                                        <Trash2 className="w-4 h-4" />
                                                     </button>
                                                 )}
                                             </div>
@@ -814,25 +764,45 @@ const Suppliers = () => {
 
                     <div className="hidden md:flex px-4 py-4 border-t border-border items-center justify-between bg-muted/5">
                         <div className="flex items-center gap-3 text-[12px] text-muted-foreground font-medium">
-                            <span>{filteredSuppliers.length > 0 ? `1–${filteredSuppliers.length}` : '0'}/Tổng {filteredSuppliers.length}</span>
-                            <div className="flex items-center gap-1 ml-2">
-                                <span className="text-[11px] font-bold">│</span>
-                                <span className="text-primary font-bold">{formatNumber(filteredSuppliersCount)} NCC</span>
-                            </div>
+                            <span>
+                                {filteredSuppliersCount > 0 ? `${(currentPage - 1) * pageSize + 1}–${Math.min(currentPage * pageSize, filteredSuppliersCount)}` : '0'} / Tổng {filteredSuppliersCount}
+                            </span>
                         </div>
                         <div className="flex items-center gap-1">
-                            <button className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors disabled:opacity-20" disabled>
+                            <button 
+                                onClick={() => setCurrentPage(1)}
+                                className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors disabled:opacity-20" 
+                                disabled={currentPage === 1}
+                                title="Trang đầu"
+                            >
                                 <ChevronLeft size={16} />
                                 <ChevronLeft size={16} className="-ml-2.5" />
                             </button>
-                            <button className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors disabled:opacity-20" disabled>
+                            <button 
+                                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                                className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors disabled:opacity-20" 
+                                disabled={currentPage === 1}
+                                title="Trang trước"
+                            >
                                 <ChevronLeft size={16} />
                             </button>
-                            <div className="w-8 h-8 rounded-lg bg-primary text-white flex items-center justify-center text-[12px] font-bold shadow-md shadow-primary/25">1</div>
-                            <button className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors disabled:opacity-20" disabled>
+                            <div className="w-8 h-8 rounded-lg bg-primary text-white flex items-center justify-center text-[12px] font-bold shadow-md shadow-primary/25">
+                                {currentPage}
+                            </div>
+                            <button 
+                                onClick={() => setCurrentPage(prev => Math.min(Math.ceil(filteredSuppliersCount / pageSize), prev + 1))}
+                                className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors disabled:opacity-20" 
+                                disabled={currentPage >= Math.ceil(filteredSuppliersCount / pageSize)}
+                                title="Trang sau"
+                            >
                                 <ChevronRight size={16} />
                             </button>
-                            <button className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors disabled:opacity-20" disabled>
+                            <button 
+                                onClick={() => setCurrentPage(Math.ceil(filteredSuppliersCount / pageSize))}
+                                className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors disabled:opacity-20" 
+                                disabled={currentPage >= Math.ceil(filteredSuppliersCount / pageSize) || filteredSuppliersCount === 0}
+                                title="Trang cuối"
+                            >
                                 <ChevronRight size={16} />
                                 <ChevronRight size={16} className="-ml-2.5" />
                             </button>
@@ -842,8 +812,10 @@ const Suppliers = () => {
             )}
 
             {activeView === 'stats' && (
-                <div className="bg-white rounded-2xl border border-border shadow-sm flex flex-col flex-1 min-h-0 w-full">
+                <div className="bg-white rounded-2xl border border-border shadow-sm flex flex-col flex-1 min-h-0 w-full text-left">
                     <div className="space-y-0">
+
+
                         <div className="md:hidden flex items-center gap-2 p-3 border-b border-border">
                             <button
                                 onClick={() => navigate(-1)}

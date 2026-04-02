@@ -105,7 +105,7 @@ export default function ShipperFormModal({ shipper, onClose, onSuccess }) {
     return createPortal(
         <>
             <div className={cn(
-                "fixed inset-0 z-[100005] flex justify-end transition-all duration-300",
+                "fixed inset-0 z-[150000] flex justify-end transition-all duration-300",
                 isClosing ? "opacity-0 pointer-events-none" : "opacity-100"
             )}>
                 {/* Backdrop */}

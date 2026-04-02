@@ -93,7 +93,13 @@ const MobileFilterSheet = ({
   };
 
   const clearAllSections = () => {
-    normalizedSections.forEach((section) => section.onSelectionChange([]));
+    normalizedSections.forEach((section) => {
+      if (section.type === 'dateRange') {
+        section.onValueChange({ start_date: '', end_date: '' });
+      } else {
+        section.onSelectionChange([]);
+      }
+    });
   };
 
   return createPortal(
@@ -102,7 +108,14 @@ const MobileFilterSheet = ({
         className={clsx('absolute inset-0 bg-black/25 transition-opacity duration-300', isClosing ? 'opacity-0' : 'opacity-100')}
         onClick={onClose}
       />
-      <div className={clsx('relative bg-white rounded-t-[24px] flex flex-col max-h-[80vh] shadow-2xl will-change-transform', isClosing ? 'animate-out fade-out slide-out-to-bottom-12 [animation-duration:240ms]' : 'animate-in fade-in slide-in-from-bottom-12 [animation-duration:300ms]')}>
+      <div 
+        className={clsx(
+          'relative bg-white rounded-t-[24px] flex flex-col max-h-[80vh] shadow-2xl will-change-transform', 
+          isClosing 
+            ? 'animate-out fade-out slide-out-to-bottom-full [animation-duration:300ms] [animation-fill-mode:forwards]' 
+            : 'animate-in fade-in slide-in-from-bottom-full [animation-duration:300ms]'
+        )}
+      >
         <div className="flex justify-center pt-1 pb-0.5">
           <div className="w-11 h-1 rounded-full bg-border" />
         </div>
@@ -168,67 +181,92 @@ const MobileFilterSheet = ({
 
                 {showExpanded && (
                   <div className={clsx('px-4 pb-4', isExpanded ? 'animate-in slide-in-from-top-4 fade-in [animation-duration:220ms]' : 'animate-out slide-out-to-top-4 fade-out [animation-duration:180ms]')}>
-                    {section.searchable !== false && (
-                      <div className="relative mb-2.5">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/50" size={13} />
-                        <input
-                          type="text"
-                          placeholder={section.searchPlaceholder}
-                          value={mobileFilterSearch}
-                          onChange={(e) => setMobileFilterSearch(e.target.value)}
-                          className="w-full pl-8 pr-3 py-2 rounded-lg bg-muted/20 border border-border/60 text-[13px] focus:outline-none focus:ring-2 focus:ring-primary/10 font-medium"
-                        />
-                      </div>
-                    )}
-
-                    {!section.singleSelect && (
-                      <div className="flex items-center justify-between mb-2 px-1">
-                        <label className="flex items-center gap-3 cursor-pointer">
+                    {section.type === 'dateRange' ? (
+                      <div className="space-y-4 py-2">
+                        <div className="space-y-1.5">
+                          <label className="text-[12px] font-bold text-muted-foreground ml-1">Từ ngày</label>
                           <input
-                            type="checkbox"
-                            className="rounded border-border text-primary focus:ring-primary/20 w-4 h-4"
-                            checked={section.selectedValues.length === section.options.length && section.options.length > 0}
-                            onChange={() => handleToggleAll(section)}
+                            type="date"
+                            value={section.value?.start_date || ''}
+                            onChange={(e) => section.onValueChange({ ...section.value, start_date: e.target.value })}
+                            className="w-full px-4 py-3 rounded-xl bg-muted/30 border border-border/60 text-[14px] focus:outline-none focus:ring-2 focus:ring-primary/10 font-medium"
                           />
-                          <span className="text-[13px] font-bold text-muted-foreground">{section.selectAllLabel || selectAllLabel}</span>
-                        </label>
-                        {section.selectedValues.length > 0 && (
-                          <button onClick={() => section.onSelectionChange([])} className="text-[12px] font-bold text-primary">
-                            {section.clearSelectionLabel || clearSelectionLabel}
-                          </button>
-                        )}
-                      </div>
-                    )}
-
-                    <div className="space-y-0.5">
-                      {filteredOptions.length > 0 ? (
-                        filteredOptions.map((option) => (
-                          <label key={option.id} className="flex items-center justify-between px-1 py-2.5 rounded-md hover:bg-muted/20 cursor-pointer">
-                            <div className="flex items-center gap-3">
-                              <input
-                                type={section.singleSelect ? "radio" : "checkbox"}
-                                className={clsx(
-                                  "border-border text-primary focus:ring-primary/20 w-4 h-4",
-                                  section.singleSelect ? "rounded-full" : "rounded"
-                                )}
-                                checked={section.selectedValues.includes(option.id)}
-                                onChange={() => handleToggleOption(section, option.id)}
-                              />
-                              <span className="text-[14px] font-medium text-foreground">{option.label}</span>
-                            </div>
-                            {section.showCounts !== false && section.getOptionCount(option) != null && (
-                              <span className="text-[12px] font-bold text-muted-foreground tabular-nums">
-                                {section.getOptionCount(option)}
-                              </span>
-                            )}
-                          </label>
-                        ))
-                      ) : (
-                        <div className="px-1 py-5 text-center text-[12px] text-muted-foreground">
-                          {section.emptyMessage || emptyMessage}
                         </div>
-                      )}
-                    </div>
+                        <div className="space-y-1.5">
+                          <label className="text-[12px] font-bold text-muted-foreground ml-1">Đến ngày</label>
+                          <input
+                            type="date"
+                            value={section.value?.end_date || ''}
+                            onChange={(e) => section.onValueChange({ ...section.value, end_date: e.target.value })}
+                            className="w-full px-4 py-3 rounded-xl bg-muted/30 border border-border/60 text-[14px] focus:outline-none focus:ring-2 focus:ring-primary/10 font-medium"
+                          />
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        {section.searchable !== false && (
+                          <div className="relative mb-2.5">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/50" size={13} />
+                            <input
+                              type="text"
+                              placeholder={section.searchPlaceholder}
+                              value={mobileFilterSearch}
+                              onChange={(e) => setMobileFilterSearch(e.target.value)}
+                              className="w-full pl-8 pr-3 py-2 rounded-lg bg-muted/20 border border-border/60 text-[13px] focus:outline-none focus:ring-2 focus:ring-primary/10 font-medium"
+                            />
+                          </div>
+                        )}
+
+                        {!section.singleSelect && (
+                          <div className="flex items-center justify-between mb-2 px-1">
+                            <label className="flex items-center gap-3 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                className="rounded border-border text-primary focus:ring-primary/20 w-4 h-4"
+                                checked={section.selectedValues.length === section.options.length && section.options.length > 0}
+                                onChange={() => handleToggleAll(section)}
+                              />
+                              <span className="text-[13px] font-bold text-muted-foreground">{section.selectAllLabel || selectAllLabel}</span>
+                            </label>
+                            {section.selectedValues.length > 0 && (
+                              <button onClick={() => section.onSelectionChange([])} className="text-[12px] font-bold text-primary">
+                                {section.clearSelectionLabel || clearSelectionLabel}
+                              </button>
+                            )}
+                          </div>
+                        )}
+
+                        <div className="space-y-0.5">
+                          {filteredOptions.length > 0 ? (
+                            filteredOptions.map((option) => (
+                              <label key={option.id} className="flex items-center justify-between px-1 py-2.5 rounded-md hover:bg-muted/20 cursor-pointer">
+                                <div className="flex items-center gap-3">
+                                  <input
+                                    type={section.singleSelect ? "radio" : "checkbox"}
+                                    className={clsx(
+                                      "border-border text-primary focus:ring-primary/20 w-4 h-4",
+                                      section.singleSelect ? "rounded-full" : "rounded"
+                                    )}
+                                    checked={section.selectedValues.includes(option.id)}
+                                    onChange={() => handleToggleOption(section, option.id)}
+                                  />
+                                  <span className="text-[14px] font-medium text-foreground">{option.label}</span>
+                                </div>
+                                {section.showCounts !== false && section.getOptionCount(option) != null && (
+                                  <span className="text-[12px] font-bold text-muted-foreground tabular-nums">
+                                    {section.getOptionCount(option)}
+                                  </span>
+                                )}
+                              </label>
+                            ))
+                          ) : (
+                            <div className="px-1 py-5 text-center text-[12px] text-muted-foreground">
+                              {section.emptyMessage || emptyMessage}
+                            </div>
+                          )}
+                        </div>
+                      </>
+                    )}
                   </div>
                 )}
               </div>

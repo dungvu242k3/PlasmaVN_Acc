@@ -35,6 +35,9 @@ import PromotionFormModal from '../components/Promotions/PromotionFormModal';
 import ColumnPicker from '../components/ui/ColumnPicker';
 import FilterDropdown from '../components/ui/FilterDropdown';
 import MobileFilterSheet from '../components/ui/MobileFilterSheet';
+import MobilePageHeader from '../components/layout/MobilePageHeader';
+import MobilePagination from '../components/layout/MobilePagination';
+import PageViewSwitcher from '../components/layout/PageViewSwitcher';
 import { supabase } from '../supabase/config';
 
 ChartJS.register(
@@ -77,6 +80,12 @@ const Promotions = () => {
     const [selectedStatuses, setSelectedStatuses] = useState([]);
     const [selectedCustomerTypes, setSelectedCustomerTypes] = useState([]);
     const [selectedActiveStatus, setSelectedActiveStatus] = useState([]);
+
+    // Pagination State
+    const [currentPage, setCurrentPage] = useState(1);
+    const [pageSize, setPageSize] = useState(50);
+    const [totalRecords, setTotalRecords] = useState(0);
+
     const [uniqueCustomerTypes, setUniqueCustomerTypes] = useState([]);
 
     const [showMobileFilter, setShowMobileFilter] = useState(false);
@@ -126,7 +135,7 @@ const Promotions = () => {
 
     useEffect(() => {
         fetchPromotions();
-    }, []);
+    }, [currentPage, pageSize]);
 
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -152,14 +161,19 @@ const Promotions = () => {
     const fetchPromotions = async () => {
         setIsLoading(true);
         try {
-            const { data, error } = await supabase
+            const from = (currentPage - 1) * pageSize;
+            const to = from + pageSize - 1;
+
+            const { data, count, error } = await supabase
                 .from('app_promotions')
-                .select('*')
-                .order('created_at', { ascending: false });
+                .select('*', { count: 'exact' })
+                .order('created_at', { ascending: false })
+                .range(from, to);
 
             if (error) throw error;
             const list = data || [];
             setPromotions(list);
+            setTotalRecords(count || 0);
             setSelectedIds([]);
 
             const uniqueTypes = [...new Set(list.map(p => p.customer_type).filter(Boolean))];
@@ -310,7 +324,7 @@ const Promotions = () => {
         setTimeout(() => {
             setShowMobileFilter(false);
             setMobileFilterClosing(false);
-        }, 280);
+        }, 300);
     };
 
     const openMobileFilter = () => {
@@ -425,95 +439,59 @@ const Promotions = () => {
 
     return (
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 w-full flex-1 flex flex-col mt-1 min-h-0 px-1 md:px-1.5">
-            <div className="flex items-center gap-1 mb-3 mt-1">
-                <button
-                    onClick={() => setActiveView('list')}
-                    className={clsx(
-                        'flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-bold transition-all',
-                        activeView === 'list'
-                            ? 'bg-white text-primary shadow-sm ring-1 ring-border'
-                            : 'text-muted-foreground hover:text-foreground'
-                    )}
-                >
-                    <List size={14} />
-                    Danh sách
-                </button>
-                <button
-                    onClick={() => setActiveView('stats')}
-                    className={clsx(
-                        'flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-bold transition-all',
-                        activeView === 'stats'
-                            ? 'bg-white text-primary shadow-sm ring-1 ring-border'
-                            : 'text-muted-foreground hover:text-foreground'
-                    )}
-                >
-                    <BarChart2 size={14} />
-                    Thống kê
-                </button>
-            </div>
+            <PageViewSwitcher
+                activeView={activeView}
+                setActiveView={setActiveView}
+                views={[
+                    { id: 'list', label: 'Danh sách', icon: <List size={16} /> },
+                    { id: 'stats', label: 'Thống kê', icon: <BarChart2 size={16} /> },
+                ]}
+            />
 
             {activeView === 'list' && (
                 <div className="bg-white rounded-2xl border border-border shadow-sm flex flex-col flex-1 min-h-0 w-full">
-                    <div className="md:hidden flex items-center gap-2 p-3 border-b border-border">
-                        <button
-                            onClick={() => navigate(-1)}
-                            className="p-2 rounded-xl border border-border bg-white text-muted-foreground shrink-0"
-                        >
-                            <ChevronLeft size={18} />
-                        </button>
-                        <div className="relative flex-1">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={15} />
-                            <input
-                                type="text"
-                                placeholder="Tìm kiếm . . ."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full pl-9 pr-8 py-2 bg-muted/20 border border-border/80 rounded-xl text-[13px] focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all font-medium"
-                            />
-                            {searchTerm && (
-                                <button onClick={() => setSearchTerm('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                                    <X size={14} />
-                                </button>
-                            )}
-                        </div>
-                        <button
-                            onClick={openMobileFilter}
-                            className={clsx(
-                                'relative p-2 rounded-xl border shrink-0 transition-all',
-                                hasActiveFilters ? getFilterButtonClass('statuses', true) : getFilterButtonClass('statuses', false),
-                            )}
-                        >
-                            <Filter size={18} className={getFilterIconClass('statuses', hasActiveFilters)} />
-                            {hasActiveFilters && (
-                                <span className={clsx(
-                                    'absolute -top-1 -right-1 w-4 h-4 rounded-full text-[9px] font-bold flex items-center justify-center',
-                                    getFilterCountBadgeClass('statuses')
-                                )}>
-                                    {totalActiveFilters}
-                                </span>
-                            )}
-                        </button>
-                        <button
-                            onClick={() => {
-                                setSelectedPromo(null);
-                                setIsFormModalOpen(true);
-                            }}
-                            className="p-2 rounded-xl bg-primary text-white shrink-0 shadow-md shadow-primary/20"
-                        >
-                            <Plus size={18} />
-                        </button>
-                    </div>
-                    {selectedIds.length > 0 && (
-                        <div className="md:hidden px-3 py-2 bg-rose-50 border-b border-rose-100 flex items-center justify-between">
-                            <span className="text-sm font-bold text-rose-700">Đã chọn {selectedIds.length} mục</span>
+                    <MobilePageHeader
+                        searchTerm={searchTerm}
+                        setSearchTerm={setSearchTerm}
+                        searchPlaceholder="Tìm kiếm khuyến mãi..."
+                        onFilterClick={openMobileFilter}
+                        hasActiveFilters={hasActiveFilters}
+                        totalActiveFilters={totalActiveFilters}
+                        actions={
                             <button
-                                onClick={handleBulkDelete}
-                                className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-bold transition-colors shadow-sm"
+                                onClick={() => {
+                                    setSelectedPromo(null);
+                                    setIsFormModalOpen(true);
+                                }}
+                                className="p-2 rounded-xl bg-primary text-white shadow-lg shadow-primary/25 active:scale-95 transition-all"
                             >
-                                <Trash2 size={14} /> Xóa
+                                <Plus size={20} />
                             </button>
-                        </div>
-                    )}
+                        }
+                        selectionBar={
+                            selectedIds.length > 0 ? (
+                                <div className="flex items-center justify-between px-1 mt-3 pt-3 border-t border-slate-100 animate-in slide-in-from-top-2 duration-300">
+                                    <span className="text-[13px] font-bold text-slate-600">
+                                        Đã chọn <span className="text-primary">{selectedIds.length}</span> khuyến mãi
+                                    </span>
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            onClick={toggleSelectAll}
+                                            className="text-[12px] font-bold text-primary hover:underline px-2 py-1"
+                                        >
+                                            Bỏ chọn
+                                        </button>
+                                        <button
+                                            onClick={handleBulkDelete}
+                                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-50 text-rose-600 text-[12px] font-bold border border-rose-100"
+                                        >
+                                            <Trash2 size={14} /> Xóa tất cả
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : null
+                        }
+                    />
 
                     <div className="md:hidden flex-1 overflow-y-auto p-3 flex flex-col gap-3">
                         {isLoading ? (
@@ -566,6 +544,17 @@ const Promotions = () => {
                             );
                         })}
                     </div>
+
+                    {/* Sticky Mobile Pagination */}
+                    {!isLoading && (
+                        <MobilePagination
+                            currentPage={currentPage}
+                            setCurrentPage={setCurrentPage}
+                            pageSize={pageSize}
+                            setPageSize={setPageSize}
+                            totalRecords={totalRecords}
+                        />
+                    )}
 
                     <div className="hidden md:block p-4 space-y-4">
                         <div className="flex items-center justify-between gap-4">
@@ -820,7 +809,7 @@ const Promotions = () => {
 
                     <div className="hidden md:flex px-4 py-4 border-t border-border items-center justify-between bg-muted/5">
                         <div className="flex items-center gap-3 text-[12px] text-muted-foreground font-medium">
-                            <span>{filteredPromotions.length > 0 ? `1–${filteredPromotions.length}` : '0'}/Tổng {filteredPromotions.length}</span>
+                            <span>{totalRecords > 0 ? `${(currentPage - 1) * pageSize + 1}–${Math.min(currentPage * pageSize, totalRecords)}` : '0'}/Tổng {totalRecords}</span>
                             <div className="flex items-center gap-1 ml-2">
                                 <span className="text-[11px] font-bold">│</span>
                                 <span className="text-primary font-bold">{activeCount} hoạt động</span>
@@ -829,18 +818,34 @@ const Promotions = () => {
                             </div>
                         </div>
                         <div className="flex items-center gap-1">
-                            <button className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors disabled:opacity-20" disabled>
+                            <button
+                                onClick={() => setCurrentPage(1)}
+                                disabled={currentPage === 1}
+                                className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors disabled:opacity-20"
+                            >
                                 <ChevronLeft size={16} />
                                 <ChevronLeft size={16} className="-ml-2.5" />
                             </button>
-                            <button className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors disabled:opacity-20" disabled>
+                            <button
+                                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                                disabled={currentPage === 1}
+                                className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors disabled:opacity-20"
+                            >
                                 <ChevronLeft size={16} />
                             </button>
-                            <div className="w-8 h-8 rounded-lg bg-primary text-white flex items-center justify-center text-[12px] font-bold shadow-md shadow-primary/25">1</div>
-                            <button className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors disabled:opacity-20" disabled>
+                            <div className="w-8 h-8 rounded-lg bg-primary text-white flex items-center justify-center text-[12px] font-bold shadow-md shadow-primary/25">{currentPage}</div>
+                            <button
+                                onClick={() => setCurrentPage(prev => Math.min(Math.ceil(totalRecords / pageSize), prev + 1))}
+                                disabled={currentPage >= Math.ceil(totalRecords / pageSize)}
+                                className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors disabled:opacity-20"
+                            >
                                 <ChevronRight size={16} />
                             </button>
-                            <button className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors disabled:opacity-20" disabled>
+                            <button
+                                onClick={() => setCurrentPage(Math.ceil(totalRecords / pageSize))}
+                                disabled={currentPage >= Math.ceil(totalRecords / pageSize)}
+                                className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors disabled:opacity-20"
+                            >
                                 <ChevronRight size={16} />
                                 <ChevronRight size={16} className="-ml-2.5" />
                             </button>

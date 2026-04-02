@@ -576,9 +576,9 @@ export default function GoodsIssueFormModal({ issue, onClose, onSuccess, forcedT
                             {/* Bảng chọn nhanh (Chỉ hiện khi là loại Trả NCC) */}
                             {(formData.issue_type === 'TRA_VO' || formData.issue_type === 'TRA_BINH_LOI' || formData.issue_type === 'TRA_MAY') && formData.warehouse_id && (
                                 <div className="rounded-3xl border border-emerald-200 bg-emerald-50/30 p-5 sm:p-6 space-y-4 shadow-sm">
-                                    <div className="flex items-center justify-between">
+                                    <div className="flex flex-col gap-4">
                                         <div className="flex items-center gap-2.5">
-                                            <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center text-emerald-600 shadow-sm border border-emerald-200">
+                                            <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center text-emerald-600 shadow-sm border border-emerald-200 shrink-0">
                                                 <CheckSquare size={20} />
                                             </div>
                                             <div>
@@ -587,15 +587,15 @@ export default function GoodsIssueFormModal({ issue, onClose, onSuccess, forcedT
                                             </div>
                                         </div>
                                         {inventoryItems.length > 0 && (
-                                            <div className="flex items-center gap-3">
-                                                <div className="relative group">
+                                            <div className="flex flex-wrap items-center gap-3 w-full">
+                                                <div className="relative group flex-1 min-w-[200px]">
                                                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-emerald-400 group-focus-within:text-emerald-600 transition-colors" size={14} />
                                                     <input 
                                                         type="text"
                                                         placeholder="Tìm serial/loại bình..."
                                                         value={inventorySearchTerm}
                                                         onChange={(e) => setInventorySearchTerm(e.target.value)}
-                                                        className="h-9 pl-9 pr-4 bg-white border border-emerald-100 rounded-xl text-[12px] font-bold text-emerald-900 focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500/40 transition-all w-[180px] sm:w-[240px]"
+                                                        className="h-9 pl-9 pr-4 w-full bg-white border border-emerald-100 rounded-xl text-[12px] font-bold text-emerald-900 focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500/40 transition-all"
                                                     />
                                                 </div>
                                                 <button 
@@ -717,12 +717,12 @@ export default function GoodsIssueFormModal({ issue, onClose, onSuccess, forcedT
 
                             {/* Chi tiết sản phẩm */}
                             <div className="rounded-3xl border border-primary/20 bg-white p-5 sm:p-6 space-y-5 shadow-sm">
-                                <div className="flex items-center justify-between pb-3 border-b border-primary/10">
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-primary/10">
                                     <div className="flex items-center gap-2.5">
                                         <LayoutGrid className="w-4 h-4 text-primary" />
                                         <h4 className="text-[18px] !font-extrabold !text-primary">Chi tiết xuất</h4>
                                     </div>
-                                    <div className="flex items-center gap-2">
+                                    <div className="flex items-center gap-2 w-full sm:w-auto">
                                         <button
                                             type="button"
                                             onClick={fetchInventory}

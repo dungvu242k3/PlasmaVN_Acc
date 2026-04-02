@@ -11,6 +11,9 @@ import {
     Title
 } from 'chart.js';
 import { clsx } from 'clsx';
+import MobilePageHeader from '../components/layout/MobilePageHeader';
+import MobilePagination from '../components/layout/MobilePagination';
+import PageViewSwitcher from '../components/layout/PageViewSwitcher';
 import {
     BarChart2,
     CheckCircle,
@@ -22,6 +25,7 @@ import {
     Filter,
     List,
     MapPin,
+    MoreVertical,
     Package,
     Phone,
     Plus,
@@ -30,6 +34,7 @@ import {
     SlidersHorizontal,
     Trash2,
     User,
+    Warehouse,
     X
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
@@ -81,6 +86,7 @@ const Orders = () => {
     const [orderToEdit, setOrderToEdit] = useState(null);
     const [serialsModalOrder, setSerialsModalOrder] = useState(null);
     const [warehousesList, setWarehousesList] = useState([]);
+    const [showMoreActions, setShowMoreActions] = useState(false);
     const defaultColOrder = TABLE_COLUMNS.map(col => col.key);
     const columnDefs = TABLE_COLUMNS.reduce((acc, col) => {
         acc[col.key] = { label: col.label };
@@ -236,6 +242,16 @@ const Orders = () => {
             if (activeDropdown && !isClickInsideList && !isClickInsideStats) {
                 setActiveDropdown(null);
                 setFilterSearch('');
+            }
+
+            // Close more actions menu on mobile
+            if (showMoreActions) {
+                const moreActionsMenu = document.getElementById('more-actions-menu-orders');
+                const moreActionsButton = document.getElementById('more-actions-button-orders');
+                if (moreActionsMenu && !moreActionsMenu.contains(event.target) &&
+                    moreActionsButton && !moreActionsButton.contains(event.target)) {
+                    setShowMoreActions(false);
+                }
             }
         };
         document.addEventListener('mousedown', handleClickOutside);
@@ -727,107 +743,99 @@ const Orders = () => {
 
     return (
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 w-full flex-1 flex flex-col mt-1 min-h-0 px-1 md:px-1.5">
-            {/* Top Sidebar Style Tabs */}
-            <div className="flex items-center gap-1 mb-3 mt-1">
-                <button
-                    onClick={() => setActiveView('list')}
-                    className={clsx(
-                        "flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-bold transition-all",
-                        activeView === 'list'
-                            ? "bg-white text-primary shadow-sm ring-1 ring-border"
-                            : "text-muted-foreground hover:text-foreground"
-                    )}
-                >
-                    <List size={14} />
-                    Danh sách
-                </button>
-                <button
-                    onClick={() => setActiveView('stats')}
-                    className={clsx(
-                        "flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-bold transition-all",
-                        activeView === 'stats'
-                            ? "bg-white text-primary shadow-sm ring-1 ring-border"
-                            : "text-muted-foreground hover:text-foreground"
-                    )}
-                >
-                    <BarChart2 size={14} />
-                    Thống kê
-                </button>
-            </div>
+            <PageViewSwitcher
+                activeView={activeView}
+                setActiveView={setActiveView}
+                views={[
+                    { id: 'list', label: 'Danh sách', icon: <List size={16} /> },
+                    { id: 'stats', label: 'Thống kê', icon: <BarChart2 size={16} /> },
+                ]}
+            />
 
             {activeView === 'list' && (
                 <div className="bg-white rounded-2xl border border-border shadow-sm flex flex-col flex-1 min-h-0 w-full">
-                    {/* ── MOBILE TOOLBAR ── */}
-                    <div className="md:hidden flex items-center gap-2 p-3 border-b border-border">
-                        <button
-                            onClick={() => navigate(-1)}
-                            className="p-2 rounded-xl border border-border bg-white text-muted-foreground shrink-0"
-                        >
-                            <ChevronLeft size={18} />
-                        </button>
-                        <div className="relative flex-1">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={15} />
-                            <input
-                                type="text"
-                                placeholder="Tìm kiếm . . ."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full pl-9 pr-8 py-2 bg-muted/20 border border-border/80 rounded-xl text-[13px] focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all font-medium"
-                            />
-                            {searchTerm && (
-                                <button onClick={() => setSearchTerm('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                                    <X size={14} />
+                    <MobilePageHeader
+                        searchTerm={searchTerm}
+                        setSearchTerm={setSearchTerm}
+                        searchPlaceholder="Tìm kiếm..."
+                        onFilterClick={openMobileFilter}
+                        hasActiveFilters={hasActiveFilters}
+                        totalActiveFilters={totalActiveFilters}
+                        actions={
+                            <>
+                                <div className="relative">
+                                    <button
+                                        id="more-actions-button-orders"
+                                        onClick={() => setShowMoreActions(!showMoreActions)}
+                                        className={clsx(
+                                            "p-2 rounded-xl border shrink-0 transition-all active:scale-95 shadow-sm",
+                                            showMoreActions ? "bg-slate-100 border-slate-300" : "bg-white border-slate-200 text-slate-600"
+                                        )}
+                                    >
+                                        <MoreVertical size={20} />
+                                    </button>
+                                    {showMoreActions && (
+                                        <div id="more-actions-menu-orders" className="absolute right-0 top-full mt-2 w-48 bg-white rounded-2xl shadow-xl border border-slate-100 py-2 z-[100] animate-in fade-in slide-in-from-top-2 duration-200 origin-top-right">
+                                            <div
+                                                role="button"
+                                                onClick={() => {
+                                                    setOrderToEdit(null);
+                                                    navigate('/de-nghi-xuat-may/tao');
+                                                    setShowMoreActions(false);
+                                                }}
+                                                className="w-full flex items-center justify-start gap-4 px-4 py-2.5 text-[14px] font-bold text-slate-700 hover:bg-slate-50 transition-colors text-left cursor-pointer"
+                                            >
+                                                <div className="w-5 flex justify-center flex-shrink-0">
+                                                    <Plus size={18} className="text-slate-400" />
+                                                </div>
+                                                Đề nghị xuất máy
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                                <button
+                                    onClick={() => {
+                                        setOrderToEdit(null);
+                                        setIsFormModalOpen(true);
+                                    }}
+                                    className="p-2 rounded-xl bg-primary text-white shadow-lg shadow-primary/30 active:scale-95 transition-all"
+                                >
+                                    <Plus size={20} />
                                 </button>
-                            )}
-                        </div>
-                        <button
-                            onClick={openMobileFilter}
-                            className={clsx(
-                                'relative p-2 rounded-xl border shrink-0 transition-all',
-                                hasActiveFilters ? 'border-primary bg-primary/5 text-primary' : 'border-border bg-white text-muted-foreground',
-                            )}
-                        >
-                            <Filter size={18} />
-                            {hasActiveFilters && (
-                                <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-primary text-white text-[9px] font-bold flex items-center justify-center">
-                                    {totalActiveFilters}
-                                </span>
-                            )}
-                        </button>
-
-                        {selectedIds.length > 0 && (
-                            <button
-                                onClick={handleBulkDelete}
-                                className="relative p-2 rounded-xl border border-rose-200 bg-rose-50 text-rose-600 shrink-0 transition-all shadow-sm"
-                                title="Xóa các đơn hàng đã chọn"
-                            >
-                                <Trash2 size={18} />
-                                <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-rose-600 text-white text-[9px] font-bold flex items-center justify-center">
-                                    {selectedIds.length}
-                                </span>
-                            </button>
-                        )}
-
-                        <button
-                            onClick={() => {
-                                setOrderToEdit(null);
-                                setIsFormModalOpen(true);
-                            }}
-                            className="p-2 rounded-xl bg-primary text-white shrink-0 shadow-md shadow-primary/20"
-                        >
-                            <Plus size={18} />
-                        </button>
-                        <button
-                            onClick={() => {
-                                setOrderToEdit(null);
-                                navigate('/de-nghi-xuat-may/tao');
-                            }}
-                            className="p-2 px-3 flex items-center gap-2 rounded-xl bg-emerald-600 text-white shrink-0 shadow-md shadow-emerald-600/20 text-[13px] font-bold"
-                        >
-                            <Plus size={18} />
-                            <span className="hidden sm:inline">Đề nghị xuất máy</span>
-                        </button>
-                    </div>
+                            </>
+                        }
+                        selectionBar={
+                            selectedIds.length > 0 ? (
+                                <div className="flex items-center justify-between px-1 mt-3 pt-3 border-t border-slate-100 animate-in slide-in-from-top-2 duration-300">
+                                    <span className="text-[13px] font-bold text-slate-600">
+                                        Đã chọn <span className="text-primary">{selectedIds.length}</span> đơn hàng
+                                    </span>
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            onClick={() => setSelectedIds([])}
+                                            className="text-[12px] font-bold text-primary hover:underline px-2 py-1"
+                                        >
+                                            Bỏ chọn
+                                        </button>
+                                        <div className="flex items-center gap-2">
+                                            <button
+                                                onClick={handleBulkPrint}
+                                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 text-blue-600 text-[12px] font-bold border border-blue-100"
+                                            >
+                                                <Printer size={14} /> In {selectedIds.length}
+                                            </button>
+                                            <button
+                                                onClick={handleBulkDelete}
+                                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-50 text-rose-600 text-[12px] font-bold border border-rose-100"
+                                            >
+                                                <Trash2 size={14} /> Xóa
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : null
+                        }
+                    />
 
                     {/* ── MOBILE CARD LIST ── */}
                     <div className="md:hidden flex-1 overflow-y-auto p-3 flex flex-col gap-3">
@@ -836,129 +844,139 @@ const Orders = () => {
                         ) : filteredOrders.length === 0 ? (
                             <div className="py-16 text-center text-[13px] text-muted-foreground italic">Không tìm thấy kết quả phù hợp</div>
                         ) : (
-                            filteredOrders.map((order) => {
+                            filteredOrders.map((order, index) => {
                                 const status = getStatusConfig(order.status);
                                 const isSelected = selectedIds.includes(order.id);
                                 return (
                                     <div key={order.id} className={clsx(
-                                        "border rounded-2xl p-4 shadow-sm transition-all duration-200",
+                                        "rounded-2xl border shadow-sm p-4 transition-all duration-200",
                                         isSelected
                                             ? "border-primary bg-primary/[0.05] ring-1 ring-primary/20"
                                             : "border-primary/15 bg-white"
                                     )}>
-                                        <div className="flex justify-between items-start mb-3">
-                                            <div className="flex items-center gap-2">
-                                                <input
-                                                    type="checkbox"
-                                                    className="w-4 h-4 rounded border-border text-primary focus:ring-primary/20"
-                                                    checked={selectedIds.includes(order.id)}
-                                                    onChange={() => toggleSelect(order.id)}
-                                                />
-                                                <span className="text-[13px] font-bold text-foreground">{order.order_code}</span>
+                                        <div className="flex items-start justify-between gap-2 mb-2">
+                                            <div className="flex gap-3">
+                                                <div className="pt-1">
+                                                    <input
+                                                        type="checkbox"
+                                                        className="w-5 h-5 rounded-md border-border text-primary focus:ring-primary/20 transition-all cursor-pointer"
+                                                        checked={selectedIds.includes(order.id)}
+                                                        onChange={() => toggleSelect(order.id)}
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">#{index + 1}</p>
+                                                    <h3 className="text-[14px] font-bold text-foreground leading-tight mt-0.5">{order.order_code}</h3>
+                                                </div>
                                             </div>
-                                            <span className={clsx(getStatusBadgeClass(status.color), 'text-[10px] uppercase')}>
+                                            <span className={clsx(getStatusBadgeClass(status.color), 'text-[10px] font-bold uppercase')}>
                                                 {status.label}
                                             </span>
                                         </div>
 
                                         <div className="mb-3">
-                                            <h3 className="text-[14px] font-bold text-foreground leading-snug">{order.customer_name}</h3>
+                                            <h3 className="text-[14px] font-black text-foreground leading-snug">{order.customer_name}</h3>
                                             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1">
                                                 <span className={getCategoryBadgeClass(order.customer_category)}>{getLabel(CUSTOMER_CATEGORIES, order.customer_category)}</span>
                                                 <span className="text-[11px] font-medium text-muted-foreground">{order.created_at ? new Date(order.created_at).toLocaleDateString('vi-VN') : '---'}</span>
                                             </div>
                                         </div>
 
-                                        <div className="grid grid-cols-2 gap-y-2 text-xs mb-3 bg-muted/10 rounded-xl p-2.5 border border-border/60">
-                                            <div className="space-y-1">
-                                                <p className="text-muted-foreground font-medium flex items-center gap-1.5">
-                                                    <Package className="w-3.5 h-3.5 text-blue-600" />
+                                        <div className="grid grid-cols-2 gap-2 mb-3 rounded-xl bg-muted/10 border border-border/60 p-2.5">
+                                            <div>
+                                                <p className="text-[9px] uppercase tracking-wider text-muted-foreground flex items-center gap-1">
+                                                    <Package className="w-3 h-3 text-blue-600" /> Hàng hóa
+                                                </p>
+                                                <p className="text-[12px] text-foreground font-bold mt-0.5">
                                                     <span className={getProductTypeBadgeClass(order.product_type)}>{getLabel(PRODUCT_TYPES, order.product_type)}</span>
                                                 </p>
-                                                <p className="text-foreground font-bold ml-5">SL: {formatNumber(order.quantity)}</p>
                                             </div>
-                                            <div className="space-y-1 pl-2 border-l border-border">
-                                                <p className="text-muted-foreground font-medium flex items-center gap-1.5">
-                                                    <MapPin className="w-3.5 h-3.5 text-muted-foreground" />
-                                                    Kho: {getLabel(warehousesList, order.warehouse)}
-                                                </p>
-                                                <p className="text-muted-foreground font-medium flex items-center gap-1.5">
-                                                    <Filter className="w-3.5 h-3.5 text-muted-foreground" />
-                                                    <span className="flex items-center gap-1">
-                                                        <span className="text-muted-foreground">Loại:</span>
-                                                        <span className={getOrderTypeBadgeClass(order.order_type)}>{getLabel(ORDER_TYPES, order.order_type)}</span>
-                                                    </span>
-                                                </p>
+                                            <div>
+                                                <p className="text-[9px] uppercase tracking-wider text-muted-foreground">Số lượng</p>
+                                                <p className="text-[14px] text-foreground font-black mt-0.5">{formatNumber(order.quantity)}</p>
                                             </div>
-                                        </div>
-
-                                        {(order.recipient_name || order.recipient_phone) && (
-                                            <div className="bg-cyan-50/30 rounded-lg p-2.5 space-y-1 border border-cyan-100 mb-3">
-                                                <p className="text-[11px] font-bold text-muted-foreground uppercase leading-none mb-1">Người nhận</p>
-                                                <div className="flex items-center justify-between">
+                                            <div className="col-span-2">
+                                                <div className="space-y-3">
                                                     <div className="flex items-center gap-2">
-                                                        <User className="w-3.5 h-3.5 text-muted-foreground" />
-                                                        <span className="text-xs font-bold text-foreground">{order.recipient_name}</span>
+                                                        <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600 shrink-0">
+                                                            <User size={14} />
+                                                        </div>
+                                                        <div className="min-w-0 flex-1">
+                                                            <p className="text-[9px] uppercase tracking-wider text-muted-foreground">Người nhận</p>
+                                                            <p className="text-[12px] text-foreground font-bold truncate">
+                                                                {order.recipient_name || '---'} {order.recipient_phone && `(${order.recipient_phone})`}
+                                                            </p>
+                                                        </div>
                                                     </div>
-                                                    <div className="flex items-center gap-1.5 text-muted-foreground">
-                                                        <Phone className="w-3 h-3" />
-                                                        <span className="text-[11px] font-medium">{order.recipient_phone}</span>
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center text-amber-600 shrink-0">
+                                                            <Warehouse size={14} />
+                                                        </div>
+                                                        <div className="min-w-0 flex-1">
+                                                            <p className="text-[9px] uppercase tracking-wider text-muted-foreground">Kho / Vị trí</p>
+                                                            <p className="text-[12px] text-foreground font-bold truncate">
+                                                                {getLabel(warehousesList, order.warehouse)} {order.department && ` / ${order.department}`}
+                                                            </p>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
-                                        )}
+                                        </div>
 
-                                        <div className="bg-amber-50/40 rounded-lg p-2.5 border border-amber-100/50 mb-3">
-                                            <p className="text-[10px] font-bold text-amber-700 uppercase leading-none mb-2">Thông tin nợ vỏ (Thu hồi)</p>
+                                        <div className="bg-amber-50/40 rounded-xl p-2.5 border border-amber-100/50 mb-3 shadow-inner">
+                                            <p className="text-[10px] font-bold text-amber-700 uppercase tracking-wide mb-2 flex items-center gap-1.5">
+                                                <div className="w-1.5 h-3 bg-amber-400 rounded-full"></div>
+                                                Nợ vỏ tại khách
+                                            </p>
                                             <div className="grid grid-cols-2 gap-2">
                                                 {(allCustomerDebts[order.customer_id] || []).length > 0 ? (
                                                     allCustomerDebts[order.customer_id].map((debt, idx) => (
-                                                        <div key={idx} className="flex items-center justify-between bg-white/60 p-1.5 rounded-md border border-amber-200/30">
-                                                            <span className="text-[10px] text-slate-500 font-medium">{debt.cylinder_type}</span>
+                                                        <div key={idx} className="flex items-center justify-between bg-white/70 p-2 rounded-lg border border-amber-200/40 shadow-sm">
+                                                            <span className="text-[10px] text-slate-500 font-bold">{debt.cylinder_type}</span>
                                                             <span className="text-xs text-rose-600 font-black">{debt.balance}</span>
                                                         </div>
                                                     ))
                                                 ) : (
-                                                    <div className="col-span-2 text-[10px] text-slate-400 italic">Không có nợ vỏ</div>
+                                                    <div className="col-span-2 text-[10px] text-slate-400 italic py-1">Không có nợ vỏ</div>
                                                 )}
                                             </div>
                                         </div>
 
-                                        <div className="flex items-center justify-between pt-3 border-t border-border">
+                                        <div className="flex items-center justify-between pt-3 border-t border-border/70">
                                             <div className="flex flex-col">
-                                                <span className="text-[10px] font-bold text-muted-foreground uppercase leading-none mb-1">Thành tiền</span>
-                                                <span className="text-[14px] font-bold text-primary">
-                                                    {formatNumber(order.total_amount || (order.quantity || 0) * (order.unit_price || 0))} <small className="text-[10px]">đ</small>
+                                                <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest leading-none mb-1">Thành tiền</span>
+                                                <span className="text-[15px] font-black text-primary">
+                                                    {formatNumber(order.total_amount || (order.quantity || 0) * (order.unit_price || 0))} <small className="text-[10px] font-medium opacity-70">đ</small>
                                                 </span>
                                             </div>
                                             <div className="flex items-center gap-2">
                                                 <button
                                                     onClick={() => { setSelectedOrder(order); setIsActionModalOpen(true); }}
-                                                    className="p-2 text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-lg"
-                                                    title="Thao tác đơn hàng"
+                                                    className="p-2 text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-lg active:scale-90 transition-all"
+                                                    title="Thao tác"
                                                 >
-                                                    <Package className="w-4 h-4" />
+                                                    <Package size={18} />
                                                 </button>
                                                 <button
                                                     onClick={() => handlePrint(order)}
-                                                    className="p-2 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
+                                                    className="p-2 text-muted-foreground bg-slate-50 border border-slate-200 rounded-lg active:scale-90 transition-all"
                                                 >
-                                                    <Printer className="w-4 h-4" />
+                                                    <Printer size={18} />
                                                 </button>
                                                 {order.product_type?.startsWith('MAY') && (
                                                     <button
                                                         onClick={() => handleHandoverPrint(order)}
-                                                        className="p-2 text-muted-foreground hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-                                                        title="In biên bản bàn giao (BBBG)"
+                                                        className="p-2 text-green-700 bg-green-50 border border-green-100 rounded-lg active:scale-90 transition-all font-bold"
+                                                        title="BBBG"
                                                     >
-                                                        <ClipboardCheck className="w-4 h-4" />
+                                                        <ClipboardCheck size={18} />
                                                     </button>
                                                 )}
                                                 <button
                                                     onClick={() => handleEditOrder(order)}
-                                                    className="p-2 text-amber-700 bg-amber-50 border border-amber-100 rounded-lg"
+                                                    className="p-2 text-amber-700 bg-amber-50 border border-amber-100 rounded-lg active:scale-90 transition-all"
                                                 >
-                                                    <Edit className="w-4 h-4" />
+                                                    <Edit size={18} />
                                                 </button>
                                             </div>
                                         </div>
@@ -979,20 +997,15 @@ const Orders = () => {
                     )}
 
                     {/* Mobile pagination */}
-                    <div className="md:hidden px-4 py-3 border-t border-border flex items-center justify-between bg-muted/5">
-                        <span className="text-[12px] text-muted-foreground font-medium">
-                            {filteredOrders.length > 0 ? `1–${filteredOrders.length}` : '0'}/Tổng {filteredOrders.length}
-                        </span>
-                        <div className="flex items-center gap-1">
-                            <select className="bg-white border border-border rounded-lg px-2 py-1 focus:outline-none text-[11px] font-bold shadow-sm">
-                                <option>20 / trang</option>
-                                <option>50 / trang</option>
-                            </select>
-                            <button className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted disabled:opacity-20" disabled><ChevronLeft size={15} /></button>
-                            <div className="w-7 h-7 rounded-lg bg-primary text-white flex items-center justify-center text-[11px] font-bold">1</div>
-                            <button className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted disabled:opacity-20" disabled><ChevronRight size={15} /></button>
-                        </div>
-                    </div>
+                    {!isLoading && (
+                        <MobilePagination
+                            currentPage={1}
+                            setCurrentPage={() => { }} // Placeholder if real pagination not yet active
+                            pageSize={50}
+                            setPageSize={() => { }}
+                            totalRecords={filteredOrders.length}
+                        />
+                    )}
 
                     {/* ── DESKTOP TOOLBAR ── */}
                     <div className="hidden md:block p-3 space-y-3">

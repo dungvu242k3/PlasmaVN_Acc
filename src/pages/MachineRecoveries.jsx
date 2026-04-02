@@ -1,21 +1,38 @@
 import { clsx } from 'clsx';
+import MobilePageHeader from '../components/layout/MobilePageHeader';
+import MobilePagination from '../components/layout/MobilePagination';
+import PageViewSwitcher from '../components/layout/PageViewSwitcher';
+import {
+    ArcElement,
+    BarElement,
+    CategoryScale,
+    Chart as ChartJS,
+    Legend as ChartLegend,
+    Tooltip as ChartTooltip,
+    LinearScale,
+    LineElement,
+    PointElement,
+    Title
+} from 'chart.js';
+import { Bar as BarChartJS, Doughnut as DoughnutChartJS } from 'react-chartjs-2';
 import {
     ChevronLeft,
     ChevronRight,
     Edit,
     FileText,
-    Filter,
-    LayoutGrid,
     List,
     Monitor,
-    Package,
     Plus,
     Printer,
     Search,
     Trash2,
     X,
+    BarChart2,
+    Calendar,
+    Clock,
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useEffect, useState, cloneElement } from 'react';
 import { createPortal } from 'react-dom';
 import { toast } from 'react-toastify';
 import MachineRecoveryFormModal from '../components/MachineRecovery/MachineRecoveryFormModal';
@@ -23,11 +40,27 @@ import MachineRecoveryPrintTemplate from '../components/MachineRecovery/MachineR
 import { MACHINE_RECOVERY_STATUSES, MACHINE_RECOVERY_TABLE_COLUMNS } from '../constants/machineRecoveryConstants';
 import { supabase } from '../supabase/config';
 
+// Register Chart.js components
+ChartJS.register(
+    CategoryScale,
+    LinearScale,
+    BarElement,
+    ArcElement,
+    PointElement,
+    LineElement,
+    Title,
+    ChartTooltip,
+    ChartLegend
+);
+
 export default function MachineRecoveries() {
+    const navigate = useNavigate();
     const [recoveries, setRecoveries] = useState([]);
     const [loading, setLoading] = useState(true);
     const [activeView, setActiveView] = useState('list'); // 'list' or 'stats'
     const [searchTerm, setSearchTerm] = useState('');
+    const [currentPage, setCurrentPage] = useState(1);
+    const [pageSize, setPageSize] = useState(50);
     const [isFormModalOpen, setIsFormModalOpen] = useState(false);
     const [recoveryToEdit, setRecoveryToEdit] = useState(null);
     const [recoveryToPrint, setRecoveryToPrint] = useState(null);
@@ -67,11 +100,14 @@ export default function MachineRecoveries() {
     const getCustomerAddress = (id) => customers.find(c => c.id === id)?.address || '';
     const getWarehouseName = (id) => warehouses.find(w => w.id === id)?.name || id || '—';
 
-    const filteredRecoveries = recoveries.filter(r => 
+    const filteredRecoveries = recoveries.filter(r =>
         r.recovery_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
         getCustomerName(r.customer_id).toLowerCase().includes(searchTerm.toLowerCase()) ||
         (r.driver_name || '').toLowerCase().includes(searchTerm.toLowerCase())
     );
+
+    const totalRecords = filteredRecoveries.length;
+    const paginatedRecoveries = filteredRecoveries.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
     const handleDelete = async (id, code) => {
         if (!window.confirm(`Bạn có chắc muốn xóa phiếu ${code}?`)) return;
@@ -96,118 +132,371 @@ export default function MachineRecoveries() {
             case 'amber': return 'bg-amber-100 text-amber-700 border-amber-200';
             case 'emerald': return 'bg-emerald-100 text-emerald-700 border-emerald-200';
             case 'rose': return 'bg-rose-100 text-rose-700 border-rose-200';
+            case 'blue': return 'bg-blue-100 text-blue-700 border-blue-200';
+            case 'yellow': return 'bg-yellow-100 text-yellow-700 border-yellow-200';
             default: return 'bg-slate-100 text-slate-700 border-slate-200';
         }
     };
 
     const getStatusLabel = (statusId) => MACHINE_RECOVERY_STATUSES.find(s => s.id === statusId)?.label || statusId;
 
+    const getChartData = () => {
+        const customerData = {};
+        recoveries.forEach(r => {
+            if (r.status !== 'HUY') {
+                const name = getCustomerName(r.customer_id);
+                customerData[name] = (customerData[name] || 0) + (r.total_items || 0);
+            }
+        });
+
+        const sortedCustomers = Object.entries(customerData)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 10);
+
+        return {
+            labels: sortedCustomers.map(c => c[0].length > 15 ? c[0].substring(0, 15) + '...' : c[0]),
+            datasets: [{
+                label: 'Số lượng máy thu hồi',
+                data: sortedCustomers.map(c => c[1]),
+                backgroundColor: 'rgba(56, 189, 248, 0.8)',
+                borderRadius: 6,
+                barThickness: 24
+            }]
+        };
+    };
+
+    const getStatusChartData = () => {
+        const counts = { 'Hoàn thành': 0, 'Đang xử lý': 0, 'Đã hủy': 0 };
+        recoveries.forEach(r => {
+            if (r.status === 'HOAN_THANH') counts['Hoàn thành']++;
+            else if (r.status === 'HUY') counts['Đã hủy']++;
+            else counts['Đang xử lý']++;
+        });
+
+        return {
+            labels: Object.keys(counts),
+            datasets: [{
+                data: Object.values(counts),
+                backgroundColor: ['rgba(16, 185, 129, 0.8)', 'rgba(245, 158, 11, 0.8)', 'rgba(244, 63, 94, 0.8)'],
+                borderWidth: 0,
+                hoverOffset: 4
+            }]
+        };
+    };
+
     return (
-        <div className="p-4 md:p-6 space-y-6 max-w-[1600px] mx-auto animate-in fade-in duration-500">
-            {/* Header Section */}
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-                <div className="space-y-1">
-                    <div className="flex items-center gap-2 text-primary font-bold text-sm uppercase tracking-wider opacity-80">
-                        <Monitor size={16} />
-                        QUẢN LÝ THIẾT BỊ
-                    </div>
-                    <h1 className="text-3xl font-black text-slate-900 tracking-tight leading-none">THU HỒI MÁY</h1>
-                    <p className="text-slate-500 font-medium text-sm">Quản lý biên bản và quy trình thu hồi máy từ khách hàng</p>
-                </div>
+        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 w-full flex-1 flex flex-col mt-1 min-h-0 px-1 md:px-1.5">
+            <PageViewSwitcher
+                activeView={activeView}
+                setActiveView={setActiveView}
+                views={[
+                    { id: 'list', label: 'Danh sách', icon: <List size={16} /> },
+                    { id: 'stats', label: 'Thống kê', icon: <BarChart2 size={16} /> },
+                ]}
+            />
 
-                <div className="flex items-center gap-2">
-                    <div className="flex bg-white p-1 rounded-2xl border border-slate-200 shadow-sm">
-                        <button onClick={() => setActiveView('list')} className={clsx("p-2 rounded-xl transition-all", activeView === 'list' ? "bg-primary text-white shadow-md shadow-primary/20" : "text-slate-400 hover:text-slate-600")}>
-                            <List size={20} />
-                        </button>
-                        <button onClick={() => setActiveView('stats')} className={clsx("p-2 rounded-xl transition-all", activeView === 'stats' ? "bg-primary text-white shadow-md shadow-primary/20" : "text-slate-400 hover:text-slate-600")}>
-                            <LayoutGrid size={20} />
-                        </button>
-                    </div>
-                    <button onClick={() => { setRecoveryToEdit(null); setIsFormModalOpen(true); }} className="flex items-center gap-2 px-6 py-3 bg-primary text-white font-black rounded-2xl shadow-xl shadow-primary/25 hover:bg-primary/90 transition-all hover:scale-[1.02] active:scale-95 leading-none">
-                        <Plus size={20} strokeWidth={3} />
-                        Tạo phiếu mới
-                    </button>
-                </div>
-            </div>
+            {activeView === 'list' && (
+                <div className="bg-white rounded-2xl border border-border shadow-sm flex flex-col flex-1 min-h-0 w-full mb-16 md:mb-0">
+                    <MobilePageHeader
+                        searchTerm={searchTerm}
+                        setSearchTerm={setSearchTerm}
+                        searchPlaceholder="Tìm kiếm phiếu thu..."
+                        actions={
+                            <button
+                                onClick={() => { setRecoveryToEdit(null); setIsFormModalOpen(true); }}
+                                className="p-2 rounded-xl bg-primary text-white shadow-lg shadow-primary/30 active:scale-95 transition-all"
+                            >
+                                <Plus size={20} />
+                            </button>
+                        }
+                    />
 
-            {/* Stats Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard icon={<FileText className="text-blue-500" />} label="Tổng số phiếu" value={recoveries.length} color="blue" />
-                <StatCard icon={<Monitor className="text-emerald-500" />} label="Máy thu hồi" value={recoveries.reduce((acc, r) => acc + (r.total_items || 0), 0)} color="emerald" />
-                <StatCard icon={<Clock className="text-amber-500" />} label="Chờ duyệt" value={recoveries.filter(r => r.status === 'CHO_DUYET').length} color="amber" />
-                <StatCard icon={<X className="text-rose-500" />} label="Đã hủy" value={recoveries.filter(r => r.status === 'HUY').length} color="rose" />
-            </div>
-
-            {/* List and Filters */}
-            <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden flex flex-col min-h-[500px]">
-                <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div className="relative flex-1 max-w-md group">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors" size={18} />
-                        <input type="text" placeholder="Tìm theo mã phiếu, khách hàng, tài xế..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full h-11 pl-11 pr-4 bg-white border border-slate-200 rounded-2xl text-[14px] font-medium outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all shadow-sm" />
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <button className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-[13px] font-bold text-slate-600 hover:bg-slate-50 transition-all">
-                            <Filter size={16} />
-                            Bộ lọc
-                        </button>
-                    </div>
-                </div>
-
-                <div className="overflow-x-auto custom-scrollbar">
-                    <table className="w-full border-collapse">
-                        <thead>
-                            <tr className="bg-slate-50/80 border-b border-slate-100">
-                                {MACHINE_RECOVERY_TABLE_COLUMNS.map(col => (
-                                    <th key={col.key} className="px-6 py-4 text-left text-[12px] font-black text-slate-500 uppercase tracking-widest">{col.label}</th>
-                                ))}
-                                <th className="px-6 py-4 text-center text-[12px] font-black text-slate-500 uppercase tracking-widest">Thao tác</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-50">
-                            {loading ? (
-                                <tr><td colSpan={10} className="px-6 py-20 text-center text-slate-400 font-bold italic">Đang tải dữ liệu...</td></tr>
-                            ) : filteredRecoveries.length === 0 ? (
-                                <tr><td colSpan={10} className="px-6 py-20 text-center text-slate-400 font-bold italic">Không tìm thấy phiếu nào</td></tr>
-                            ) : (
-                                filteredRecoveries.map(r => (
-                                    <tr key={r.id} className="group hover:bg-primary/5 transition-all">
-                                        <td className="px-6 py-4"><span className="text-[14px] font-black text-primary hover:underline cursor-pointer" onClick={() => { setRecoveryToEdit(r); setIsFormModalOpen(true); }}>{r.recovery_code}</span></td>
-                                        <td className="px-6 py-4 text-[13px] font-bold text-slate-600">{new Date(r.recovery_date).toLocaleDateString('vi-VN')}</td>
-                                        <td className="px-6 py-4"><div className="text-[14px] font-black text-slate-900 line-clamp-1">{getCustomerName(r.customer_id)}</div></td>
-                                        <td className="px-6 py-4 text-[13px] font-medium text-slate-500">{r.order_id ? 'Có liên kết' : '—'}</td>
-                                        <td className="px-6 py-4 text-[13px] font-bold text-slate-700">{getWarehouseName(r.warehouse_id)}</td>
-                                        <td className="px-6 py-4 text-[13px] font-medium text-slate-500">{r.driver_name || '—'}</td>
-                                        <td className="px-6 py-4"><span className="px-2 py-1 bg-blue-50 text-blue-700 rounded-lg font-black text-xs">{r.total_items} máy</span></td>
-                                        <td className="px-6 py-4">
-                                            <span className={clsx("px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider border", handleStatusColor(r.status))}>
-                                                {getStatusLabel(r.status)}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <button onClick={() => handlePrint(r)} className="p-2 text-slate-400 hover:text-primary hover:bg-primary/10 rounded-xl transition-all"><Printer size={18} /></button>
-                                                <button onClick={() => { setRecoveryToEdit(r); setIsFormModalOpen(true); }} className="p-2 text-slate-400 hover:text-amber-500 hover:bg-amber-50 rounded-xl transition-all"><Edit size={18} /></button>
-                                                <button onClick={() => handleDelete(r.id, r.recovery_code)} className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all"><Trash2 size={18} /></button>
+                    {/* Mobile View */}
+                    <div className="md:hidden flex-1 overflow-y-auto p-3 pb-4 flex flex-col gap-3">
+                        {loading ? (
+                            <div className="py-16 text-center text-[13px] text-muted-foreground italic">Đang tải dữ liệu...</div>
+                        ) : paginatedRecoveries.length === 0 ? (
+                            <div className="py-16 text-center text-[13px] text-muted-foreground italic">Không tìm thấy kết quả phù hợp</div>
+                        ) : (
+                            paginatedRecoveries.map((r, index) => (
+                                <div key={r.id} className="rounded-2xl border border-primary/15 bg-white shadow-sm p-4 transition-all duration-200">
+                                    <div className="flex items-start justify-between gap-2 mb-2">
+                                        <div className="flex gap-3">
+                                            <div>
+                                                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">#{((currentPage - 1) * pageSize) + index + 1}</p>
+                                                <h3 className="text-[14px] font-bold text-foreground leading-tight mt-0.5 font-mono text-primary cursor-pointer" onClick={() => { setRecoveryToEdit(r); setIsFormModalOpen(true); }}>{r.recovery_code}</h3>
                                             </div>
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
-                </div>
+                                        </div>
+                                        <span className={clsx('inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border', handleStatusColor(r.status))}>
+                                            {getStatusLabel(r.status)}
+                                        </span>
+                                    </div>
 
-                {/* Pagination Placeholder */}
-                <div className="p-4 border-t border-slate-100 bg-slate-50/30 flex items-center justify-between">
-                    <div className="text-[12px] font-bold text-slate-400 uppercase tracking-widest">Hiển thị {filteredRecoveries.length} / {recoveries.length} phiếu</div>
-                    <div className="flex items-center gap-2">
-                        <button disabled className="p-2 rounded-xl text-slate-300 hover:bg-white disabled:opacity-50"><ChevronLeft size={18} /></button>
-                        <div className="px-3 py-1 bg-primary text-white text-[12px] font-black rounded-lg shadow-sm">1</div>
-                        <button disabled className="p-2 rounded-xl text-slate-300 hover:bg-white disabled:opacity-50"><ChevronRight size={18} /></button>
+                                    <div className="grid grid-cols-2 gap-2 mb-3 rounded-xl bg-muted/10 border border-border/60 p-2.5">
+                                        <div>
+                                            <p className="text-[9px] uppercase tracking-wider text-muted-foreground">Kho nhập</p>
+                                            <p className="text-[12px] text-foreground font-medium truncate">
+                                                {getWarehouseName(r.warehouse_id)}
+                                            </p>
+                                        </div>
+                                        <div>
+                                            <p className="text-[9px] uppercase tracking-wider text-muted-foreground">Số lượng</p>
+                                            <p className="text-[12px] text-foreground font-medium text-emerald-600 font-bold">
+                                                {r.total_items} máy
+                                            </p>
+                                        </div>
+                                        <div className="col-span-2">
+                                            <div className="space-y-3">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600 shrink-0">
+                                                        <User size={14} />
+                                                    </div>
+                                                    <div className="min-w-0 flex-1">
+                                                        <p className="text-[9px] uppercase tracking-wider text-muted-foreground">Khách hàng</p>
+                                                        <p className="text-[12px] text-foreground font-bold truncate">
+                                                            {getCustomerName(r.customer_id)}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-center justify-between pt-2 border-t border-border/70">
+                                        <div className="flex items-center gap-2 text-[11px] text-muted-foreground font-medium">
+                                            <Calendar size={12} />
+                                            <span>{new Date(r.recovery_date).toLocaleDateString('vi-VN')}</span>
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                            <button onClick={() => handlePrint(r)} className="p-2 text-slate-400 hover:text-primary bg-slate-50 hover:bg-primary/10 border border-slate-100 rounded-lg"><Printer size={16} /></button>
+                                            <button onClick={() => { setRecoveryToEdit(r); setIsFormModalOpen(true); }} className="p-2 text-amber-700 bg-amber-50 border border-amber-100 rounded-lg"><Edit size={16} /></button>
+                                            <button onClick={() => handleDelete(r.id, r.recovery_code)} className="p-2 text-rose-700 bg-rose-50 border border-rose-100 rounded-lg"><Trash2 size={16} /></button>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))
+                        )}
+                    </div>
+
+                    {/* Desktop View */}
+                    <div className="hidden md:flex flex-col flex-1 min-h-0">
+                        {/* Desktop Toolbar */}
+                        <div className="p-4 border-b border-border/50 shrink-0">
+                            <div className="flex items-center justify-between gap-4">
+                                <div className="flex items-center gap-2 flex-1">
+                                    <button
+                                        onClick={() => navigate(-1)}
+                                        className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-border hover:bg-muted text-muted-foreground text-[12px] font-bold transition-all bg-white shadow-sm shrink-0"
+                                    >
+                                        <ChevronLeft size={16} />
+                                        Quay lại
+                                    </button>
+                                    <div className="relative flex-1">
+                                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
+                                        <input
+                                            type="text"
+                                            placeholder="Tìm kiếm . . ."
+                                            value={searchTerm}
+                                            onChange={(e) => setSearchTerm(e.target.value)}
+                                            className="w-full pl-10 pr-8 py-1.5 bg-muted/20 border border-border/80 rounded-xl text-[13px] focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all font-medium"
+                                        />
+                                        {searchTerm && (
+                                            <button onClick={() => setSearchTerm('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-rose-500 transition-colors">
+                                                <X size={14} />
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <button onClick={() => { setRecoveryToEdit(null); setIsFormModalOpen(true); }} className="flex items-center gap-2 px-6 h-10 rounded-lg bg-primary text-white text-[13px] font-bold hover:bg-primary/90 shadow-md shadow-primary/20 transition-all active:scale-95">
+                                        <Plus size={18} />
+                                        Thêm
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="flex-1 overflow-auto custom-scrollbar">
+                            <table className="w-full text-left border-collapse">
+                                <thead className="sticky top-0 z-10 bg-slate-50/95 backdrop-blur shadow-sm">
+                                    <tr>
+                                        {MACHINE_RECOVERY_TABLE_COLUMNS.map(col => (
+                                            <th key={col.key} className="px-5 py-3.5 text-[12px] font-bold text-slate-500 uppercase tracking-wider">{col.label}</th>
+                                        ))}
+                                        <th className="px-5 py-3.5 text-center text-[12px] font-bold text-slate-500 uppercase tracking-wider">Thao tác</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-border/60 bg-white">
+                                    {loading ? (
+                                        <tr><td colSpan={10} className="px-6 py-20 text-center text-slate-400 font-bold italic">Đang tải dữ liệu...</td></tr>
+                                    ) : paginatedRecoveries.length === 0 ? (
+                                        <tr><td colSpan={10} className="px-6 py-20 text-center text-slate-400 font-bold italic">Không tìm thấy phiếu nào</td></tr>
+                                    ) : (
+                                        paginatedRecoveries.map(r => (
+                                            <tr key={r.id} className="group hover:bg-muted/30 transition-colors">
+                                                <td className="px-5 py-3.5"><span className="text-[14px] font-bold text-primary hover:underline cursor-pointer" onClick={() => { setRecoveryToEdit(r); setIsFormModalOpen(true); }}>{r.recovery_code}</span></td>
+                                                <td className="px-5 py-3.5 text-[13px] font-semibold text-slate-600">{new Date(r.recovery_date).toLocaleDateString('vi-VN')}</td>
+                                                <td className="px-5 py-3.5"><div className="text-[14px] font-bold text-slate-900 line-clamp-1">{getCustomerName(r.customer_id)}</div></td>
+                                                <td className="px-5 py-3.5 text-[13px] font-medium text-slate-500">{r.order_id ? 'Có liên kết' : '—'}</td>
+                                                <td className="px-5 py-3.5 text-[13px] font-semibold text-slate-700">{getWarehouseName(r.warehouse_id)}</td>
+                                                <td className="px-5 py-3.5 text-[13px] font-medium text-slate-500">{r.driver_name || '—'}</td>
+                                                <td className="px-5 py-3.5"><span className="px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-md font-bold text-[12px]">{r.total_items} máy</span></td>
+                                                <td className="px-5 py-3.5">
+                                                    <span className={clsx("px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider border", handleStatusColor(r.status))}>
+                                                        {getStatusLabel(r.status)}
+                                                    </span>
+                                                </td>
+                                                <td className="px-5 py-3.5">
+                                                    <div className="flex items-center justify-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        <button onClick={() => handlePrint(r)} className="p-1.5 text-slate-400 hover:text-primary hover:bg-primary/10 rounded-lg transition-all"><Printer size={16} /></button>
+                                                        <button onClick={() => { setRecoveryToEdit(r); setIsFormModalOpen(true); }} className="p-1.5 text-slate-400 hover:text-amber-500 hover:bg-amber-50 rounded-lg transition-all"><Edit size={16} /></button>
+                                                        <button onClick={() => handleDelete(r.id, r.recovery_code)} className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-all"><Trash2 size={16} /></button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        {/* Desktop Pagination */}
+                        <div className="hidden md:flex items-center justify-between p-3 border-t border-border bg-slate-50/50 mt-auto">
+                            <div className="flex items-center gap-2 text-[12px] text-muted-foreground font-medium">
+                                <span>
+                                    {totalRecords > 0 ? `${(currentPage - 1) * pageSize + 1}–${Math.min(currentPage * pageSize, totalRecords)}` : '0'} / Tổng {totalRecords}
+                                </span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                                <button
+                                    onClick={() => setCurrentPage(1)}
+                                    className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors disabled:opacity-20"
+                                    disabled={currentPage === 1}
+                                    title="Trang đầu"
+                                >
+                                    <ChevronLeft size={16} />
+                                    <ChevronLeft size={16} className="-ml-2.5" />
+                                </button>
+                                <button
+                                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                                    className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors disabled:opacity-20"
+                                    disabled={currentPage === 1}
+                                    title="Trang trước"
+                                >
+                                    <ChevronLeft size={16} />
+                                </button>
+                                <div className="w-8 h-8 rounded-lg bg-primary text-white flex items-center justify-center text-[12px] font-bold shadow-md shadow-primary/25">
+                                    {currentPage}
+                                </div>
+                                <button
+                                    onClick={() => setCurrentPage(prev => Math.min(Math.ceil(totalRecords / pageSize), prev + 1))}
+                                    className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors disabled:opacity-20"
+                                    disabled={currentPage >= Math.ceil(totalRecords / pageSize)}
+                                    title="Trang sau"
+                                >
+                                    <ChevronRight size={16} />
+                                </button>
+                                <button
+                                    onClick={() => setCurrentPage(Math.ceil(totalRecords / pageSize))}
+                                    className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors disabled:opacity-20"
+                                    disabled={currentPage >= Math.ceil(totalRecords / pageSize)}
+                                    title="Trang cuối"
+                                >
+                                    <ChevronRight size={16} />
+                                    <ChevronRight size={16} className="-ml-2.5" />
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    {!loading && (
+                        <MobilePagination
+                            currentPage={currentPage}
+                            setCurrentPage={setCurrentPage}
+                            pageSize={pageSize}
+                            setPageSize={setPageSize}
+                            totalRecords={totalRecords}
+                        />
+                    )}
+                </div>
+            )}
+
+            {activeView === 'stats' && (
+                <div className="bg-white rounded-2xl border border-border shadow-sm flex flex-col flex-1 min-h-0 w-full mb-16 md:mb-0">
+                    <div className="space-y-0">
+                        {/* Mobile Header */}
+                        <div className="md:hidden flex items-center gap-2 p-3 border-b border-border">
+                            <button
+                                onClick={() => navigate(-1)}
+                                className="p-2 rounded-xl border border-border bg-white text-muted-foreground shrink-0"
+                            >
+                                <ChevronLeft size={18} />
+                            </button>
+                            <h2 className="text-base font-bold text-foreground flex-1 text-center">Thống kê</h2>
+                            <div className="w-9" /> {/* Spacer for centering */}
+                        </div>
+
+                        {/* Desktop Header */}
+                        <div className="hidden md:block p-4 border-b border-border">
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={() => navigate(-1)}
+                                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-border hover:bg-muted text-muted-foreground text-[12px] font-bold transition-all bg-white shadow-sm shrink-0"
+                                >
+                                    <ChevronLeft size={16} />
+                                    Quay lại
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Stats Content */}
+                        <div className="w-full px-3 md:px-4 pt-4 md:pt-5 pb-5 md:pb-6 space-y-5 flex-1 overflow-y-auto bg-slate-50/30">
+                            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                                <StatCard icon={<FileText />} label="Tổng số phiếu" value={recoveries.length} color="blue" />
+                                <StatCard icon={<Monitor />} label="Máy thu hồi" value={recoveries.reduce((acc, r) => acc + (r.total_items || 0), 0)} color="emerald" />
+                                <StatCard icon={<Clock />} label="Chờ duyệt" value={recoveries.filter(r => r.status === 'CHO_DUYET').length} color="amber" />
+                                <StatCard icon={<X />} label="Đã hủy" value={recoveries.filter(r => r.status === 'HUY').length} color="rose" />
+                            </div>
+
+                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mt-6">
+                                <div className="lg:col-span-2 bg-white border border-border rounded-2xl p-5 md:p-6 shadow-sm">
+                                    <h3 className="text-[14px] md:text-base font-black text-slate-800 uppercase tracking-tight mb-6">Top 10 Khách hàng <span className="text-muted-foreground text-[12px] font-medium normal-case">(Theo số lượng máy thu hồi)</span></h3>
+                                    <div style={{ height: '280px' }}>
+                                        <BarChartJS 
+                                            data={getChartData()}
+                                            options={{
+                                                responsive: true,
+                                                maintainAspectRatio: false,
+                                                plugins: { legend: { display: false } },
+                                                scales: {
+                                                    y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { stepSize: 5 } },
+                                                    x: { grid: { display: false }, ticks: { font: { size: 11, weight: 'bold' } } }
+                                                }
+                                            }}
+                                        />
+                                    </div>
+                                </div>
+                                <div className="bg-white border border-border rounded-2xl p-5 md:p-6 shadow-sm">
+                                    <h3 className="text-[14px] md:text-base font-black text-slate-800 uppercase tracking-tight mb-6">Tỷ lệ theo trạng thái</h3>
+                                    <div style={{ height: '280px' }} className="flex items-center justify-center">
+                                        <DoughnutChartJS 
+                                            data={getStatusChartData()}
+                                            options={{
+                                                responsive: true,
+                                                maintainAspectRatio: false,
+                                                plugins: { 
+                                                    legend: { position: 'bottom', labels: { padding: 20, font: { weight: 'bold' } } }
+                                                },
+                                                cutout: '72%'
+                                            }}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
-            </div>
+            )}
 
             {/* Modals */}
             {isFormModalOpen && (
@@ -233,31 +522,26 @@ export default function MachineRecoveries() {
 }
 
 function StatCard({ icon, label, value, color }) {
-    const colorClasses = {
-        blue: 'bg-blue-50 border-blue-100 text-blue-600 ring-blue-500/10',
-        emerald: 'bg-emerald-50 border-emerald-100 text-emerald-600 ring-emerald-500/10',
-        amber: 'bg-amber-50 border-amber-100 text-amber-600 ring-amber-500/10',
-        rose: 'bg-rose-50 border-rose-100 text-rose-600 ring-rose-500/10',
+    const colorStyles = {
+        blue: { bg: 'bg-blue-50/70', border: 'border-blue-100', text: 'text-blue-600', iconBg: 'bg-blue-100/80', ring: 'ring-blue-200/70' },
+        emerald: { bg: 'bg-emerald-50/70', border: 'border-emerald-100', text: 'text-emerald-600', iconBg: 'bg-emerald-100/80', ring: 'ring-emerald-200/70' },
+        amber: { bg: 'bg-amber-50/70', border: 'border-amber-100', text: 'text-amber-600', iconBg: 'bg-amber-100/80', ring: 'ring-amber-200/70' },
+        rose: { bg: 'bg-rose-50/70', border: 'border-rose-100', text: 'text-rose-600', iconBg: 'bg-rose-100/80', ring: 'ring-rose-200/70' },
     };
 
+    const style = colorStyles[color] || colorStyles.blue;
+
     return (
-        <div className={clsx("p-5 bg-white border rounded-3xl flex items-center justify-between shadow-sm hover:shadow-md transition-all hover:-translate-y-1", colorClasses[color] || 'border-slate-200')}>
-            <div className="space-y-1">
-                <p className="text-[11px] font-black uppercase tracking-[0.1em] opacity-60 leading-none">{label}</p>
-                <p className="text-3xl font-black tracking-tighter text-slate-900 leading-none pt-1">{value}</p>
-            </div>
-            <div className={clsx("w-14 h-14 rounded-2xl flex items-center justify-center ring-4", colorClasses[color])}>
-                {icon}
+        <div className={clsx("border rounded-2xl p-4 md:p-5 shadow-sm transition-all hover:shadow-md", style.bg, style.border)}>
+            <div className="flex flex-col md:flex-row items-center justify-center md:justify-start text-center md:text-left gap-3 md:gap-4">
+                <div className={clsx("w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center shrink-0 ring-1", style.iconBg, style.ring)}>
+                    {cloneElement(icon, { className: clsx("w-5 h-5 md:w-6 md:h-6", style.text) })}
+                </div>
+                <div>
+                    <p className={clsx("text-[10px] md:text-[11px] font-semibold uppercase tracking-wider mb-0.5 md:mb-1", style.text)}>{label}</p>
+                    <p className="text-2xl md:text-3xl font-bold text-foreground leading-none">{value}</p>
+                </div>
             </div>
         </div>
-    );
-}
-
-function Clock(props) {
-    return (
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
-            <circle cx="12" cy="12" r="10" />
-            <polyline points="12 6 12 12 16 14" />
-        </svg>
     );
 }

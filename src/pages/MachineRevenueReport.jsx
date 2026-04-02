@@ -22,12 +22,16 @@ import {
     User,
     X,
     TrendingUp,
-    PieChart
+    PieChart,
+    ArrowLeft
 } from 'lucide-react';
 import React, { useEffect, useRef, useState } from 'react';
 import { Bar as BarChartJS, Pie as PieChartJS } from 'react-chartjs-2';
 import { useNavigate } from 'react-router-dom';
 import { clsx } from 'clsx';
+import MobilePageHeader from '../components/layout/MobilePageHeader';
+import MobilePagination from '../components/layout/MobilePagination';
+import PageViewSwitcher from '../components/layout/PageViewSwitcher';
 import { useReports } from '../hooks/useReports';
 import { exportMachineRevenueReport } from '../utils/exportExcel';
 import ColumnPicker from '../components/ui/ColumnPicker';
@@ -57,25 +61,27 @@ const TABLE_COLUMNS = [
 const MachineRevenueReport = () => {
     const navigate = useNavigate();
     const { fetchMachineRevenue, fetchFilterOptions, loading } = useReports();
-    
+
     // View state
     const [activeView, setActiveView] = useState('list'); // 'list' or 'stats'
     const [searchTerm, setSearchTerm] = useState('');
     const [data, setData] = useState([]);
-    
+
     // Filter states
     const [filterOptions, setFilterOptions] = useState({ customerTypes: [], salespersons: [], departments: [] });
     const [selectedDepartments, setSelectedDepartments] = useState([]);
     const [selectedSalespersons, setSelectedSalespersons] = useState([]);
     const [selectedCustomerTypes, setSelectedCustomerTypes] = useState([]);
-    
+    const [currentPage, setCurrentPage] = useState(1);
+    const [pageSize, setPageSize] = useState(50);
+
     // Column visibility and ordering
     const defaultColOrder = TABLE_COLUMNS.map(col => col.key);
     const columnDefs = TABLE_COLUMNS.reduce((acc, col) => {
         acc[col.key] = { label: col.label };
         return acc;
     }, {});
-    
+
     const [columnOrder, setColumnOrder] = useState(() => {
         try {
             const saved = JSON.parse(localStorage.getItem('columns_machine_revenue_order') || 'null');
@@ -87,7 +93,7 @@ const MachineRevenueReport = () => {
         } catch { }
         return defaultColOrder;
     });
-    
+
     const [visibleColumns, setVisibleColumns] = useState(() => {
         try {
             const saved = JSON.parse(localStorage.getItem('columns_machine_revenue') || 'null');
@@ -97,14 +103,14 @@ const MachineRevenueReport = () => {
         } catch { }
         return defaultColOrder;
     });
-    
+
     const [showColumnPicker, setShowColumnPicker] = useState(false);
     const columnPickerRef = useRef(null);
     const [activeDropdown, setActiveDropdown] = useState(null);
     const [filterSearch, setFilterSearch] = useState('');
     const listDropdownRef = useRef(null);
     const statsDropdownRef = useRef(null);
-    
+
     // Mobile filter sheet state
     const [showMobileFilter, setShowMobileFilter] = useState(false);
     const [mobileFilterClosing, setMobileFilterClosing] = useState(false);
@@ -116,10 +122,10 @@ const MachineRevenueReport = () => {
         const init = async () => {
             const revenueData = await fetchMachineRevenue();
             setData(revenueData || []);
-            
+
             const options = await fetchFilterOptions();
             const depts = [...new Set((revenueData || []).map(item => item.khoa).filter(Boolean))].sort();
-            
+
             setFilterOptions({
                 customerTypes: options.customerTypes || [],
                 salespersons: options.salespersons || [],
@@ -159,9 +165,9 @@ const MachineRevenueReport = () => {
 
     const filteredData = data.filter(item => {
         const search = searchTerm.toLowerCase();
-        const matchesSearch = item.khach_hang?.toLowerCase().includes(search) || 
-                             item.khoa?.toLowerCase().includes(search);
-        
+        const matchesSearch = item.khach_hang?.toLowerCase().includes(search) ||
+            item.khoa?.toLowerCase().includes(search);
+
         const matchesDept = selectedDepartments.length === 0 || selectedDepartments.includes(item.khoa);
         const matchesSales = selectedSalespersons.length === 0 || selectedSalespersons.includes(item.nhan_vien_kinh_doanh);
         const matchesType = selectedCustomerTypes.length === 0 || selectedCustomerTypes.includes(item.loai_khach_hang);
@@ -178,7 +184,7 @@ const MachineRevenueReport = () => {
         setTimeout(() => {
             setShowMobileFilter(false);
             setMobileFilterClosing(false);
-        }, 280);
+        }, 300);
     };
 
     const openMobileFilter = () => {
@@ -201,8 +207,8 @@ const MachineRevenueReport = () => {
             if (columnPickerRef.current && !columnPickerRef.current.contains(event.target)) {
                 setShowColumnPicker(false);
             }
-            if (activeDropdown && 
-                !(listDropdownRef.current?.contains(event.target)) && 
+            if (activeDropdown &&
+                !(listDropdownRef.current?.contains(event.target)) &&
                 !(statsDropdownRef.current?.contains(event.target))) {
                 setActiveDropdown(null);
                 setFilterSearch('');
@@ -233,7 +239,7 @@ const MachineRevenueReport = () => {
             const name = item.nhan_vien_kinh_doanh || 'Khác';
             stats[name] = (stats[name] || 0) + (item.tong_doanh_so || 0);
         });
-        return Object.entries(stats).map(([name, value]) => ({ name, value })).sort((a,b) => b.value - a.value).slice(0, 10);
+        return Object.entries(stats).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value).slice(0, 10);
     };
 
     const revenueByType = () => {
@@ -255,133 +261,97 @@ const MachineRevenueReport = () => {
     return (
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 w-full flex-1 flex flex-col mt-1 min-h-0 px-1 md:px-1.5">
 
-            {/* Navigation Tabs */}
-            <div className="flex items-center justify-between mb-3 mt-1">
-                <div className="flex items-center gap-1">
-                    <button
-                        onClick={() => setActiveView('list')}
-                        className={clsx(
-                            "flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-bold transition-all",
-                            activeView === 'list'
-                                ? "bg-white text-primary shadow-sm ring-1 ring-border"
-                                : "text-muted-foreground hover:text-foreground hover:bg-muted/30"
-                        )}
-                    >
-                        <List size={14} />
-                        Danh sách
-                    </button>
-                    <button
-                        onClick={() => setActiveView('stats')}
-                        className={clsx(
-                            "flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-bold transition-all",
-                            activeView === 'stats'
-                                ? "bg-white text-primary shadow-sm ring-1 ring-border"
-                                : "text-muted-foreground hover:text-foreground hover:bg-muted/30"
-                        )}
-                    >
-                        <BarChart2 size={14} />
-                        Thống kê
-                    </button>
-                </div>
-            </div>
+            <PageViewSwitcher
+                activeView={activeView}
+                setActiveView={setActiveView}
+                views={[
+                    { id: 'list', label: 'Danh sách', icon: <List size={14} /> },
+                    { id: 'stats', label: 'Thống kê', icon: <BarChart2 size={14} /> },
+                ]}
+            />
 
             {activeView === 'list' && (
                 <div className="bg-white rounded-2xl border border-border shadow-sm flex flex-col flex-1 min-h-0 w-full overflow-hidden">
                     {/* Toolbar */}
                     <div className="p-3 md:p-3.5 border-b border-border bg-muted/5 space-y-3">
-                        <div className="flex flex-wrap items-center gap-3">
-                            {/* Desktop Back + Search Row */}
-                            <div className="hidden md:flex items-center gap-2 flex-1">
-                                <button
-                                    onClick={() => navigate(-1)}
-                                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-border hover:bg-muted text-muted-foreground text-[12px] font-bold transition-all bg-white shadow-sm shrink-0"
-                                >
-                                    <ChevronLeft size={16} />
-                                    Quay lại
-                                </button>
-                                <div className="relative flex-1">
-                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={15} />
-                                    <input
-                                        type="text"
-                                        placeholder="Tìm khách hàng hoặc khoa . . ."
-                                        value={searchTerm}
-                                        onChange={(e) => setSearchTerm(e.target.value)}
-                                        className="w-full pl-9 pr-8 py-2 bg-white border border-border rounded-xl text-[13px] focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all font-medium"
-                                    />
-                                    {searchTerm && (
-                                        <button onClick={() => setSearchTerm('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
-                                            <X size={14} />
-                                        </button>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* Mobile Search/Filter Row */}
-                            <div className="flex md:hidden items-center gap-2 w-full">
-                                <button
-                                    onClick={() => navigate(-1)}
-                                    className="p-2.5 rounded-xl border border-border bg-white text-muted-foreground shrink-0 shadow-sm"
-                                >
-                                    <ChevronLeft size={18} />
-                                </button>
-                                <div className="relative flex-1">
-                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={15} />
-                                    <input
-                                        type="text"
-                                        placeholder="Tìm khách hàng . . ."
-                                        value={searchTerm}
-                                        onChange={(e) => setSearchTerm(e.target.value)}
-                                        className="w-full pl-9 pr-3 py-2.5 bg-white border border-border rounded-xl text-[13px] focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all font-medium"
-                                    />
-                                </div>
-                                <button
-                                    onClick={openMobileFilter}
-                                    className={clsx(
-                                        'relative p-2.5 rounded-xl border shrink-0 transition-all shadow-sm',
-                                        hasActiveFilters ? 'border-primary bg-primary/5 text-primary' : 'border-border bg-white text-muted-foreground'
-                                    )}
-                                >
-                                    <Filter size={18} />
-                                    {hasActiveFilters && (
-                                        <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-primary text-white text-[9px] font-bold flex items-center justify-center">
-                                            {totalActiveFilters}
-                                        </span>
-                                    )}
-                                </button>
-                            </div>
-
-                            {/* Desktop Desktop Actions */}
-                            <div className="hidden md:flex items-center gap-2">
-                                <div className="relative" ref={columnPickerRef}>
+                        <div className="flex flex-col gap-3">
+                            <MobilePageHeader
+                                searchTerm={searchTerm}
+                                setSearchTerm={setSearchTerm}
+                                onFilterClick={openMobileFilter}
+                                hasActiveFilters={hasActiveFilters}
+                                totalActiveFilters={totalActiveFilters}
+                                searchPlaceholder="Tìm khách hàng . . ."
+                                actions={
                                     <button
-                                        onClick={() => setShowColumnPicker(!showColumnPicker)}
-                                        className={clsx(
-                                            'flex items-center gap-2 px-4 py-2 rounded-xl border text-[13px] font-bold transition-all bg-white shadow-sm',
-                                            showColumnPicker ? 'border-primary bg-primary/5 text-primary' : 'border-border text-muted-foreground'
-                                        )}
+                                        onClick={handleExport}
+                                        className="p-2 rounded-xl bg-emerald-600 text-white shrink-0 active:scale-95 transition-all shadow-sm flex items-center justify-center"
                                     >
-                                        <SlidersHorizontal size={15} />
-                                        Cột ({visibleColumns.length}/{TABLE_COLUMNS.length})
+                                        <Download size={20} />
                                     </button>
-                                    {showColumnPicker && (
-                                        <ColumnPicker
-                                            columnOrder={columnOrder}
-                                            setColumnOrder={setColumnOrder}
-                                            visibleColumns={visibleColumns}
-                                            setVisibleColumns={setVisibleColumns}
-                                            defaultColOrder={defaultColOrder}
-                                            columnDefs={columnDefs}
+                                }
+                            />
+
+                            <div className="flex items-center gap-3">
+                                {/* Desktop Back + Search Row */}
+                                <div className="hidden md:flex items-center gap-2 flex-1">
+                                    <button
+                                        onClick={() => navigate(-1)}
+                                        className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-border hover:bg-muted text-muted-foreground text-[12px] font-bold transition-all bg-white shadow-sm shrink-0"
+                                    >
+                                        <ArrowLeft size={16} />
+                                        Quay lại
+                                    </button>
+                                    <div className="relative flex-1">
+                                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={15} />
+                                        <input
+                                            type="text"
+                                            placeholder="Tìm khách hàng hoặc khoa . . ."
+                                            value={searchTerm}
+                                            onChange={(e) => setSearchTerm(e.target.value)}
+                                            className="w-full pl-9 pr-8 py-2 bg-white border border-border rounded-xl text-[13px] focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all font-medium"
                                         />
-                                    )}
+                                        {searchTerm && (
+                                            <button onClick={() => setSearchTerm('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
+                                                <X size={14} />
+                                            </button>
+                                        )}
+                                    </div>
                                 </div>
 
-                                <button
-                                    onClick={handleExport}
-                                    className="flex items-center gap-2 px-5 py-2 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 text-[13px] font-bold shadow-md shadow-emerald-600/20 transition-all"
-                                >
-                                    <Download size={15} />
-                                    Xuất Excel
-                                </button>
+                                {/* Desktop Desktop Actions */}
+                                <div className="hidden md:flex items-center gap-2">
+                                    <div className="relative" ref={columnPickerRef}>
+                                        <button
+                                            onClick={() => setShowColumnPicker(!showColumnPicker)}
+                                            className={clsx(
+                                                'flex items-center gap-2 px-4 py-2 rounded-xl border text-[13px] font-bold transition-all bg-white shadow-sm',
+                                                showColumnPicker ? 'border-primary bg-primary/5 text-primary' : 'border-border text-muted-foreground'
+                                            )}
+                                        >
+                                            <SlidersHorizontal size={15} />
+                                            Cột ({visibleColumns.length}/{TABLE_COLUMNS.length})
+                                        </button>
+                                        {showColumnPicker && (
+                                            <ColumnPicker
+                                                columnOrder={columnOrder}
+                                                setColumnOrder={setColumnOrder}
+                                                visibleColumns={visibleColumns}
+                                                setVisibleColumns={setVisibleColumns}
+                                                defaultColOrder={defaultColOrder}
+                                                columnDefs={columnDefs}
+                                            />
+                                        )}
+                                    </div>
+
+                                    <button
+                                        onClick={handleExport}
+                                        className="flex items-center gap-2 px-5 py-2 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 text-[13px] font-bold shadow-md shadow-emerald-600/20 transition-all"
+                                    >
+                                        <Download size={15} />
+                                        Xuất Excel
+                                    </button>
+                                </div>
                             </div>
                         </div>
 
@@ -522,42 +492,58 @@ const MachineRevenueReport = () => {
                     </div>
 
                     {/* Mobile Card List */}
-                    <div className="md:hidden flex-1 overflow-y-auto p-3 flex flex-col gap-3">
+                    <div className="md:hidden flex-1 overflow-y-auto p-3 flex flex-col gap-3 pb-20">
                         {loading ? (
-                            <div className="py-16 text-center text-[13px] text-muted-foreground italic">Đang tải dữ liệu...</div>
+                            <div className="py-20 text-center">
+                                <div className="w-6 h-6 border-2 border-primary/30 border-t-primary rounded-full animate-spin mx-auto mb-3" />
+                                <span className="text-sm font-medium text-muted-foreground">Đang tải dữ liệu...</span>
+                            </div>
                         ) : filteredData.length === 0 ? (
-                            <div className="py-16 text-center text-[13px] text-muted-foreground italic">Không tìm thấy kết quả</div>
+                            <div className="py-20 text-center text-muted-foreground italic text-[13px]">
+                                Không tìm thấy kết quả phù hợp
+                            </div>
                         ) : (
                             filteredData.map((item, idx) => (
-                                <div key={idx} className="bg-white border border-border/80 rounded-2xl p-4 shadow-sm hover:shadow-md transition-shadow">
-                                    <div className="flex justify-between items-start mb-2">
-                                        <h3 className="text-[15px] font-bold text-foreground leading-tight">{item.khach_hang}</h3>
-                                        <span className={clsx(
-                                            'px-2 py-0.5 rounded-full text-[9px] font-bold uppercase',
-                                            item.loai_khach_hang === 'công' ? 'bg-blue-100 text-blue-700' : 'bg-pink-100 text-pink-700'
-                                        )}>
-                                            {item.loai_khach_hang === 'công' ? 'BV công' : 'BV tư'}
-                                        </span>
-                                    </div>
-                                    <div className="space-y-1.5 mb-3">
-                                        <div className="flex items-center gap-2 text-muted-foreground">
-                                            <Building className="w-3.5 h-3.5" />
-                                            <span className="text-[12px] font-medium">{item.khoa || 'Không xác định'}</span>
+                                <div key={idx} className="bg-white border border-border/80 rounded-2xl p-4 shadow-sm hover:shadow-md transition-shadow active:scale-[0.98]">
+                                    <div className="flex justify-between items-start gap-4 mb-3">
+                                        <div className="flex-1 min-w-0">
+                                            <h3 className="text-[15px] font-bold text-foreground leading-tight truncate">{item.khach_hang}</h3>
+                                            <div className="flex items-center gap-1.5 mt-1">
+                                                <span className={clsx(
+                                                    'px-2 py-0.5 rounded-full text-[9px] font-bold border uppercase tracking-tight',
+                                                    item.loai_khach_hang === 'công' ? 'bg-blue-50 text-blue-700 border-blue-100' : 'bg-pink-50 text-pink-700 border-pink-100'
+                                                )}>
+                                                    {item.loai_khach_hang === 'công' ? 'BV công' : 'BV tư'}
+                                                </span>
+                                            </div>
                                         </div>
-                                        <div className="flex items-center gap-2 text-muted-foreground">
-                                            <User className="w-3.5 h-3.5" />
-                                            <span className="text-[12px] font-medium">{item.nhan_vien_kinh_doanh || 'Chưa giao'}</span>
+                                        <div className="bg-slate-50 px-2.5 py-1.5 rounded-xl border border-slate-100 text-center shrink-0">
+                                            <span className="block text-[8px] font-black text-slate-400 uppercase leading-none mb-1">Số đơn</span>
+                                            <span className="text-[13px] font-black text-slate-700 tabular-nums">{item.so_don_hang}</span>
                                         </div>
                                     </div>
-                                    <div className="flex items-center justify-between pt-3 border-t border-border/60">
+                                    <div className="grid grid-cols-2 gap-3 mb-4 py-3 px-3 bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
+                                        <div className="flex items-center gap-2 text-muted-foreground min-w-0">
+                                            <div className="w-6 h-6 rounded-lg bg-white flex items-center justify-center border border-slate-100 shrink-0">
+                                                <Building size={12} className="text-violet-500" />
+                                            </div>
+                                            <span className="text-[12px] font-bold text-slate-600 truncate">{item.khoa || '---'}</span>
+                                        </div>
+                                        <div className="flex items-center gap-2 text-muted-foreground min-w-0">
+                                            <div className="w-6 h-6 rounded-lg bg-white flex items-center justify-center border border-slate-100 shrink-0">
+                                                <User size={12} className="text-primary" />
+                                            </div>
+                                            <span className="text-[12px] font-bold text-slate-600 truncate">{item.nhan_vien_kinh_doanh || '---'}</span>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center justify-between pt-1">
                                         <div className="flex flex-col">
-                                            <span className="text-[10px] font-bold text-muted-foreground uppercase leading-none mb-1">Doanh số</span>
-                                            <span className="text-[15px] font-bold text-emerald-600">{formatCurrency(item.tong_doanh_so)}</span>
+                                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider leading-none mb-1.5">Tổng doanh số</span>
+                                            <span className="text-[17px] font-black text-emerald-600 tracking-tight">{formatCurrency(item.tong_doanh_so)}</span>
                                         </div>
-                                        <div className="bg-muted px-2.5 py-1 rounded-lg text-center">
-                                            <span className="block text-[9px] font-bold text-muted-foreground leading-none">Số đơn</span>
-                                            <span className="text-[13px] font-black text-foreground">{item.so_don_hang}</span>
-                                        </div>
+                                        <button className="p-2 rounded-xl bg-primary/5 text-primary hover:bg-primary/10 transition-colors">
+                                            <ArrowLeft size={16} className="rotate-180" />
+                                        </button>
                                     </div>
                                 </div>
                             ))
@@ -591,6 +577,15 @@ const MachineRevenueReport = () => {
                             </button>
                         </div>
                     </div>
+
+                    {/* Mobile Pagination */}
+                    <MobilePagination
+                        currentPage={currentPage}
+                        setCurrentPage={setCurrentPage}
+                        totalRecords={filteredData.length}
+                        pageSize={pageSize}
+                        setPageSize={setPageSize}
+                    />
                 </div>
             )}
 
@@ -599,28 +594,36 @@ const MachineRevenueReport = () => {
                 <div className="bg-white rounded-2xl border border-border shadow-sm flex flex-col flex-1 min-h-0 w-full overflow-hidden">
                     <div className="space-y-0 flex-1 flex flex-col min-h-0">
                         {/* Mobile Header for Stats */}
-                        <div className="md:hidden flex items-center gap-2 p-3 border-b border-border bg-muted/5">
+                        <div className="md:hidden flex items-center gap-2 p-3 border-b border-border glass-header sticky top-0 z-30 rounded-t-2xl">
                             <button
                                 onClick={() => navigate(-1)}
-                                className="p-2.5 rounded-xl border border-border bg-white text-muted-foreground shrink-0 shadow-sm"
+                                className="p-2 rounded-xl border border-border bg-white text-muted-foreground shrink-0 active:scale-95 transition-all shadow-sm"
                             >
-                                <ChevronLeft size={18} />
+                                <ChevronLeft size={20} />
                             </button>
-                            <h2 className="text-[15px] font-extrabold text-foreground flex-1 text-center tracking-tight">Thống kê báo cáo</h2>
-                            <button
-                                onClick={openMobileFilter}
-                                className={clsx(
-                                    'relative p-2.5 rounded-xl border shrink-0 transition-all shadow-sm',
-                                    hasActiveFilters ? 'border-primary bg-primary/5 text-primary' : 'border-border bg-white text-muted-foreground'
-                                )}
-                            >
-                                <Filter size={18} />
-                                {hasActiveFilters && (
-                                    <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-primary text-white text-[9px] font-bold flex items-center justify-center">
-                                        {totalActiveFilters}
-                                    </span>
-                                )}
-                            </button>
+                            <h2 className="text-base font-bold text-slate-800 flex-1 text-center">Thống kê báo cáo</h2>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={openMobileFilter}
+                                    className={clsx(
+                                        'relative p-2 rounded-xl border shrink-0 transition-all active:scale-95 shadow-sm',
+                                        hasActiveFilters ? 'border-primary bg-primary/5 text-primary' : 'border-slate-200 bg-white text-slate-600'
+                                    )}
+                                >
+                                    <Filter size={18} />
+                                    {hasActiveFilters && (
+                                        <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-primary text-white text-[9px] font-bold flex items-center justify-center ring-1 ring-white">
+                                            {totalActiveFilters}
+                                        </span>
+                                    )}
+                                </button>
+                                <button
+                                    onClick={handleExport}
+                                    className="p-2 rounded-xl bg-emerald-600 text-white shrink-0 active:scale-95 transition-all shadow-sm flex items-center justify-center"
+                                >
+                                    <Download size={20} />
+                                </button>
+                            </div>
                         </div>
 
                         {/* Desktop Header for Stats */}
@@ -712,59 +715,57 @@ const MachineRevenueReport = () => {
                                             />
                                         )}
                                     </div>
-                                    </div>
                                 </div>
+                            </div>
 
-                                {hasActiveFilters && (
-                                    <button
-                                        onClick={() => {
-                                            setSelectedDepartments([]);
-                                            setSelectedSalespersons([]);
-                                            setSelectedCustomerTypes([]);
-                                        }}
-                                        className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-dashed border-red-300 text-red-500 text-[12px] font-bold hover:bg-red-50 transition-all ml-auto md:ml-0"
-                                    >
-                                        <X size={14} />
-                                        Xóa bộ lọc
-                                    </button>
-                                    )}
-                                </div>
-                        
-                                <div className="flex-1 overflow-y-auto p-4 md:p-6 bg-white">
+                            {hasActiveFilters && (
+                                <button
+                                    onClick={() => {
+                                        setSelectedDepartments([]);
+                                        setSelectedSalespersons([]);
+                                        setSelectedCustomerTypes([]);
+                                    }}
+                                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-dashed border-red-300 text-red-500 text-[12px] font-bold hover:bg-red-50 transition-all ml-auto md:ml-0"
+                                >
+                                    <X size={14} />
+                                    Xóa bộ lọc
+                                </button>
+                            )}
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto p-4 md:p-6 bg-white space-y-6">
                             {/* Summary Cards */}
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                                <div className="bg-blue-50/70 border border-blue-100 rounded-2xl p-5 shadow-sm">
-                                    <div className="flex items-center justify-start gap-4">
-                                        <div className="w-12 h-12 bg-blue-100/80 rounded-full flex items-center justify-center shrink-0 ring-1 ring-blue-200/70">
-                                            <TrendingUp className="w-6 h-6 text-blue-600" />
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                                <div className="bg-gradient-to-br from-blue-50 to-white border border-blue-100 rounded-3xl p-5 shadow-sm hover:shadow-md transition-shadow group">
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-14 h-14 bg-blue-600 rounded-2xl flex items-center justify-center shrink-0 shadow-lg shadow-blue-200 group-hover:scale-110 transition-transform">
+                                            <TrendingUp className="w-7 h-7 text-white" />
                                         </div>
-                                        <div>
-                                            <p className="text-[11px] font-semibold text-blue-600 uppercase tracking-wider">Tổng doanh số</p>
-                                            <p className="text-2xl md:text-3xl font-black text-foreground mt-1 tabular-nums">{formatCurrency(totalRevenue)}</p>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="bg-emerald-50/70 border border-emerald-100 rounded-2xl p-5 shadow-sm">
-                                    <div className="flex items-center justify-start gap-4">
-                                        <div className="w-12 h-12 bg-emerald-100/80 rounded-full flex items-center justify-center shrink-0 ring-1 ring-emerald-200/70">
-                                            <BarChart2 className="w-6 h-6 text-emerald-600" />
-                                        </div>
-                                        <div>
-                                            <p className="text-[11px] font-semibold text-emerald-600 uppercase tracking-wider">Tổng số máy</p>
-                                            <p className="text-2xl md:text-3xl font-black text-foreground mt-1 tabular-nums">{formatNumber(totalUnits)}</p>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-[11px] font-black text-blue-600/70 uppercase tracking-[0.1em] mb-1">Tổng doanh số</p>
+                                            <p className="text-xl md:text-2xl font-black text-slate-800 tabular-nums truncate">{formatCurrency(totalRevenue)}</p>
                                         </div>
                                     </div>
                                 </div>
-
-                                <div className="bg-amber-50/70 border border-amber-100 rounded-2xl p-5 shadow-sm">
-                                    <div className="flex items-center justify-start gap-4">
-                                        <div className="w-12 h-12 bg-amber-100/80 rounded-full flex items-center justify-center shrink-0 ring-1 ring-amber-200/70">
-                                            <TrendingUp className="w-6 h-6 text-amber-600" />
+                                <div className="bg-gradient-to-br from-emerald-50 to-white border border-emerald-100 rounded-3xl p-5 shadow-sm hover:shadow-md transition-shadow group">
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-14 h-14 bg-emerald-600 rounded-2xl flex items-center justify-center shrink-0 shadow-lg shadow-emerald-200 group-hover:scale-110 transition-transform">
+                                            <BarChart2 className="w-7 h-7 text-white" />
                                         </div>
-                                        <div>
-                                            <p className="text-[11px] font-semibold text-amber-600 uppercase tracking-wider">Doanh số TB/Máy</p>
-                                            <p className="text-2xl md:text-3xl font-black text-foreground mt-1 tabular-nums">
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-[11px] font-black text-emerald-600/70 uppercase tracking-[0.1em] mb-1">Số lượng máy</p>
+                                            <p className="text-xl md:text-2xl font-black text-slate-800 tabular-nums truncate">{formatNumber(totalUnits)}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="bg-gradient-to-br from-amber-50 to-white border border-amber-100 rounded-3xl p-5 shadow-sm hover:shadow-md transition-shadow group sm:col-span-2 lg:col-span-1">
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-14 h-14 bg-amber-600 rounded-2xl flex items-center justify-center shrink-0 shadow-lg shadow-amber-200 group-hover:scale-110 transition-transform">
+                                            <TrendingUp className="w-7 h-7 text-white" />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-[11px] font-black text-amber-600/70 uppercase tracking-[0.1em] mb-1">Doanh số TB/Máy</p>
+                                            <p className="text-xl md:text-2xl font-black text-slate-800 tabular-nums truncate">
                                                 {formatCurrency(totalUnits > 0 ? Math.round(totalRevenue / totalUnits) : 0)}
                                             </p>
                                         </div>
@@ -773,8 +774,8 @@ const MachineRevenueReport = () => {
                             </div>
 
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                                 {/* By Salesperson */}
-                                 <div className="bg-white border border-border rounded-xl p-6 shadow-sm">
+                                {/* By Salesperson */}
+                                <div className="bg-white border border-border rounded-2xl p-6 shadow-sm">
                                     <h3 className="text-lg font-bold text-foreground mb-6 flex items-center gap-2">
                                         <BarChart2 size={20} className="text-primary" />
                                         Top 10 Nhân viên kinh doanh theo doanh số
@@ -797,14 +798,14 @@ const MachineRevenueReport = () => {
                                                 plugins: { legend: { display: false } },
                                                 indexAxis: 'y',
                                                 scales: {
-                                                    x: { 
+                                                    x: {
                                                         grid: { display: false },
-                                                        ticks: { 
+                                                        ticks: {
                                                             font: { weight: 'bold', size: 10 },
-                                                            callback: value => value >= 1000000 ? (value / 1000000).toFixed(0) + 'M' : value 
+                                                            callback: value => value >= 1000000 ? (value / 1000000).toFixed(0) + 'M' : value
                                                         }
                                                     },
-                                                    y: { 
+                                                    y: {
                                                         grid: { display: false },
                                                         ticks: { font: { weight: 'bold', size: 11 } }
                                                     }
@@ -812,10 +813,10 @@ const MachineRevenueReport = () => {
                                             }}
                                         />
                                     </div>
-                                 </div>
+                                </div>
 
-                                 {/* By Customer Type */}
-                                 <div className="bg-white border border-border rounded-xl p-6 shadow-sm">
+                                {/* By Customer Type */}
+                                <div className="bg-white border border-border rounded-xl p-6 shadow-sm">
                                     <h3 className="text-lg font-bold text-foreground mb-6 flex items-center gap-2">
                                         <PieChart size={20} className="text-emerald-500" />
                                         Phân bổ doanh số theo Loại khách hàng
@@ -834,25 +835,25 @@ const MachineRevenueReport = () => {
                                             options={{
                                                 responsive: true,
                                                 maintainAspectRatio: false,
-                                                plugins: { 
-                                                    legend: { 
-                                                        position: 'bottom', 
-                                                        labels: { 
-                                                            usePointStyle: true, 
-                                                            padding: 20, 
-                                                            font: { weight: 'bold', size: 12 } 
-                                                        } 
+                                                plugins: {
+                                                    legend: {
+                                                        position: 'bottom',
+                                                        labels: {
+                                                            usePointStyle: true,
+                                                            padding: 20,
+                                                            font: { weight: 'bold', size: 12 }
+                                                        }
                                                     }
                                                 }
                                             }}
                                         />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
-            </div>
-        </div>
-    </div>
-</div>
-)}
+            )}
 
             {/* Mobile Filter Sheet */}
             <MobileFilterSheet

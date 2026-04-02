@@ -19,6 +19,8 @@ import {
     Trash2,
     Users as UsersIcon,
     ChevronLeft,
+    ChevronRight,
+    MoreVertical,
     X,
     Phone,
     List,
@@ -30,6 +32,9 @@ import {
     Package
 } from 'lucide-react';
 import { useEffect, useState, useRef } from 'react';
+import MobilePageHeader from '../components/layout/MobilePageHeader';
+import MobilePagination from '../components/layout/MobilePagination';
+import PageViewSwitcher from '../components/layout/PageViewSwitcher';
 import { Bar as BarChartJS, Pie as PieChartJS } from 'react-chartjs-2';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { clsx } from 'clsx';
@@ -63,7 +68,12 @@ const Users = () => {
     const [isFormModalOpen, setIsFormModalOpen] = useState(false);
     const [selectedUser, setSelectedUser] = useState(null);
     const [activeView, setActiveView] = useState('list'); // 'list' or 'stats'
+    const [showMoreActions, setShowMoreActions] = useState(false);
     
+    // Pagination State
+    const [currentPage, setCurrentPage] = useState(1);
+    const [pageSize, setPageSize] = useState(50);
+
     // Multi-select state
     const [selectedIds, setSelectedIds] = useState([]);
 
@@ -205,10 +215,20 @@ const Users = () => {
                 setActiveDropdown(null);
                 setFilterSearch('');
             }
+
+            // Close more actions menu on mobile
+            if (showMoreActions) {
+                const moreActionsMenu = document.getElementById('more-actions-menu-users');
+                const moreActionsButton = document.getElementById('more-actions-button-users');
+                if (moreActionsMenu && !moreActionsMenu.contains(event.target) && 
+                    moreActionsButton && !moreActionsButton.contains(event.target)) {
+                    setShowMoreActions(false);
+                }
+            }
         };
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, [activeDropdown, showColumnPicker]);
+    }, [activeDropdown, showColumnPicker, showMoreActions]);
 
     const toggleSelectAll = () => {
         if (selectedIds.length === filteredUsers.length) {
@@ -428,39 +448,27 @@ const Users = () => {
         return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
     };
 
+    const paginatedUsers = filteredUsers.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+    const totalRecords = filteredUsers.length;
+
+    // Reset pagination when filters change
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchTerm, selectedRoles, selectedStatuses]);
+
     return (
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 w-full flex-1 flex flex-col mt-1 min-h-0 px-1 md:px-1.5 font-sans">
-            {/* Top Tabs */}
-            <div className="flex items-center gap-1 mb-3 mt-1">
-                <button
-                    onClick={() => setActiveView('list')}
-                    className={clsx(
-                        "flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-bold transition-all",
-                        activeView === 'list'
-                            ? "bg-white text-primary shadow-sm ring-1 ring-border"
-                            : "text-muted-foreground hover:text-foreground"
-                    )}
-                >
-                    <List size={14} />
-                    Danh sách
-                </button>
-                <button
-                    onClick={() => setActiveView('stats')}
-                    className={clsx(
-                        "flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-bold transition-all",
-                        activeView === 'stats'
-                            ? "bg-white text-primary shadow-sm ring-1 ring-border"
-                            : "text-muted-foreground hover:text-foreground"
-                    )}
-                >
-                    <BarChart2 size={14} />
-                    Thống kê
-                </button>
-            </div>
+            <PageViewSwitcher
+                activeView={activeView}
+                setActiveView={setActiveView}
+                views={[
+                    { id: 'list', label: 'Danh sách', icon: <List size={16} /> },
+                    { id: 'stats', label: 'Thống kê', icon: <BarChart2 size={16} /> },
+                ]}
+            />
 
-            <div className="bg-white rounded-2xl border border-border shadow-sm flex flex-col flex-1 min-h-0 w-full overflow-hidden">
-                {activeView === 'list' ? (
-                    <>
+            {activeView === 'list' && (
+                <div className="bg-white rounded-2xl border border-border shadow-sm flex flex-col flex-1 min-h-0 w-full">
                         {/* ── DESKTOP TOOLBAR ── */}
                         <div className="hidden md:block p-3 space-y-3">
                             <div className="flex items-center justify-between gap-4">
@@ -605,35 +613,42 @@ const Users = () => {
                             </div>
                         </div>
 
-                        {/* ── MOBILE TOOLBAR ── */}
-                        <div className="md:hidden flex items-center gap-2 p-3 border-b border-border">
-                            <button onClick={() => navigate(-1)} className="p-2 rounded-xl border border-border bg-white text-muted-foreground shrink-0"><ChevronLeft size={18} /></button>
-                            <div className="relative flex-1">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={15} />
-                                <input
-                                    type="text"
-                                    placeholder="Tìm kiếm..."
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                    className="w-full pl-9 pr-8 py-2 bg-muted/20 border border-border/80 rounded-xl text-[13px] focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all font-medium"
-                                />
-                            </div>
-                            <button
-                                onClick={openMobileFilter}
-                                className={clsx(
-                                    'relative p-2 rounded-xl border shrink-0 transition-all',
-                                    hasActiveFilters ? 'border-primary bg-primary/5 text-primary' : 'border-border bg-white text-muted-foreground',
-                                )}
-                            >
-                                <Filter size={18} className={hasActiveFilters ? "text-amber-600" : "text-amber-600/60"} />
-                                {hasActiveFilters && (
-                                    <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-primary text-white text-[9px] font-bold flex items-center justify-center">
-                                        {totalActiveFilters}
-                                    </span>
-                                )}
-                            </button>
-                            <button onClick={handleCreateNew} className="p-2 rounded-xl bg-primary text-white shrink-0 shadow-md shadow-primary/20"><Plus size={18} /></button>
-                        </div>
+                        <MobilePageHeader
+                            searchTerm={searchTerm}
+                            setSearchTerm={setSearchTerm}
+                            searchPlaceholder="Tìm kiếm..."
+                            onFilterClick={openMobileFilter}
+                            hasActiveFilters={hasActiveFilters}
+                            totalActiveFilters={totalActiveFilters}
+                            actions={
+                                <button onClick={handleCreateNew} className="p-2 rounded-xl bg-primary text-white shrink-0 shadow-lg shadow-primary/30 active:scale-95 transition-all">
+                                    <Plus size={20} />
+                                </button>
+                            }
+                            selectionBar={
+                                selectedIds.length > 0 ? (
+                                    <div className="flex items-center justify-between px-1 mt-3 pt-3 border-t border-slate-100 animate-in slide-in-from-top-2 duration-300">
+                                        <span className="text-[13px] font-bold text-slate-600">
+                                            Đã chọn <span className="text-primary">{selectedIds.length}</span> nhân sự
+                                        </span>
+                                        <div className="flex items-center gap-2">
+                                            <button
+                                                onClick={toggleSelectAll}
+                                                className="text-[12px] font-bold text-primary hover:underline px-2 py-1"
+                                            >
+                                                Bỏ chọn
+                                            </button>
+                                            <button
+                                                onClick={handleBulkDelete}
+                                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-50 text-rose-600 text-[12px] font-bold border border-rose-100"
+                                            >
+                                                <Trash2 size={14} /> Xóa tất cả
+                                            </button>
+                                        </div>
+                                    </div>
+                                ) : null
+                            }
+                        />
 
                         {/* ── CONTENT ── */}
                         <div className="flex-1 overflow-auto custom-scrollbar">
@@ -676,7 +691,7 @@ const Users = () => {
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y divide-primary/10">
-                                                {filteredUsers.map((user) => {
+                                                {paginatedUsers.map((user) => {
                                                     const statusConfig = getStatusConfig(user.status);
                                                     return (
                                                         <tr key={user.id} className={getRowStyle(user.status, selectedIds.includes(user.id))}>
@@ -723,81 +738,161 @@ const Users = () => {
                                     </div>
 
                                     {/* Mobile Card List */}
-                                    <div className="md:hidden flex-1 overflow-y-auto p-3 flex flex-col gap-3">
-                                        {filteredUsers.map((user) => {
+                                    <div className="md:hidden flex-1 overflow-y-auto p-3 pb-4 flex flex-col gap-3">
+                                        {paginatedUsers.map((user, index) => {
                                             const statusConfig = getStatusConfig(user.status);
+                                            const actualIndex = (currentPage - 1) * pageSize + index + 1;
                                             return (
-                                                <div key={user.id} className="bg-white border border-primary/15 rounded-2xl p-4 shadow-sm">
-                                                    <div className="flex justify-between items-start mb-3">
-                                                        <div className="flex items-center gap-3">
-                                                            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary font-black text-xs">
-                                                                {getInitials(user.name)}
+                                                <div key={user.id} className={clsx(
+                                                    "rounded-2xl border shadow-sm p-4 transition-all duration-200",
+                                                    selectedIds.includes(user.id)
+                                                        ? "border-primary bg-primary/[0.05] ring-1 ring-primary/20"
+                                                        : "border-primary/15 bg-white"
+                                                )}>
+                                                    <div className="flex items-start justify-between gap-2 mb-2">
+                                                        <div className="flex gap-3">
+                                                            <div className="pt-1">
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={selectedIds.includes(user.id)}
+                                                                    onChange={() => toggleSelect(user.id)}
+                                                                    className="w-5 h-5 rounded-md border-border text-primary focus:ring-primary/20 transition-all cursor-pointer"
+                                                                />
                                                             </div>
-                                                            <div>
-                                                                <div className="font-bold text-foreground text-[14px] leading-snug uppercase">{user.name}</div>
-                                                                <div className="text-[11px] font-medium text-muted-foreground">@{user.username}</div>
+                                                            <div className="flex items-center gap-2 pt-0.5">
+                                                                <p className="text-[12px] font-bold text-muted-foreground uppercase tracking-wider min-w-[20px]">#{actualIndex}</p>
+                                                                <h3 className="text-[15px] font-black text-foreground leading-tight truncate max-w-[180px]">{user.name}</h3>
                                                             </div>
                                                         </div>
                                                         <span className={getStatusBadgeClass(statusConfig.color)}>
-                                                            <div className={clsx("w-1 h-1 rounded-full animate-pulse", statusConfig.color === 'green' ? "bg-emerald-500" : "bg-rose-500")} />
+                                                            <div className={clsx("w-1.5 h-1.5 rounded-full animate-pulse", statusConfig.color === 'green' ? "bg-emerald-500" : "bg-rose-500")} />
                                                             {user.status}
                                                         </span>
                                                     </div>
-                                                    
-                                                    <div className="grid grid-cols-2 gap-3 mb-3 bg-muted/10 rounded-xl p-3 border border-border/60">
-                                                        <div className="space-y-1">
-                                                            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Vai trò</p>
-                                                            <div className="flex items-center gap-1.5 text-xs text-foreground font-bold uppercase tracking-tight">
-                                                                {user.role === 'Admin' ? <ShieldCheck className="w-3.5 h-3.5 text-blue-600" /> : <Briefcase className="w-3.5 h-3.5 text-slate-400" />}
-                                                                {user.role}
-                                                            </div>
+
+                                                    <div className="grid grid-cols-2 gap-2 mb-3 rounded-xl bg-muted/10 border border-border/60 p-2.5">
+                                                        <div>
+                                                            <p className="text-[9px] uppercase tracking-wider text-muted-foreground">Vai trò</p>
+                                                            <p className="text-[12px] text-foreground font-medium mt-0.5">
+                                                                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-white border border-border">
+                                                                    {user.role === 'Admin' ? <ShieldCheck className="w-3 h-3 text-blue-600" /> : <Briefcase className="w-3 h-3 text-slate-400" />}
+                                                                    {user.role}
+                                                                </span>
+                                                            </p>
                                                         </div>
-                                                        <div className="space-y-1 pl-3 border-l border-border">
-                                                            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Cấp duyệt</p>
-                                                            <div className="text-xs text-primary font-black uppercase tracking-tight">
-                                                                {user.approval_level || 'Staff'}
+                                                        <div>
+                                                            <p className="text-[9px] uppercase tracking-wider text-muted-foreground">Cấp duyệt</p>
+                                                            <p className="text-[12px] text-foreground font-medium mt-0.5">
+                                                                <span className="px-2 py-0.5 rounded-md bg-primary/5 text-primary text-[10px] font-bold border border-primary/10 uppercase">
+                                                                    {user.approval_level || 'Staff'}
+                                                                </span>
+                                                            </p>
+                                                        </div>
+                                                        <div className="col-span-2">
+                                                            <div className="space-y-3 mt-1">
+                                                                <div className="flex items-center gap-2">
+                                                                    <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600 shrink-0">
+                                                                        <Phone size={14} />
+                                                                    </div>
+                                                                    <div className="min-w-0 flex-1">
+                                                                        <p className="text-[9px] uppercase tracking-wider text-muted-foreground">Liên hệ</p>
+                                                                        <p className="text-[12px] text-foreground font-bold truncate">
+                                                                            {user.phone || '—'} <span className="text-muted-foreground font-normal ml-1">@{user.username}</span>
+                                                                        </p>
+                                                                    </div>
+                                                                </div>
+                                                                <div className="flex items-center gap-2">
+                                                                    <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600 shrink-0">
+                                                                        <UsersIcon size={14} />
+                                                                    </div>
+                                                                    <div className="min-w-0 flex-1">
+                                                                        <p className="text-[9px] uppercase tracking-wider text-muted-foreground">Phòng / Nhóm</p>
+                                                                        <p className="text-[12px] text-foreground font-bold truncate capitalize">
+                                                                            {user.department || '-'} / {user.sales_group || '-'}
+                                                                        </p>
+                                                                    </div>
+                                                                </div>
                                                             </div>
                                                         </div>
                                                     </div>
 
-                                                    <div className="grid grid-cols-2 gap-3 mb-4 bg-muted/5 rounded-xl p-3 border border-slate-100">
-                                                        <div className="space-y-1">
-                                                            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Phòng / Nhóm</p>
-                                                            <div className="text-[11px] text-foreground font-semibold leading-tight capitalize">
-                                                                {user.department || '-'} / {user.sales_group || '-'}
-                                                            </div>
-                                                        </div>
-                                                        <div className="space-y-1 pl-3 border-l border-border">
-                                                            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Liên hệ</p>
-                                                            <div className="flex items-center gap-1.5 text-xs text-foreground font-bold">
-                                                                <Phone className="w-3.5 h-3.5 text-muted-foreground" />
-                                                                {user.phone}
-                                                            </div>
-                                                        </div>
-                                                    </div>
-
-                                                    <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
-                                                        <button onClick={() => handleEditUser(user)} className="px-4 py-1.5 bg-blue-50 text-blue-600 rounded-lg text-xs font-bold uppercase tracking-wide border border-blue-100 transition-all hover:bg-blue-100">Sửa</button>
-                                                        <button onClick={() => handleDeleteUser(user.id, user.name)} className="px-4 py-1.5 bg-rose-50 text-rose-600 rounded-lg text-xs font-bold uppercase tracking-wide border border-rose-100 transition-all hover:bg-rose-100">Xóa</button>
+                                                    <div className="flex items-center justify-end gap-3 pt-2 border-t border-border/70 mt-3">
+                                                        <button onClick={() => handleEditUser(user)} className="p-2 text-amber-700 bg-amber-50 border border-amber-100 rounded-lg hover:bg-amber-100 transition-colors"><Edit size={16} /></button>
+                                                        <button onClick={() => handleDeleteUser(user.id, user.name)} className="p-2 text-red-700 bg-red-50 border border-red-100 rounded-lg hover:bg-red-100 transition-colors"><Trash2 size={16} /></button>
                                                     </div>
                                                 </div>
                                             );
                                         })}
                                     </div>
+
+                                    {/* Sticky Mobile Pagination */}
+                                    {!loading && filteredUsers.length > 0 && (
+                                        <MobilePagination
+                                            currentPage={currentPage}
+                                            setCurrentPage={setCurrentPage}
+                                            pageSize={pageSize}
+                                            setPageSize={setPageSize}
+                                            totalRecords={totalRecords}
+                                        />
+                                    )}
                                 </>
                             )}
                         </div>
 
-                        {/* Footer Bar */}
+                        {/* Footer Bar (Desktop) */}
                         {!loading && filteredUsers.length > 0 && (
-                            <div className="px-4 py-3 border-t border-border flex items-center justify-between bg-muted/5">
-                                <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">
-                                    Tổng số: <span className="text-primary text-sm font-black mx-1">{filteredUsers.length}</span> nhân sự
-                                </p>
+                            <div className="hidden md:flex px-4 py-4 border-t border-border items-center justify-between bg-muted/5">
+                                <div className="flex items-center gap-3 text-[12px] text-muted-foreground font-medium">
+                                    <span>
+                                        {totalRecords > 0 ? `${(currentPage - 1) * pageSize + 1}–${Math.min(currentPage * pageSize, totalRecords)}` : '0'} / Tổng {totalRecords}
+                                    </span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                    <button 
+                                        onClick={() => setCurrentPage(1)}
+                                        className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors disabled:opacity-20" 
+                                        disabled={currentPage === 1}
+                                        title="Trang đầu"
+                                    >
+                                        <ChevronLeft size={16} />
+                                        <ChevronLeft size={16} className="-ml-2.5" />
+                                    </button>
+                                    <button 
+                                        onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                                        className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors disabled:opacity-20" 
+                                        disabled={currentPage === 1}
+                                        title="Trang trước"
+                                    >
+                                        <ChevronLeft size={16} />
+                                    </button>
+                                    <div className="w-8 h-8 rounded-lg bg-primary text-white flex items-center justify-center text-[12px] font-bold shadow-md shadow-primary/25">
+                                        {currentPage}
+                                    </div>
+                                    <button 
+                                        onClick={() => setCurrentPage(prev => Math.min(Math.ceil(totalRecords / pageSize), prev + 1))}
+                                        className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors disabled:opacity-20" 
+                                        disabled={currentPage >= Math.ceil(totalRecords / pageSize)}
+                                        title="Trang sau"
+                                    >
+                                        <ChevronRight size={16} />
+                                    </button>
+                                    <button 
+                                        onClick={() => setCurrentPage(Math.ceil(totalRecords / pageSize))}
+                                        className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors disabled:opacity-20" 
+                                        disabled={currentPage >= Math.ceil(totalRecords / pageSize)}
+                                        title="Trang cuối"
+                                    >
+                                        <ChevronRight size={16} />
+                                        <ChevronRight size={16} className="-ml-2.5" />
+                                    </button>
+                                </div>
                             </div>
                         )}
-                    </>
-                ) : (
+                    </div>
+                )}
+
+            {activeView === 'stats' && (
+                <div className="bg-white rounded-2xl border border-border shadow-sm flex flex-col w-full">
                     <div className="flex flex-col flex-1 overflow-auto custom-scrollbar">
                         {/* ── MOBILE HEADER (Stats) ── */}
                         <div className="md:hidden flex items-center gap-2 p-3 border-b border-border">
@@ -810,7 +905,7 @@ const Users = () => {
                                     hasActiveFilters ? 'border-primary bg-primary/5 text-primary' : 'border-border bg-white text-muted-foreground',
                                 )}
                             >
-                                <Filter size={18} className={hasActiveFilters ? "text-amber-600" : "text-amber-600/60"} />
+                                <Filter size={18} />
                                 {hasActiveFilters && (
                                     <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-primary text-white text-[9px] font-bold flex items-center justify-center">
                                         {totalActiveFilters}
@@ -999,8 +1094,8 @@ const Users = () => {
                             </div>
                         </div>
                     </div>
-                )}
-            </div>
+                </div>
+            )}
 
             {/* Mobile Filter Sheet */}
             {showMobileFilter && (
@@ -1010,53 +1105,25 @@ const Users = () => {
                     onApply={applyMobileFilter}
                     isClosing={mobileFilterClosing}
                     title="Bộ lọc nhân sự"
-                >
-                    <div className="space-y-6">
-                        <div className="space-y-3">
-                            <h4 className="text-[13px] font-bold text-foreground uppercase tracking-wider">Vai trò</h4>
-                            <div className="flex flex-wrap gap-2">
-                                {USER_ROLES.map(role => (
-                                    <button
-                                        key={role.id}
-                                        onClick={() => setPendingRoles(prev => 
-                                            prev.includes(role.id) ? prev.filter(i => i !== role.id) : [...prev, role.id]
-                                        )}
-                                        className={clsx(
-                                            "px-3 py-2 rounded-xl text-[12px] font-bold transition-all border",
-                                            pendingRoles.includes(role.id)
-                                                ? "bg-primary text-white border-primary shadow-md shadow-primary/20"
-                                                : "bg-white text-muted-foreground border-border"
-                                        )}
-                                    >
-                                        {role.label}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        <div className="space-y-3">
-                            <h4 className="text-[13px] font-bold text-foreground uppercase tracking-wider">Trạng thái</h4>
-                            <div className="flex flex-wrap gap-2">
-                                {USER_STATUSES.map(status => (
-                                    <button
-                                        key={status.id}
-                                        onClick={() => setPendingStatuses(prev => 
-                                            prev.includes(status.id) ? prev.filter(i => i !== status.id) : [...prev, status.id]
-                                        )}
-                                        className={clsx(
-                                            "px-3 py-2 rounded-xl text-[12px] font-bold transition-all border",
-                                            pendingStatuses.includes(status.id)
-                                                ? "bg-primary text-white border-primary shadow-md shadow-primary/20"
-                                                : "bg-white text-muted-foreground border-border"
-                                        )}
-                                    >
-                                        {status.label}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
-                </MobileFilterSheet>
+                    sections={[
+                        {
+                            id: 'role',
+                            label: 'Vai trò',
+                            icon: <Briefcase size={16} />,
+                            options: roleOptions,
+                            selectedValues: pendingRoles,
+                            onSelectionChange: setPendingRoles,
+                        },
+                        {
+                            id: 'status',
+                            label: 'Trạng thái',
+                            icon: <Filter size={16} />,
+                            options: statusOptions,
+                            selectedValues: pendingStatuses,
+                            onSelectionChange: setPendingStatuses,
+                        }
+                    ]}
+                />
             )}
 
             {/* Modal */}

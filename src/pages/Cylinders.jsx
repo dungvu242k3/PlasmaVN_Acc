@@ -11,6 +11,9 @@ import {
     Title
 } from 'chart.js';
 import { clsx } from 'clsx';
+import MobilePageHeader from '../components/layout/MobilePageHeader';
+import MobilePagination from '../components/layout/MobilePagination';
+import PageViewSwitcher from '../components/layout/PageViewSwitcher';
 import {
     ActivitySquare,
     BarChart2,
@@ -22,6 +25,7 @@ import {
     Eye,
     Filter,
     List,
+    MoreVertical,
     Plus,
     Search,
     SlidersHorizontal,
@@ -85,6 +89,7 @@ const Cylinders = () => {
     const [isQCModalOpen, setIsQCModalOpen] = useState(false);
     const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
     const [selectedCylinder, setSelectedCylinder] = useState(null);
+    const [showMoreActions, setShowMoreActions] = useState(false);
 
     const [selectedStatuses, setSelectedStatuses] = useState([]);
     const [selectedVolumes, setSelectedVolumes] = useState([]);
@@ -94,6 +99,18 @@ const Cylinders = () => {
     const [uniqueCustomers, setUniqueCustomers] = useState([]);
     const [uniqueVolumes, setUniqueVolumes] = useState([]);
     const [uniqueWarehouses, setUniqueWarehouses] = useState([]);
+
+    // Pagination State
+    const [currentPage, setCurrentPage] = useState(1);
+    const [pageSize, setPageSize] = useState(50);
+    const [totalRecords, setTotalRecords] = useState(0);
+    const [stats, setStats] = useState({
+        ready: 0,
+        inUse: 0,
+        empty: 0,
+        total: 0
+    });
+    const [allMetadata, setAllMetadata] = useState([]); // For stats and charts
 
     const [showMobileFilter, setShowMobileFilter] = useState(false);
     const [mobileFilterClosing, setMobileFilterClosing] = useState(false);
@@ -143,17 +160,99 @@ const Cylinders = () => {
     const totalCount = defaultColOrder.length;
 
     useEffect(() => {
-        fetchCylinders();
+        fetchFilterOptions();
     }, []);
 
     useEffect(() => {
-        const customers = [...new Set(cylinders.map(c => c.customers?.name || c.customer_name?.split(' / ')[0]).filter(Boolean))];
-        const volumes = [...new Set(cylinders.map(c => c.volume).filter(Boolean))];
-        const warehouses = [...new Set(cylinders.map(c => c.warehouses?.name).filter(Boolean))];
-        setUniqueCustomers(customers);
-        setUniqueVolumes(volumes);
-        setUniqueWarehouses(warehouses);
-    }, [cylinders]);
+        fetchCylinders();
+        fetchGlobalStats();
+        fetchMetadataForCharts();
+    }, [currentPage, searchTerm, selectedStatuses, selectedVolumes, selectedCustomers, selectedCategories, selectedWarehouses]);
+
+    const fetchMetadataForCharts = async () => {
+        try {
+            let query = supabase
+                .from('cylinders')
+                .select('status, volume, customer_name, category');
+
+            if (searchTerm) {
+                query = query.or(`serial_number.ilike.%${searchTerm}%,volume.ilike.%${searchTerm}%,customer_name.ilike.%${searchTerm}%`);
+            }
+            if (selectedStatuses.length > 0) query = query.in('status', selectedStatuses);
+            if (selectedVolumes.length > 0) query = query.in('volume', selectedVolumes);
+            if (selectedCustomers.length > 0) query = query.in('customer_name', selectedCustomers);
+            if (selectedCategories.length > 0) query = query.in('category', selectedCategories);
+
+            const { data } = await query;
+            if (data) setAllMetadata(data);
+        } catch (err) {
+            console.error('Error fetching metadata for charts:', err);
+        }
+    };
+
+    const fetchFilterOptions = async () => {
+        try {
+            // Fetch unique volumes
+            const { data: volData } = await supabase.rpc('get_unique_cylinder_volumes');
+            if (volData) setUniqueVolumes(volData.map(v => v.volume).filter(Boolean));
+            else {
+                // Fallback if RPC doesn't exist
+                const { data } = await supabase.from('cylinders').select('volume').not('volume', 'is', null);
+                if (data) setUniqueVolumes([...new Set(data.map(d => d.volume))]);
+            }
+
+            // Fetch unique customers
+            const { data: custData } = await supabase.from('customers').select('name').order('name');
+            if (custData) setUniqueCustomers(custData.map(c => c.name));
+
+            // Fetch unique warehouses
+            const { data: whData } = await supabase.from('warehouses').select('name').order('name');
+            if (whData) setUniqueWarehouses(whData.map(w => w.name));
+        } catch (err) {
+            console.error('Error fetching filter options:', err);
+        }
+    };
+
+    const fetchGlobalStats = async () => {
+        try {
+            let queries = {
+                total: supabase.from('cylinders').select('*', { count: 'exact', head: true }),
+                ready: supabase.from('cylinders').select('*', { count: 'exact', head: true }).eq('status', 'sẵn sàng'),
+                inUse: supabase.from('cylinders').select('*', { count: 'exact', head: true }).in('status', ['đang sử dụng', 'thuộc khách hàng']),
+                empty: supabase.from('cylinders').select('*', { count: 'exact', head: true }).in('status', ['bình rỗng', 'chờ nạp'])
+            };
+
+            // Apply same filters to stat queries
+            Object.keys(queries).forEach(key => {
+                if (searchTerm) {
+                    queries[key] = queries[key].or(`serial_number.ilike.%${searchTerm}%,volume.ilike.%${searchTerm}%,customer_name.ilike.%${searchTerm}%`);
+                }
+                // Don't apply 'status' filter to individual status counts unless you want specific behavior
+                if (key === 'total') {
+                    if (selectedStatuses.length > 0) queries[key] = queries[key].in('status', selectedStatuses);
+                }
+                if (selectedVolumes.length > 0) queries[key] = queries[key].in('volume', selectedVolumes);
+                if (selectedCustomers.length > 0) queries[key] = queries[key].in('customer_name', selectedCustomers);
+                if (selectedCategories.length > 0) queries[key] = queries[key].in('category', selectedCategories);
+            });
+
+            const [totalRes, readyRes, inUseRes, emptyRes] = await Promise.all([
+                queries.total,
+                queries.ready,
+                queries.inUse,
+                queries.empty
+            ]);
+
+            setStats({
+                total: totalRes.count || 0,
+                ready: readyRes.count || 0,
+                inUse: inUseRes.count || 0,
+                empty: emptyRes.count || 0
+            });
+        } catch (err) {
+            console.error('Error fetching global stats:', err);
+        }
+    };
 
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -162,6 +261,15 @@ const Cylinders = () => {
             }
             if (columnPickerRef.current && !columnPickerRef.current.contains(event.target)) {
                 setShowColumnPicker(false);
+            }
+            // Close more actions menu on mobile
+            if (showMoreActions) {
+                const moreActionsMenu = document.getElementById('more-actions-menu-cylinders');
+                const moreActionsButton = document.getElementById('more-actions-button-cylinders');
+                if (moreActionsMenu && !moreActionsMenu.contains(event.target) && 
+                    moreActionsButton && !moreActionsButton.contains(event.target)) {
+                    setShowMoreActions(false);
+                }
             }
         };
         document.addEventListener('mousedown', handleClickOutside);
@@ -205,13 +313,37 @@ const Cylinders = () => {
     const fetchCylinders = async () => {
         setIsLoading(true);
         try {
-            const { data, error } = await supabase
+            let query = supabase
                 .from('cylinders')
-                .select('*, warehouses(name), customers(name)')
-                .order('created_at', { ascending: false });
+                .select('*, warehouses(name), customers(name)', { count: 'exact' });
+
+            // Apply Filters (Server-side)
+            if (searchTerm) {
+                query = query.or(`serial_number.ilike.%${searchTerm}%,volume.ilike.%${searchTerm}%,customer_name.ilike.%${searchTerm}%`);
+            }
+            if (selectedStatuses.length > 0) {
+                query = query.in('status', selectedStatuses);
+            }
+            if (selectedVolumes.length > 0) {
+                query = query.in('volume', selectedVolumes);
+            }
+            if (selectedCustomers.length > 0) {
+                query = query.in('customer_name', selectedCustomers);
+            }
+            if (selectedCategories.length > 0) {
+                query = query.in('category', selectedCategories);
+            }
+
+            const from = (currentPage - 1) * pageSize;
+            const to = from + pageSize - 1;
+
+            const { data, count, error } = await query
+                .order('created_at', { ascending: false })
+                .range(from, to);
 
             if (error && error.code !== '42P01') throw error;
             setCylinders(data || []);
+            setTotalRecords(count || 0);
             setSelectedIds([]); // Clear selection on refresh
         } catch (error) {
             console.error('Error fetching cylinders:', error);
@@ -443,27 +575,12 @@ const Cylinders = () => {
         return item ? item.label : status;
     };
 
-    const filteredCylinders = cylinders.filter(cylinder => {
-        const search = searchTerm.toLowerCase();
-        const matchesSearch = (
-            (cylinder.serial_number?.toLowerCase().includes(search)) ||
-            (cylinder.volume?.toLowerCase().includes(search)) ||
-            (cylinder.customer_name?.toLowerCase().includes(search))
-        );
+    const filteredCylinders = cylinders;
 
-        const matchesStatus = selectedStatuses.length === 0 || selectedStatuses.includes(cylinder.status);
-        const matchesVolume = selectedVolumes.length === 0 || selectedVolumes.includes(cylinder.volume);
-        const matchesCustomer = selectedCustomers.length === 0 || selectedCustomers.includes(cylinder.customer_name);
-        const matchesWarehouse = selectedWarehouses.length === 0 || selectedWarehouses.includes(cylinder.warehouses?.name);
-        const matchesCategory = selectedCategories.length === 0 || selectedCategories.includes(cylinder.category);
-
-        return matchesSearch && matchesStatus && matchesVolume && matchesCustomer && matchesWarehouse && matchesCategory;
-    });
-
-    const filteredCylindersCount = filteredCylinders.length;
-    const readyCount = filteredCylinders.filter(c => c.status === 'sẵn sàng').length;
-    const inUseCount = filteredCylinders.filter(c => c.status === 'đang sử dụng' || c.status === 'thuộc khách hàng').length;
-    const emptyCount = filteredCylinders.filter(c => c.status === 'bình rỗng' || c.status === 'chờ nạp').length;
+    const filteredCylindersCount = totalRecords;
+    const readyCount = stats.ready;
+    const inUseCount = stats.inUse;
+    const emptyCount = stats.empty;
 
     const hasActiveFilters = selectedStatuses.length > 0
         || selectedVolumes.length > 0
@@ -516,42 +633,42 @@ const Cylinders = () => {
     };
 
     const getStatusStats = () => {
-        const stats = {};
-        filteredCylinders.forEach(cylinder => {
+        const statsLocal = {};
+        allMetadata.forEach(cylinder => {
             const statusLabel = getStatusLabel(cylinder.status);
-            stats[statusLabel] = (stats[statusLabel] || 0) + 1;
+            statsLocal[statusLabel] = (statsLocal[statusLabel] || 0) + 1;
         });
-        return Object.entries(stats).map(([name, value]) => ({ name, value }));
+        return Object.entries(statsLocal).map(([name, value]) => ({ name, value }));
     };
 
     const getVolumeStats = () => {
-        const stats = {};
-        filteredCylinders.forEach(cylinder => {
+        const statsLocal = {};
+        allMetadata.forEach(cylinder => {
             const volume = cylinder.volume || 'Không xác định';
-            stats[volume] = (stats[volume] || 0) + 1;
+            statsLocal[volume] = (statsLocal[volume] || 0) + 1;
         });
-        return Object.entries(stats).map(([name, value]) => ({ name, value }));
+        return Object.entries(statsLocal).map(([name, value]) => ({ name, value }));
     };
 
     const getCustomerStats = () => {
-        const stats = {};
-        filteredCylinders.forEach(cylinder => {
+        const statsLocal = {};
+        allMetadata.forEach(cylinder => {
             const customer = cylinder.customer_name || 'Vỏ bình tại kho';
-            stats[customer] = (stats[customer] || 0) + 1;
+            statsLocal[customer] = (statsLocal[customer] || 0) + 1;
         });
-        return Object.entries(stats)
+        return Object.entries(statsLocal)
             .map(([name, value]) => ({ name, value }))
             .sort((a, b) => b.value - a.value)
             .slice(0, 10);
     };
 
     const getCategoryStats = () => {
-        const stats = {};
-        filteredCylinders.forEach(cylinder => {
+        const statsLocal = {};
+        allMetadata.forEach(cylinder => {
             const category = cylinder.category || 'Không xác định';
-            stats[category] = (stats[category] || 0) + 1;
+            statsLocal[category] = (statsLocal[category] || 0) + 1;
         });
-        return Object.entries(stats).map(([name, value]) => ({ name, value }));
+        return Object.entries(statsLocal).map(([name, value]) => ({ name, value }));
     };
 
     const chartColors = [
@@ -678,132 +795,100 @@ const Cylinders = () => {
     );
 
     return (
-        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 w-full flex-1 flex flex-col -mt-2 min-h-0 px-3 md:px-6">
-            <div className="flex items-center gap-1 mb-4 mt-6">
-                <button
-                    onClick={() => setActiveView('list')}
-                    className={clsx(
-                        'flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-bold transition-all',
-                        activeView === 'list'
-                            ? 'bg-white text-primary shadow-sm ring-1 ring-border'
-                            : 'text-muted-foreground hover:text-foreground'
-                    )}
-                >
-                    <List size={14} />
-                    Danh sách
-                </button>
-                <button
-                    onClick={() => setActiveView('stats')}
-                    className={clsx(
-                        'flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-bold transition-all',
-                        activeView === 'stats'
-                            ? 'bg-white text-primary shadow-sm ring-1 ring-border'
-                            : 'text-muted-foreground hover:text-foreground'
-                    )}
-                >
-                    <BarChart2 size={14} />
-                    Thống kê
-                </button>
-            </div>
+        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 w-full flex-1 flex flex-col mt-1 min-h-0 px-1 md:px-1.5">
+            <PageViewSwitcher
+                activeView={activeView}
+                setActiveView={setActiveView}
+                views={[
+                    { id: 'list', label: 'Danh sách', icon: <List size={16} /> },
+                    { id: 'stats', label: 'Thống kê', icon: <BarChart2 size={16} /> },
+                ]}
+            />
 
             {activeView === 'list' && (
                 <div className="bg-white rounded-2xl border border-border shadow-sm flex flex-col flex-1 min-h-0 w-full">
-                    <div className="md:hidden flex items-center gap-2 p-3 border-b border-border">
-                        <div className="flex items-center gap-2 shrink-0 pr-1">
-                            <input
-                                type="checkbox"
-                                checked={selectedIds.length === filteredCylinders.length && filteredCylinders.length > 0}
-                                onChange={toggleSelectAll}
-                                className="w-5 h-5 rounded-md border-border text-primary focus:ring-primary/20 transition-all cursor-pointer"
-                            />
-                        </div>
-                        <button
-                            onClick={() => navigate(-1)}
-                            className="p-2 rounded-xl border border-border bg-white text-muted-foreground shrink-0"
-                        >
-                            <ChevronLeft size={18} />
-                        </button>
-                        <div className="relative flex-1">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={15} />
-                            <input
-                                type="text"
-                                placeholder="Tìm kiếm . . ."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full pl-9 pr-8 py-2 bg-muted/20 border border-border/80 rounded-xl text-[13px] focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all font-medium"
-                            />
-                            {searchTerm && (
-                                <button onClick={() => setSearchTerm('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                                    <X size={14} />
+                    <MobilePageHeader
+                        searchTerm={searchTerm}
+                        setSearchTerm={setSearchTerm}
+                        searchPlaceholder="Tìm kiếm..."
+                        onFilterClick={openMobileFilter}
+                        hasActiveFilters={hasActiveFilters}
+                        totalActiveFilters={totalActiveFilters}
+                        actions={
+                            <>
+                                <div className="relative">
+                                    <button
+                                        id="more-actions-button-cylinders"
+                                        onClick={() => setShowMoreActions(!showMoreActions)}
+                                        className={clsx(
+                                            "p-2 rounded-xl border shrink-0 transition-all active:scale-95 shadow-sm",
+                                            showMoreActions ? "bg-slate-100 border-slate-300" : "bg-white border-slate-200 text-slate-600"
+                                        )}
+                                    >
+                                        <MoreVertical size={20} />
+                                    </button>
+                                    {showMoreActions && (
+                                        <div id="more-actions-menu-cylinders" className="absolute right-0 top-full mt-2 w-48 bg-white rounded-2xl shadow-xl border border-slate-100 py-2 z-[100] animate-in fade-in slide-in-from-top-2 duration-200 origin-top-right">
+                                            <div
+                                                role="button"
+                                                onClick={() => { downloadTemplate(); setShowMoreActions(false); }}
+                                                className="w-full flex items-center justify-start gap-4 px-4 py-2.5 text-[14px] font-bold text-slate-700 hover:bg-slate-50 transition-colors text-left cursor-pointer"
+                                            >
+                                                <div className="w-5 flex justify-center flex-shrink-0">
+                                                    <Download size={18} className="text-slate-400" />
+                                                </div>
+                                                Tải mẫu Excel
+                                            </div>
+                                            <label className="w-full flex items-center justify-start gap-4 px-4 py-2.5 text-[14px] font-bold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer text-left">
+                                                <div className="w-5 flex justify-center flex-shrink-0">
+                                                    <Upload size={18} className="text-slate-400" />
+                                                </div>
+                                                Import Excel
+                                                <input
+                                                    type="file"
+                                                    accept=".xlsx, .xls"
+                                                    onChange={(e) => { handleImportExcel(e); setShowMoreActions(false); }}
+                                                    className="hidden"
+                                                />
+                                            </label>
+                                        </div>
+                                    )}
+                                </div>
+                                <button
+                                    onClick={() => { setSelectedCylinder(null); setIsFormModalOpen(true); }}
+                                    className="p-2 rounded-xl bg-primary text-white shadow-lg shadow-primary/30 active:scale-95 transition-all"
+                                >
+                                    <Plus size={20} />
                                 </button>
-                            )}
-                        </div>
-                        <div className="flex items-center gap-2 shrink-0 pr-1">
-                            <input
-                                type="checkbox"
-                                checked={selectedIds.length === filteredCylinders.length && filteredCylinders.length > 0}
-                                onChange={toggleSelectAll}
-                                className="w-5 h-5 rounded-md border-border text-primary focus:ring-primary/20 transition-all cursor-pointer"
-                            />
-                        </div>
-                        <button
-                            onClick={openMobileFilter}
-                            className={clsx(
-                                'relative p-2 rounded-xl border shrink-0 transition-all',
-                                hasActiveFilters ? 'border-primary bg-primary/5 text-primary' : 'border-border bg-white text-muted-foreground',
-                            )}
-                        >
-                            <Filter size={18} />
-                            {hasActiveFilters && (
-                                <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-primary text-white text-[9px] font-bold flex items-center justify-center">
-                                    {totalActiveFilters}
-                                </span>
-                            )}
-                        </button>
-                        <button
-                            onClick={downloadTemplate}
-                            className="p-2 rounded-xl border border-indigo-200 bg-indigo-50 text-indigo-700 shrink-0 shadow-sm transition-all"
-                            title="Tải mẫu Excel"
-                        >
-                            <Download size={18} />
-                        </button>
-                        <div className="relative">
-                            <input
-                                type="file"
-                                accept=".xlsx, .xls"
-                                onChange={handleImportExcel}
-                                className="hidden"
-                                id="excel-import-mobile-cylinders"
-                            />
-                            <label
-                                htmlFor="excel-import-mobile-cylinders"
-                                className="p-2 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-700 flex items-center justify-center cursor-pointer shadow-sm transition-all"
-                                title="Import Excel"
-                            >
-                                <Upload size={18} />
-                            </label>
-                        </div>
-                        {selectedIds.length > 0 && (
-                            <button
-                                onClick={handleBulkDelete}
-                                className="p-2 rounded-xl bg-rose-50 text-rose-600 border border-rose-200 shrink-0 shadow-sm animate-in zoom-in-95 duration-200"
-                                title="Xóa các mục đã chọn"
-                            >
-                                <Trash2 size={18} />
-                            </button>
-                        )}
-                        <button
-                            onClick={() => {
-                                setSelectedCylinder(null);
-                                setIsFormModalOpen(true);
-                            }}
-                            className="p-2 rounded-xl bg-primary text-white shrink-0 shadow-md shadow-primary/20"
-                        >
-                            <Plus size={18} />
-                        </button>
-                    </div>
+                            </>
+                        }
+                        selectionBar={
+                            selectedIds.length > 0 ? (
+                                <div className="flex items-center justify-between px-1 mt-3 pt-3 border-t border-slate-100 animate-in slide-in-from-top-2 duration-300">
+                                    <span className="text-[13px] font-bold text-slate-600">
+                                        Đã chọn <span className="text-primary">{selectedIds.length}</span> bình khí
+                                    </span>
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            onClick={toggleSelectAll}
+                                            className="text-[12px] font-bold text-primary hover:underline px-2 py-1"
+                                        >
+                                            Bỏ chọn
+                                        </button>
+                                        <button
+                                            onClick={handleBulkDelete}
+                                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-50 text-rose-600 text-[12px] font-bold border border-rose-100"
+                                        >
+                                            <Trash2 size={14} /> Xóa tất cả
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : null
+                        }
+                    />
 
-                    <div className="md:hidden flex-1 overflow-y-auto p-3 flex flex-col gap-3">
+
+                    <div className="md:hidden flex-1 overflow-y-auto p-3 pb-4 flex flex-col gap-3">
                         {isLoading ? (
                             <div className="py-16 text-center text-[13px] text-muted-foreground italic">Đang tải dữ liệu...</div>
                         ) : filteredCylinders.length === 0 ? (
@@ -893,7 +978,19 @@ const Cylinders = () => {
                                 </div>
                             ))
                         )}
+
                     </div>
+
+                    {/* Sticky Mobile Pagination */}
+                    {!isLoading && (
+                        <MobilePagination
+                            currentPage={currentPage}
+                            setCurrentPage={setCurrentPage}
+                            pageSize={pageSize}
+                            setPageSize={setPageSize}
+                            totalRecords={totalRecords}
+                        />
+                    )}
 
                     <div className="hidden md:block p-4 space-y-4">
                         <div className="flex items-center justify-between gap-4">
@@ -926,7 +1023,7 @@ const Cylinders = () => {
                                     <button
                                         onClick={() => setShowColumnPicker(prev => !prev)}
                                         className={clsx(
-                                            'flex items-center gap-2 px-4 py-1.5 rounded-xl border text-[13px] font-bold transition-all bg-white shadow-sm',
+                                            'flex items-center gap-2 px-4 h-10 rounded-lg border text-[13px] font-bold transition-all bg-white shadow-sm',
                                             showColumnPicker
                                                 ? 'border-primary bg-primary/5 text-primary'
                                                 : 'border-border text-muted-foreground hover:bg-muted/20'
@@ -952,7 +1049,7 @@ const Cylinders = () => {
                                         setSelectedCylinder(null);
                                         setIsFormModalOpen(true);
                                     }}
-                                    className="flex items-center gap-2 px-6 py-1.5 rounded-xl bg-primary text-white text-[13px] font-bold hover:bg-primary/90 shadow-md shadow-primary/20 transition-all"
+                                    className="flex items-center gap-2 px-6 h-10 rounded-lg bg-primary text-white text-[13px] font-bold hover:bg-primary/90 shadow-md shadow-primary/20 transition-all active:scale-95"
                                 >
                                     <Plus size={18} />
                                     Thêm
@@ -961,7 +1058,7 @@ const Cylinders = () => {
                                 {selectedIds.length > 0 && (
                                     <button
                                         onClick={handleBulkDelete}
-                                        className="flex items-center gap-2 px-4 py-1.5 rounded-xl border border-rose-200 bg-rose-50 text-rose-600 text-[13px] font-bold hover:bg-rose-100 shadow-sm transition-all animate-in slide-in-from-right-4"
+                                        className="flex items-center gap-2 px-4 h-10 rounded-lg border border-rose-200 bg-rose-50 text-rose-600 text-[13px] font-bold hover:bg-rose-100 shadow-sm transition-all active:scale-95 animate-in slide-in-from-right-4"
                                     >
                                         <Trash2 size={16} />
                                         Xóa ({selectedIds.length})
@@ -970,7 +1067,7 @@ const Cylinders = () => {
 
                                 <button
                                     onClick={downloadTemplate}
-                                    className="flex items-center gap-2 px-4 py-1.5 rounded-xl border border-indigo-200 bg-indigo-50 text-indigo-700 text-[13px] font-bold hover:bg-indigo-100 shadow-sm transition-all"
+                                    className="flex items-center gap-2 px-4 h-10 rounded-lg border border-indigo-200 bg-indigo-50 text-indigo-700 text-[13px] font-bold hover:bg-indigo-100 shadow-sm transition-all active:scale-95"
                                     title="Tải file Excel mẫu"
                                 >
                                     <Download size={16} />
@@ -987,7 +1084,7 @@ const Cylinders = () => {
                                     />
                                     <label
                                         htmlFor="excel-import"
-                                        className="flex items-center gap-2 px-4 py-1.5 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-700 text-[13px] font-bold hover:bg-emerald-100 shadow-sm transition-all cursor-pointer"
+                                        className="flex items-center gap-2 px-4 h-10 rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 text-[13px] font-bold hover:bg-emerald-100 shadow-sm transition-all cursor-pointer active:scale-95 select-none"
                                         title="Nhập dữ liệu từ Excel"
                                     >
                                         <Upload size={16} />
@@ -1270,27 +1367,53 @@ const Cylinders = () => {
 
                     <div className="hidden md:flex px-4 py-4 border-t border-border items-center justify-between bg-muted/5">
                         <div className="flex items-center gap-3 text-[12px] text-muted-foreground font-medium">
-                            <span>{filteredCylinders.length > 0 ? `1–${filteredCylinders.length}` : '0'}/Tổng {filteredCylinders.length}</span>
+                            <span>
+                                {totalRecords > 0 ? `${(currentPage - 1) * pageSize + 1}–${Math.min(currentPage * pageSize, totalRecords)}` : '0'} / Tổng {totalRecords}
+                            </span>
                             <div className="flex items-center gap-1 ml-2">
                                 <span className="text-[11px] font-bold">│</span>
-                                <span className="text-primary font-bold">Sẵn sàng {formatNumber(readyCount)}</span>
+                                <span className="text-emerald-600 font-bold">Sẵn sàng {formatNumber(readyCount)}</span>
                                 <span className="text-muted-foreground">•</span>
-                                <span className="text-primary font-bold">Đang dùng {formatNumber(inUseCount)}</span>
+                                <span className="text-sky-600 font-bold">Đang dùng {formatNumber(inUseCount)}</span>
+                                <span className="text-muted-foreground">•</span>
+                                <span className="text-amber-600 font-bold">Rỗng/Chờ {formatNumber(emptyCount)}</span>
                             </div>
                         </div>
                         <div className="flex items-center gap-1">
-                            <button className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors disabled:opacity-20" disabled>
+                            <button 
+                                onClick={() => setCurrentPage(1)}
+                                className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors disabled:opacity-20" 
+                                disabled={currentPage === 1}
+                                title="Trang đầu"
+                            >
                                 <ChevronLeft size={16} />
                                 <ChevronLeft size={16} className="-ml-2.5" />
                             </button>
-                            <button className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors disabled:opacity-20" disabled>
+                            <button 
+                                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                                className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors disabled:opacity-20" 
+                                disabled={currentPage === 1}
+                                title="Trang trước"
+                            >
                                 <ChevronLeft size={16} />
                             </button>
-                            <div className="w-8 h-8 rounded-lg bg-primary text-white flex items-center justify-center text-[12px] font-bold shadow-md shadow-primary/25">1</div>
-                            <button className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors disabled:opacity-20" disabled>
+                            <div className="w-8 h-8 rounded-lg bg-primary text-white flex items-center justify-center text-[12px] font-bold shadow-md shadow-primary/25">
+                                {currentPage}
+                            </div>
+                            <button 
+                                onClick={() => setCurrentPage(prev => Math.min(Math.ceil(totalRecords / pageSize), prev + 1))}
+                                className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors disabled:opacity-20" 
+                                disabled={currentPage >= Math.ceil(totalRecords / pageSize)}
+                                title="Trang sau"
+                            >
                                 <ChevronRight size={16} />
                             </button>
-                            <button className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors disabled:opacity-20" disabled>
+                            <button 
+                                onClick={() => setCurrentPage(Math.ceil(totalRecords / pageSize))}
+                                className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors disabled:opacity-20" 
+                                disabled={currentPage >= Math.ceil(totalRecords / pageSize)}
+                                title="Trang cuối"
+                            >
                                 <ChevronRight size={16} />
                                 <ChevronRight size={16} className="-ml-2.5" />
                             </button>

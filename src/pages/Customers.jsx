@@ -46,6 +46,9 @@ import RepairTicketForm from '../components/Repairs/RepairTicketForm';
 import ColumnPicker from '../components/ui/ColumnPicker';
 import FilterDropdown from '../components/ui/FilterDropdown';
 import MobileFilterSheet from '../components/ui/MobileFilterSheet';
+import MobilePageHeader from '../components/layout/MobilePageHeader';
+import MobilePagination from '../components/layout/MobilePagination';
+import PageViewSwitcher from '../components/layout/PageViewSwitcher';
 import usePermissions from '../hooks/usePermissions';
 import { supabase } from '../supabase/config';
 
@@ -82,6 +85,11 @@ const Customers = () => {
     const [uniqueCareBy, setUniqueCareBy] = useState([]);
     const [warehousesList, setWarehousesList] = useState([]);
     const [selectedIds, setSelectedIds] = useState([]);
+
+    // Pagination State
+    const [currentPage, setCurrentPage] = useState(1);
+    const [pageSize, setPageSize] = useState(50);
+    const [totalRecords, setTotalRecords] = useState(0);
 
     const [showMobileFilter, setShowMobileFilter] = useState(false);
     const [mobileFilterClosing, setMobileFilterClosing] = useState(false);
@@ -172,7 +180,7 @@ const Customers = () => {
     useEffect(() => {
         fetchCustomers();
         fetchWarehouses();
-    }, []);
+    }, [currentPage, pageSize]);
 
     useEffect(() => {
         if (location.pathname === '/khach-hang/tao') {
@@ -246,13 +254,18 @@ const Customers = () => {
     const fetchCustomers = async () => {
         setIsLoading(true);
         try {
-            const { data, error } = await supabase
+            const from = (currentPage - 1) * pageSize;
+            const to = from + pageSize - 1;
+
+            const { data, count, error } = await supabase
                 .from('customers')
-                .select('*')
-                .order('created_at', { ascending: false });
+                .select('*', { count: 'exact' })
+                .order('created_at', { ascending: false })
+                .range(from, to);
 
             if (error) throw error;
             setCustomers(data || []);
+            setTotalRecords(count || 0);
             setSelectedIds([]); // Clear selection on refresh
         } catch (error) {
             console.error('Error fetching customers:', error);
@@ -457,7 +470,7 @@ const Customers = () => {
                 .eq('id', id);
 
             if (error) throw error;
-            
+
             // Cập nhật state local để UI phản hồi nhanh
             setCustomers(prev => prev.map(c => c.id === id ? { ...c, status: newStatus } : c));
         } catch (error) {
@@ -518,13 +531,13 @@ const Customers = () => {
 
     const handleExportTransactionsBulk = async () => {
         const targetIds = selectedIds.length > 0 ? selectedIds : filteredCustomers.map(c => c.id);
-        
+
         if (targetIds.length === 0) {
             alert('Không có khách hàng nào để xuất giao dịch!');
             return;
         }
 
-        const confirmMsg = selectedIds.length > 0 
+        const confirmMsg = selectedIds.length > 0
             ? `Bạn muốn sao lưu lịch sử giao dịch cho ${selectedIds.length} khách hàng đã chọn?`
             : `Bạn muốn sao lưu toàn bộ lịch sử giao dịch cho ${filteredCustomers.length} khách hàng đang hiển thị?`;
 
@@ -561,7 +574,7 @@ const Customers = () => {
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, 'Lịch sử Thu Chi');
             XLSX.writeFile(wb, `SaoLuu_GD_KhachHang_${new Date().toISOString().split('T')[0]}.xlsx`);
-            
+
             alert(`✅ Đã sao lưu thành công ${data.length} giao dịch.`);
             setShowMoreActions(false);
         } catch (error) {
@@ -800,188 +813,115 @@ const Customers = () => {
 
     return (
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 w-full flex-1 flex flex-col mt-1 min-h-0 px-1 md:px-1.5">
-            <div className="flex items-center gap-1 mb-3 mt-1">
-                <button
-                    onClick={() => setActiveView('list')}
-                    className={clsx(
-                        'flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-bold transition-all',
-                        activeView === 'list'
-                            ? 'bg-white text-primary shadow-sm ring-1 ring-border'
-                            : 'text-muted-foreground hover:text-foreground'
-                    )}
-                >
-                    <List size={14} />
-                    Danh sách
-                </button>
-                <button
-                    onClick={() => setActiveView('stats')}
-                    className={clsx(
-                        'flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-bold transition-all',
-                        activeView === 'stats'
-                            ? 'bg-white text-primary shadow-sm ring-1 ring-border'
-                            : 'text-muted-foreground hover:text-foreground'
-                    )}
-                >
-                    <BarChart2 size={14} />
-                    Thống kê
-                </button>
-            </div>
+            <PageViewSwitcher
+                activeView={activeView}
+                setActiveView={setActiveView}
+                views={[
+                    { id: 'list', label: 'Danh sách', icon: <List size={16} /> },
+                    { id: 'stats', label: 'Thống kê', icon: <BarChart2 size={16} /> },
+                ]}
+            />
 
             {activeView === 'list' && (
                 <div className="bg-white rounded-2xl border border-border shadow-sm flex flex-col flex-1 min-h-0 w-full">
-                    <div className="md:hidden flex flex-col p-3 border-b border-border bg-white sticky top-0 z-30 shadow-subtle">
-                        {/* Row 1: Back, Title, Plus */}
-                        <div className="flex items-center justify-between mb-3 gap-3">
-                            <div className="flex items-center gap-3">
-                                <button
-                                    onClick={() => navigate(-1)}
-                                    className="p-2.5 rounded-xl border border-border bg-white text-muted-foreground flex items-center justify-center shadow-sm active:scale-95 transition-all"
-                                >
-                                    <ChevronLeft size={20} />
-                                </button>
-                                <h2 className="text-xl font-black text-slate-800 tracking-tight">
-                                    {filterType === 'lead' ? 'Form đăng kí khách hàng mới' : 'Danh sách khách hàng'}
-                                </h2>
-                            </div>
-                            <div className="flex items-center gap-2">
+                    <MobilePageHeader
+                        searchTerm={searchTerm}
+                        setSearchTerm={setSearchTerm}
+                        searchPlaceholder="Tìm kiếm..."
+                        onFilterClick={openMobileFilter}
+                        hasActiveFilters={hasActiveFilters}
+                        totalActiveFilters={totalActiveFilters}
+                        actions={
+                            <>
+                                <div className="relative">
+                                    <button
+                                        id="more-actions-btn"
+                                        onClick={() => setShowMoreActions(!showMoreActions)}
+                                        className={clsx(
+                                            "p-2 rounded-xl border shrink-0 transition-all active:scale-95 shadow-sm",
+                                            showMoreActions ? "bg-slate-100 border-slate-300" : "bg-white border-slate-200 text-slate-600"
+                                        )}
+                                    >
+                                        <MoreVertical size={20} />
+                                    </button>
+
+                                    {showMoreActions && (
+                                        <div id="more-actions-menu" className="absolute right-0 top-full mt-2 w-52 bg-white rounded-2xl shadow-xl border border-slate-100 py-2 z-[100] animate-in fade-in slide-in-from-top-2 duration-200 origin-top-right">
+                                            <div
+                                                role="button"
+                                                onClick={() => { downloadTemplate(); setShowMoreActions(false); }}
+                                                className="w-full flex items-center justify-start gap-4 px-4 py-2.5 text-[14px] font-bold text-slate-700 hover:bg-slate-50 transition-colors text-left cursor-pointer"
+                                            >
+                                                <div className="w-5 flex justify-center flex-shrink-0">
+                                                    <Download size={18} className="text-slate-400" />
+                                                </div>
+                                                Tải mẫu Excel
+                                            </div>
+
+                                            <label className="w-full flex items-center justify-start gap-4 px-4 py-2.5 text-[14px] font-bold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer text-left">
+                                                <div className="w-5 flex justify-center flex-shrink-0">
+                                                    <Upload size={18} className="text-slate-400" />
+                                                </div>
+                                                Import Excel
+                                                <input
+                                                    type="file"
+                                                    accept=".xlsx, .xls"
+                                                    onChange={(e) => { handleImportExcel(e); setShowMoreActions(false); }}
+                                                    className="hidden"
+                                                />
+                                            </label>
+
+                                            <div
+                                                role="button"
+                                                onClick={() => { handleExportTransactionsBulk(); setShowMoreActions(false); }}
+                                                className="w-full flex items-center justify-start gap-4 px-4 py-2.5 text-[14px] font-bold text-emerald-600 hover:bg-emerald-50 transition-colors border-t border-slate-50 mt-1 pt-2 cursor-pointer"
+                                            >
+                                                <div className="w-5 flex justify-center flex-shrink-0">
+                                                    <Download size={18} className="text-emerald-500" />
+                                                </div>
+                                                Sao lưu Giao dịch
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+
                                 <button
                                     onClick={() => {
                                         setSelectedCustomer(null);
                                         setIsFormModalOpen(true);
                                     }}
-                                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary text-white text-[13px] font-black shadow-lg shadow-primary/20 active:scale-95 transition-all"
+                                    className="p-2 rounded-xl bg-primary text-white shadow-lg shadow-primary/25 active:scale-95 transition-all shrink-0"
+                                    title="Thêm khách hàng"
                                 >
-                                    <Plus size={18} />
-                                    <span>Tạo mới</span>
+                                    <Plus size={20} />
                                 </button>
-                            </div>
-                        </div>
-
-                        {/* Row 2: Selection, Search, Filter, More Actions */}
-                        <div className="flex items-center gap-2 min-h-[44px]">
-                            {!isSearchExpanded ? (
-                                <>
-                                    <div className="flex items-center gap-2 pr-1">
-                                        <input
-                                            type="checkbox"
-                                            checked={selectedIds.length === filteredCustomers.length && filteredCustomers.length > 0}
-                                            onChange={toggleSelectAll}
-                                            className="w-5 h-5 rounded-md border-border text-primary focus:ring-primary/20 transition-all cursor-pointer"
-                                        />
-                                    </div>
-                                    <div className="flex-1"></div>
-                                    <button
-                                        onClick={() => setIsSearchExpanded(true)}
-                                        className="p-2.5 rounded-xl border border-slate-200 bg-white text-slate-600 flex items-center justify-center shadow-sm active:scale-95 transition-all"
-                                    >
-                                        <Search size={20} />
-                                    </button>
-                                </>
-                            ) : (
-                                <div className="relative flex-1 group animate-in slide-in-from-right-2 duration-200">
-                                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-primary" size={16} />
-                                    <input
-                                        ref={searchInputRef}
-                                        type="text"
-                                        placeholder="Tìm tên, mã, số ĐT..."
-                                        value={searchTerm}
-                                        onChange={(e) => setSearchTerm(e.target.value)}
-                                        onBlur={() => { if (!searchTerm) setIsSearchExpanded(false); }}
-                                        className="w-full pl-10 pr-20 py-2.5 bg-white border-2 border-primary/30 rounded-xl text-[14px] text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all font-semibold shadow-sm"
-                                    />
-                                    <div className="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
-                                        {searchTerm && (
-                                            <button 
-                                                onClick={() => setSearchTerm('')} 
-                                                className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400 hover:text-rose-500 transition-all"
-                                            >
-                                                <X size={15} />
-                                            </button>
-                                        )}
-                                        <button 
-                                            onClick={() => setIsSearchExpanded(false)} 
-                                            className="px-2 py-1 text-[12px] font-black text-primary hover:bg-primary/5 rounded-lg transition-all"
+                            </>
+                        }
+                        selectionBar={
+                            selectedIds.length > 0 ? (
+                                <div className="flex items-center justify-between px-1 mt-3 pt-3 border-t border-slate-100 animate-in slide-in-from-top-2 duration-300">
+                                    <span className="text-[13px] font-bold text-slate-600">
+                                        Đã chọn <span className="text-primary">{selectedIds.length}</span> khách hàng
+                                    </span>
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            onClick={toggleSelectAll}
+                                            className="text-[12px] font-bold text-primary hover:underline px-2 py-1"
                                         >
-                                            Đóng
+                                            Bỏ chọn
+                                        </button>
+                                        <button
+                                            onClick={handleBulkDelete}
+                                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-50 text-rose-600 text-[12px] font-bold border border-rose-100"
+                                        >
+                                            <Trash2 size={14} /> Xóa tất cả
                                         </button>
                                     </div>
                                 </div>
-                            )}
+                            ) : null
+                        }
+                    />
 
-                            {!isSearchExpanded && (
-                                <>
-                                    <button
-                                        onClick={openMobileFilter}
-                                        className={clsx(
-                                            'relative p-2.5 rounded-xl border shrink-0 transition-all active:scale-95 shadow-sm',
-                                            hasActiveFilters ? 'border-primary bg-primary/5 text-primary' : 'border-slate-200 bg-white text-slate-600',
-                                        )}
-                                    >
-                                        <Filter size={20} />
-                                        {hasActiveFilters && (
-                                            <span className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-primary text-white text-[10px] font-black flex items-center justify-center ring-2 ring-white">
-                                                {totalActiveFilters}
-                                            </span>
-                                        )}
-                                    </button>
-
-                                    <div className="relative">
-                                        <button
-                                            id="more-actions-btn"
-                                            onClick={() => setShowMoreActions(!showMoreActions)}
-                                            className={clsx(
-                                                "p-2.5 rounded-xl border shrink-0 transition-all active:scale-95 shadow-sm",
-                                                showMoreActions ? "bg-slate-100 border-slate-300" : "bg-white border-slate-200 text-slate-600"
-                                            )}
-                                        >
-                                            <MoreVertical size={20} />
-                                        </button>
-
-                                        {showMoreActions && (
-                                            <div id="more-actions-menu" className="absolute right-0 top-full mt-2 w-48 bg-white rounded-2xl shadow-xl border border-slate-100 py-2 z-[100] animate-in fade-in slide-in-from-top-2 duration-200 origin-top-right">
-                                                <button
-                                                    onClick={() => { downloadTemplate(); setShowMoreActions(false); }}
-                                                    className="w-full flex items-center gap-3 px-4 py-2.5 text-[14px] font-bold text-slate-700 hover:bg-slate-50 transition-colors"
-                                                >
-                                                    <Download size={18} className="text-slate-400" />
-                                                    Tải mẫu Excel
-                                                </button>
-
-                                                <label className="w-full flex items-center gap-3 px-4 py-2.5 text-[14px] font-bold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer">
-                                                    <Upload size={18} className="text-slate-400" />
-                                                    Import Excel
-                                                    <input
-                                                        type="file"
-                                                        accept=".xlsx, .xls"
-                                                        onChange={(e) => { handleImportExcel(e); setShowMoreActions(false); }}
-                                                        className="hidden"
-                                                    />
-                                                </label>
-
-                                                <button
-                                                    onClick={handleExportTransactionsBulk}
-                                                    className="w-full flex items-center gap-3 px-4 py-2.5 text-[14px] font-bold text-emerald-600 hover:bg-emerald-50 transition-colors"
-                                                >
-                                                    <Download size={18} className="text-emerald-500" />
-                                                    Sao lưu Giao dịch
-                                                </button>
-
-                                                {selectedIds.length > 0 && (
-                                                    <button
-                                                        onClick={() => { handleBulkDelete(); setShowMoreActions(false); }}
-                                                        className="w-full flex items-center gap-3 px-4 py-2.5 text-[14px] font-bold text-rose-600 hover:bg-rose-50 transition-colors"
-                                                    >
-                                                        <Trash2 size={18} />
-                                                        Xóa ({selectedIds.length})
-                                                    </button>
-                                                )}
-                                            </div>
-                                        )}
-                                    </div>
-                                </>
-                            )}
-                        </div>
-                    </div>
 
                     <div className="md:hidden flex-1 overflow-y-auto p-3 flex flex-col gap-3">
                         {isLoading ? (
@@ -992,8 +932,8 @@ const Customers = () => {
                             filteredCustomers.map((c) => (
                                 <div key={c.id} className={clsx(
                                     "rounded-2xl border shadow-sm p-4 transition-all duration-200",
-                                    selectedIds.includes(c.id) 
-                                        ? "border-primary bg-primary/[0.05] ring-1 ring-primary/20" 
+                                    selectedIds.includes(c.id)
+                                        ? "border-primary bg-primary/[0.05] ring-1 ring-primary/20"
                                         : "border-primary/15 bg-white"
                                 )}>
                                     <div className="flex items-start justify-between gap-2 mb-2">
@@ -1058,9 +998,9 @@ const Customers = () => {
                                         </div>
                                         <div className="flex items-center gap-3">
                                             {c.status === 'Thành công' && (
-                                                <button 
-                                                    onClick={() => navigate(`/de-nghi-xuat-may/tao?phone=${c.phone || ''}`)} 
-                                                    className="p-2 text-indigo-700 bg-indigo-50 border border-indigo-100 rounded-lg" 
+                                                <button
+                                                    onClick={() => navigate(`/de-nghi-xuat-may/tao?phone=${c.phone || ''}`)}
+                                                    className="p-2 text-indigo-700 bg-indigo-50 border border-indigo-100 rounded-lg"
                                                     title="Mẫu đề nghị máy"
                                                 >
                                                     <FilePlus size={16} />
@@ -1076,6 +1016,17 @@ const Customers = () => {
                             ))
                         )}
                     </div>
+
+                    {/* Sticky Mobile Pagination */}
+                    {!isLoading && (
+                        <MobilePagination
+                            currentPage={currentPage}
+                            setCurrentPage={setCurrentPage}
+                            pageSize={pageSize}
+                            setPageSize={setPageSize}
+                            totalRecords={totalRecords}
+                        />
+                    )}
 
                     <div className="hidden md:block p-4 space-y-4">
                         <div className="flex items-center justify-between gap-4">
@@ -1129,17 +1080,18 @@ const Customers = () => {
                                     )}
                                 </div>
 
-                                <button
+                                <div
                                     onClick={downloadTemplate}
-                                    className="flex items-center gap-2 px-4 py-1.5 rounded-xl border border-border bg-white text-muted-foreground hover:text-foreground text-[13px] font-bold transition-all shadow-sm"
+                                    className="flex items-center gap-2 px-4 py-2 h-10 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 rounded-lg transition-all text-[13px] font-bold shadow-sm cursor-pointer select-none"
+                                    title="Tải mẫu Excel"
                                 >
-                                    <Download size={16} />
-                                    Tải mẫu
-                                </button>
+                                    <Download size={16} className="shrink-0" />
+                                    <span>Tải mẫu</span>
+                                </div>
 
-                                <label className="flex items-center gap-2 px-4 py-1.5 rounded-xl border border-border bg-white text-muted-foreground hover:text-foreground text-[13px] font-bold transition-all shadow-sm cursor-pointer">
-                                    <Upload size={16} />
-                                    Import Excel
+                                <label className="flex items-center gap-2 px-4 py-2 h-10 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 rounded-lg transition-all text-[13px] font-bold shadow-sm cursor-pointer select-none">
+                                    <Upload size={16} className="shrink-0" />
+                                    <span>Import Excel</span>
                                     <input
                                         type="file"
                                         accept=".xlsx, .xls"
@@ -1150,10 +1102,10 @@ const Customers = () => {
 
                                 <button
                                     onClick={handleExportTransactionsBulk}
-                                    className="flex items-center gap-2 px-4 py-1.5 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 text-[13px] font-bold transition-all shadow-sm"
+                                    className="flex items-center gap-2 px-4 py-2 h-10 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 rounded-lg transition-all text-[13px] font-bold shadow-sm"
                                 >
-                                    <Download size={16} />
-                                    Sao lưu GD
+                                    <Download size={16} className="shrink-0" />
+                                    <span>Sao lưu GD</span>
                                 </button>
 
                                 <button
@@ -1320,102 +1272,102 @@ const Customers = () => {
                                     </tr>
                                 ) : (
                                     filteredCustomers.map((c) => (
-                                        <tr 
-                                            key={c.id} 
-                                        className={clsx(
-                                            getRowStyle(c.category),
-                                            selectedIds.includes(c.id) && "bg-primary/[0.04] !hover:bg-primary/[0.08]"
-                                        )}
-                                    >
-                                        <td className="px-4 py-4 text-center border-r border-primary/10">
-                                            <input
-                                                type="checkbox"
-                                                checked={selectedIds.includes(c.id)}
-                                                onChange={() => toggleSelectOne(c.id)}
-                                                className="w-4 h-4 rounded border-border text-primary focus:ring-primary/20 transition-all cursor-pointer"
-                                            />
-                                        </td>
-                                        {isColumnVisible('code') && <td className={getCodeCellClass(c.category)}>{c.code}</td>}
-                                        {isColumnVisible('name') && <td className="px-4 py-4 text-sm font-semibold text-foreground">{c.name}</td>}
-                                        {isColumnVisible('phone') && <td className="px-4 py-4 text-sm text-muted-foreground">{c.phone || '—'}</td>}
-                                        {isColumnVisible('address') && <td className="px-4 py-4 text-sm text-muted-foreground">{c.address || '—'}</td>}
-                                        {isColumnVisible('legal_rep') && <td className="px-4 py-4 text-sm text-muted-foreground">{c.legal_rep || '—'}</td>}
-                                        {isColumnVisible('managed_by') && <td className="px-4 py-4 text-sm text-muted-foreground">{c.managed_by || '—'}</td>}
-                                        {isColumnVisible('category') && <td className="px-4 py-4 text-sm text-muted-foreground"><span className={getCategoryBadgeClass(c.category)}>{getLabel(CUSTOMER_CATEGORIES, c.category)}</span></td>}
-                                        {isColumnVisible('current_cylinders') && <td className="px-4 py-4 text-sm font-semibold text-foreground">{formatNumber(c.current_cylinders || 0)}</td>}
-                                        {isColumnVisible('current_machines') && <td className="px-4 py-4 text-sm font-semibold text-foreground">{formatNumber(c.current_machines || 0)}</td>}
-                                        {isColumnVisible('borrowed_cylinders') && <td className="px-4 py-4 text-sm font-semibold text-foreground">{formatNumber(c.borrowed_cylinders || 0)}</td>}
-                                        {isColumnVisible('machines_in_use') && <td className="px-4 py-4 text-sm text-muted-foreground">{c.machines_in_use || '—'}</td>}
-                                        {isColumnVisible('care_by') && <td className="px-4 py-4 text-sm text-muted-foreground">{c.care_by || '—'}</td>}
-                                        {isColumnVisible('care_expiry_date') && (
-                                            <td className="px-4 py-4 text-sm">
-                                                {c.care_expiry_date ? (
-                                                    <div className="flex flex-col">
-                                                        <span className="font-bold text-slate-700">{new Date(c.care_expiry_date).toLocaleDateString('vi-VN')}</span>
-                                                        {(() => {
-                                                            const diff = Math.ceil((new Date(c.care_expiry_date) - new Date()) / (1000 * 60 * 60 * 24));
-                                                            if (diff <= 0) return <span className="text-[10px] font-bold text-rose-500 uppercase">Đã hết hạn</span>;
-                                                            if (diff <= 10) return <span className="text-[10px] font-bold text-amber-500 uppercase">Còn {diff} ngày</span>;
-                                                            return <span className="text-[10px] font-bold text-emerald-500 uppercase">Còn {diff} ngày</span>;
-                                                        })()}
-                                                    </div>
-                                                ) : '—'}
+                                        <tr
+                                            key={c.id}
+                                            className={clsx(
+                                                getRowStyle(c.category),
+                                                selectedIds.includes(c.id) && "bg-primary/[0.04] !hover:bg-primary/[0.08]"
+                                            )}
+                                        >
+                                            <td className="px-4 py-4 text-center border-r border-primary/10">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedIds.includes(c.id)}
+                                                    onChange={() => toggleSelectOne(c.id)}
+                                                    className="w-4 h-4 rounded border-border text-primary focus:ring-primary/20 transition-all cursor-pointer"
+                                                />
                                             </td>
-                                        )}
-                                        {isColumnVisible('invoice_email') && <td className="px-4 py-4 text-sm text-muted-foreground">{c.invoice_email || '—'}</td>}
-                                        {isColumnVisible('status') && (
-                                            <td className="px-4 py-4 text-sm">
-                                                <select
-                                                    value={c.status || ''}
-                                                    onChange={(e) => handleStatusChange(c.id, e.target.value)}
-                                                    className={clsx(
-                                                        "px-2 py-1 rounded-lg text-[11px] font-black uppercase tracking-wider border-none focus:ring-2 focus:ring-primary/20 outline-none cursor-pointer transition-all",
-                                                        c.status === 'Thành công' 
-                                                            ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200" 
-                                                            : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                                                    )}
-                                                >
-                                                    <option value="" disabled>-- Chọn --</option>
-                                                    <option value="Thành công">Thành công</option>
-                                                    <option value="Chưa thành công">Chưa thành công</option>
-                                                </select>
-                                            </td>
-                                        )}
-                                        <td className="px-4 py-4 text-center border-l border-r border-primary/20">
-                                            <div className="flex items-center justify-center gap-3">
-                                                {c.status === 'Thành công' && (
-                                                    <button 
-                                                        onClick={() => navigate(`/de-nghi-xuat-may/tao?phone=${c.phone || ''}`)} 
-                                                        className="text-indigo-600/80 hover:text-indigo-700 transition-colors p-1 rounded hover:bg-indigo-50" 
-                                                        title="Mẫu đề nghị máy"
+                                            {isColumnVisible('code') && <td className={getCodeCellClass(c.category)}>{c.code}</td>}
+                                            {isColumnVisible('name') && <td className="px-4 py-4 text-sm font-semibold text-foreground">{c.name}</td>}
+                                            {isColumnVisible('phone') && <td className="px-4 py-4 text-sm text-muted-foreground">{c.phone || '—'}</td>}
+                                            {isColumnVisible('address') && <td className="px-4 py-4 text-sm text-muted-foreground">{c.address || '—'}</td>}
+                                            {isColumnVisible('legal_rep') && <td className="px-4 py-4 text-sm text-muted-foreground">{c.legal_rep || '—'}</td>}
+                                            {isColumnVisible('managed_by') && <td className="px-4 py-4 text-sm text-muted-foreground">{c.managed_by || '—'}</td>}
+                                            {isColumnVisible('category') && <td className="px-4 py-4 text-sm text-muted-foreground"><span className={getCategoryBadgeClass(c.category)}>{getLabel(CUSTOMER_CATEGORIES, c.category)}</span></td>}
+                                            {isColumnVisible('current_cylinders') && <td className="px-4 py-4 text-sm font-semibold text-foreground">{formatNumber(c.current_cylinders || 0)}</td>}
+                                            {isColumnVisible('current_machines') && <td className="px-4 py-4 text-sm font-semibold text-foreground">{formatNumber(c.current_machines || 0)}</td>}
+                                            {isColumnVisible('borrowed_cylinders') && <td className="px-4 py-4 text-sm font-semibold text-foreground">{formatNumber(c.borrowed_cylinders || 0)}</td>}
+                                            {isColumnVisible('machines_in_use') && <td className="px-4 py-4 text-sm text-muted-foreground">{c.machines_in_use || '—'}</td>}
+                                            {isColumnVisible('care_by') && <td className="px-4 py-4 text-sm text-muted-foreground">{c.care_by || '—'}</td>}
+                                            {isColumnVisible('care_expiry_date') && (
+                                                <td className="px-4 py-4 text-sm">
+                                                    {c.care_expiry_date ? (
+                                                        <div className="flex flex-col">
+                                                            <span className="font-bold text-slate-700">{new Date(c.care_expiry_date).toLocaleDateString('vi-VN')}</span>
+                                                            {(() => {
+                                                                const diff = Math.ceil((new Date(c.care_expiry_date) - new Date()) / (1000 * 60 * 60 * 24));
+                                                                if (diff <= 0) return <span className="text-[10px] font-bold text-rose-500 uppercase">Đã hết hạn</span>;
+                                                                if (diff <= 10) return <span className="text-[10px] font-bold text-amber-500 uppercase">Còn {diff} ngày</span>;
+                                                                return <span className="text-[10px] font-bold text-emerald-500 uppercase">Còn {diff} ngày</span>;
+                                                            })()}
+                                                        </div>
+                                                    ) : '—'}
+                                                </td>
+                                            )}
+                                            {isColumnVisible('invoice_email') && <td className="px-4 py-4 text-sm text-muted-foreground">{c.invoice_email || '—'}</td>}
+                                            {isColumnVisible('status') && (
+                                                <td className="px-4 py-4 text-sm">
+                                                    <select
+                                                        value={c.status || ''}
+                                                        onChange={(e) => handleStatusChange(c.id, e.target.value)}
+                                                        className={clsx(
+                                                            "px-2 py-1 rounded-lg text-[11px] font-black uppercase tracking-wider border-none focus:ring-2 focus:ring-primary/20 outline-none cursor-pointer transition-all",
+                                                            c.status === 'Thành công'
+                                                                ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
+                                                                : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                                                        )}
                                                     >
-                                                        <FilePlus size={16} className="w-4 h-4" />
+                                                        <option value="" disabled>-- Chọn --</option>
+                                                        <option value="Thành công">Thành công</option>
+                                                        <option value="Chưa thành công">Chưa thành công</option>
+                                                    </select>
+                                                </td>
+                                            )}
+                                            <td className="px-4 py-4 text-center border-l border-r border-primary/20">
+                                                <div className="flex items-center justify-center gap-3">
+                                                    {c.status === 'Thành công' && (
+                                                        <button
+                                                            onClick={() => navigate(`/de-nghi-xuat-may/tao?phone=${c.phone || ''}`)}
+                                                            className="text-indigo-600/80 hover:text-indigo-700 transition-colors p-1 rounded hover:bg-indigo-50"
+                                                            title="Mẫu đề nghị máy"
+                                                        >
+                                                            <FilePlus size={16} className="w-4 h-4" />
+                                                        </button>
+                                                    )}
+                                                    <button onClick={() => { setSelectedCustomer(c); setIsRepairModalOpen(true); }} className="text-amber-600/80 hover:text-amber-700 transition-colors p-1 rounded hover:bg-amber-50" title="Báo hỏng">
+                                                        <Ticket size={16} className="w-4 h-4" />
                                                     </button>
-                                                )}
-                                                <button onClick={() => { setSelectedCustomer(c); setIsRepairModalOpen(true); }} className="text-amber-600/80 hover:text-amber-700 transition-colors p-1 rounded hover:bg-amber-50" title="Báo hỏng">
-                                                    <Ticket size={16} className="w-4 h-4" />
-                                                </button>
-                                                <button onClick={() => handleViewCustomer(c)} className="text-blue-600/80 hover:text-blue-700 transition-colors p-1 rounded hover:bg-blue-50" title="Xem chi tiết">
-                                                    <Eye className="w-4 h-4" />
-                                                </button>
-                                                <button onClick={() => handleEditCustomer(c)} className="text-amber-600/80 hover:text-amber-700 transition-colors p-1 rounded hover:bg-amber-50" title="Chỉnh sửa">
-                                                    <Edit className="w-4 h-4" />
-                                                </button>
-                                                <button onClick={() => handleDeleteCustomer(c.id, c.name)} className="text-red-600/80 hover:text-red-700 transition-colors p-1 rounded hover:bg-red-50" title="Xóa">
-                                                    <Trash2 className="w-4 h-4" />
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
+                                                    <button onClick={() => handleViewCustomer(c)} className="text-blue-600/80 hover:text-blue-700 transition-colors p-1 rounded hover:bg-blue-50" title="Xem chi tiết">
+                                                        <Eye className="w-4 h-4" />
+                                                    </button>
+                                                    <button onClick={() => handleEditCustomer(c)} className="text-amber-600/80 hover:text-amber-700 transition-colors p-1 rounded hover:bg-amber-50" title="Chỉnh sửa">
+                                                        <Edit className="w-4 h-4" />
+                                                    </button>
+                                                    <button onClick={() => handleDeleteCustomer(c.id, c.name)} className="text-red-600/80 hover:text-red-700 transition-colors p-1 rounded hover:bg-red-50" title="Xóa">
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
                             </tbody>
                         </table>
                     </div>
 
                     <div className="hidden md:flex px-4 py-4 border-t border-border items-center justify-between bg-muted/5">
                         <div className="flex items-center gap-3 text-[12px] text-muted-foreground font-medium">
-                            <span>{filteredCustomers.length > 0 ? `1–${filteredCustomers.length}` : '0'}/Tổng {filteredCustomers.length}</span>
+                            <span>{totalRecords > 0 ? `${(currentPage - 1) * pageSize + 1}–${Math.min(currentPage * pageSize, totalRecords)}` : '0'}/Tổng {totalRecords}</span>
                             <div className="flex items-center gap-1 ml-2">
                                 <span className="text-[11px] font-bold">│</span>
                                 <span className="text-primary font-bold">{formatNumber(totalCylinders)} vỏ</span>
@@ -1424,18 +1376,34 @@ const Customers = () => {
                             </div>
                         </div>
                         <div className="flex items-center gap-1">
-                            <button className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors disabled:opacity-20" disabled>
+                            <button
+                                onClick={() => setCurrentPage(1)}
+                                disabled={currentPage === 1}
+                                className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors disabled:opacity-20"
+                            >
                                 <ChevronLeft size={16} />
                                 <ChevronLeft size={16} className="-ml-2.5" />
                             </button>
-                            <button className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors disabled:opacity-20" disabled>
+                            <button
+                                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                                disabled={currentPage === 1}
+                                className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors disabled:opacity-20"
+                            >
                                 <ChevronLeft size={16} />
                             </button>
-                            <div className="w-8 h-8 rounded-lg bg-primary text-white flex items-center justify-center text-[12px] font-bold shadow-md shadow-primary/25">1</div>
-                            <button className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors disabled:opacity-20" disabled>
+                            <div className="w-8 h-8 rounded-lg bg-primary text-white flex items-center justify-center text-[12px] font-bold shadow-md shadow-primary/25">{currentPage}</div>
+                            <button
+                                onClick={() => setCurrentPage(prev => Math.min(Math.ceil(totalRecords / pageSize), prev + 1))}
+                                disabled={currentPage >= Math.ceil(totalRecords / pageSize)}
+                                className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors disabled:opacity-20"
+                            >
                                 <ChevronRight size={16} />
                             </button>
-                            <button className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors disabled:opacity-20" disabled>
+                            <button
+                                onClick={() => setCurrentPage(Math.ceil(totalRecords / pageSize))}
+                                disabled={currentPage >= Math.ceil(totalRecords / pageSize)}
+                                className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors disabled:opacity-20"
+                            >
                                 <ChevronRight size={16} />
                                 <ChevronRight size={16} className="-ml-2.5" />
                             </button>
@@ -1578,39 +1546,39 @@ const Customers = () => {
                         </div>
 
                         <div className="w-full px-3 md:px-4 pt-4 md:pt-5 pb-5 md:pb-6 space-y-5">
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                                <div className="bg-blue-50/70 border border-blue-100 rounded-2xl p-5 shadow-sm">
-                                    <div className="flex items-center justify-start gap-4">
-                                        <div className="w-12 h-12 bg-blue-100/80 rounded-full flex items-center justify-center shrink-0 ring-1 ring-blue-200/70">
-                                            <Users className="w-6 h-6 text-blue-600" />
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                <div className="bg-blue-50/70 border border-blue-100 rounded-2xl p-4 md:p-5 shadow-sm col-span-2 md:col-span-1">
+                                    <div className="flex flex-row items-center justify-center md:justify-start text-center md:text-left gap-3 md:gap-4">
+                                        <div className="w-10 h-10 md:w-12 md:h-12 bg-blue-100/80 rounded-full flex items-center justify-center shrink-0 ring-1 ring-blue-200/70">
+                                            <Users className="w-5 h-5 md:w-6 md:h-6 text-blue-600" />
                                         </div>
                                         <div>
-                                            <p className="text-[11px] font-semibold text-blue-600 uppercase tracking-wider">Tổng khách hàng</p>
-                                            <p className="text-3xl font-bold text-foreground mt-1 leading-none">{formatNumber(filteredCustomersCount)}</p>
+                                            <p className="text-[10px] md:text-[11px] font-semibold text-blue-600 uppercase tracking-wider">Tổng khách hàng</p>
+                                            <p className="text-2xl md:text-3xl font-bold text-foreground mt-0.5 md:mt-1 leading-none">{formatNumber(filteredCustomersCount)}</p>
                                         </div>
                                     </div>
                                 </div>
 
-                                <div className="bg-green-50/70 border border-green-100 rounded-2xl p-5 shadow-sm">
-                                    <div className="flex items-center justify-start gap-4">
-                                        <div className="w-12 h-12  bg-green-100/80 rounded-full flex items-center justify-center shrink-0 ring-1 ring-green-200/70">
-                                            <BarChart2 className="w-6 h-6 text-green-600" />
+                                <div className="bg-green-50/70 border border-green-100 rounded-2xl p-4 md:p-5 shadow-sm">
+                                    <div className="flex flex-col md:flex-row items-center md:items-center justify-center md:justify-start text-center md:text-left gap-3 md:gap-4">
+                                        <div className="w-10 h-10 md:w-12 md:h-12  bg-green-100/80 rounded-full flex items-center justify-center shrink-0 ring-1 ring-green-200/70">
+                                            <BarChart2 className="w-5 h-5 md:w-6 md:h-6 text-green-600" />
                                         </div>
                                         <div>
-                                            <p className="text-[11px] font-semibold text-green-600 uppercase tracking-wider">Tổng vỏ bình</p>
-                                            <p className="text-3xl font-bold text-foreground mt-1 leading-none">{formatNumber(totalCylinders)}</p>
+                                            <p className="text-[10px] md:text-[11px] font-semibold text-green-600 uppercase tracking-wider">Tổng vỏ bình</p>
+                                            <p className="text-2xl md:text-3xl font-bold text-foreground mt-0.5 md:mt-1 leading-none">{formatNumber(totalCylinders)}</p>
                                         </div>
                                     </div>
                                 </div>
 
-                                <div className="bg-amber-50/70 border border-amber-100 rounded-2xl p-5 shadow-sm">
-                                    <div className="flex items-center justify-start gap-4">
-                                        <div className="w-12 h-12  bg-amber-100/80 rounded-full flex items-center justify-center shrink-0 ring-1 ring-amber-200/70">
-                                            <BarChart2 className="w-6 h-6 text-amber-600" />
+                                <div className="bg-amber-50/70 border border-amber-100 rounded-2xl p-4 md:p-5 shadow-sm">
+                                    <div className="flex flex-col md:flex-row items-center md:items-center justify-center md:justify-start text-center md:text-left gap-3 md:gap-4">
+                                        <div className="w-10 h-10 md:w-12 md:h-12  bg-amber-100/80 rounded-full flex items-center justify-center shrink-0 ring-1 ring-amber-200/70">
+                                            <BarChart2 className="w-5 h-5 md:w-6 md:h-6 text-amber-600" />
                                         </div>
                                         <div>
-                                            <p className="text-[11px] font-semibold text-amber-600 uppercase tracking-wider">Tổng máy</p>
-                                            <p className="text-3xl font-bold text-foreground mt-1 leading-none">{formatNumber(totalMachines)}</p>
+                                            <p className="text-[10px] md:text-[11px] font-semibold text-amber-600 uppercase tracking-wider">Tổng máy</p>
+                                            <p className="text-2xl md:text-3xl font-bold text-foreground mt-0.5 md:mt-1 leading-none">{formatNumber(totalMachines)}</p>
                                         </div>
                                     </div>
                                 </div>

@@ -40,6 +40,9 @@ import { exportCylinderExpiryReport } from '../utils/exportExcel';
 import FilterDropdown from '../components/ui/FilterDropdown';
 import MobileFilterSheet from '../components/ui/MobileFilterSheet';
 import ColumnPicker from '../components/ui/ColumnPicker';
+import MobilePageHeader from '../components/layout/MobilePageHeader';
+import MobilePagination from '../components/layout/MobilePagination';
+import PageViewSwitcher from '../components/layout/PageViewSwitcher';
 
 // Register Chart.js components
 ChartJS.register(
@@ -79,6 +82,10 @@ const CylinderExpiryReport = () => {
   const [data, setData] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedIds, setSelectedIds] = useState([]);
+
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(50);
 
   // Filters
   const [selectedWarehouses, setSelectedWarehouses] = useState([]);
@@ -182,6 +189,8 @@ const CylinderExpiryReport = () => {
     item.khach_hang?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const paginatedData = filteredData.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
   const formatNumber = (num) => {
     if (!num) return '0';
     return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
@@ -274,29 +283,45 @@ const CylinderExpiryReport = () => {
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 w-full flex-1 flex flex-col mt-1 min-h-0 px-1 md:px-1.5">
-      {/* Top Tabs */}
-      <div className="flex items-center gap-1 mb-3 mt-1">
-        <button onClick={() => setActiveView('list')} className={clsx("flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-bold transition-all", activeView === 'list' ? "bg-white text-primary shadow-sm ring-1 ring-border" : "text-muted-foreground hover:text-foreground")}>
-          <List size={14} /> Danh sách
-        </button>
-        <button onClick={() => setActiveView('stats')} className={clsx("flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-bold transition-all", activeView === 'stats' ? "bg-white text-primary shadow-sm ring-1 ring-border" : "text-muted-foreground hover:text-foreground")}>
-          <BarChart2 size={14} /> Thống kê
-        </button>
-      </div>
+      <PageViewSwitcher
+        activeView={activeView}
+        setActiveView={setActiveView}
+        views={[
+          { id: 'list', label: 'Danh sách', icon: <List size={16} /> },
+          { id: 'stats', label: 'Thống kê', icon: <BarChart2 size={16} /> },
+        ]}
+      />
 
       {activeView === 'list' && (
         <div className="bg-white rounded-2xl border border-border shadow-sm flex flex-col flex-1 min-h-0 w-full">
           {/* MOBILE TOOLBAR */}
-          <div className="md:hidden flex items-center gap-2 p-3 border-b border-border">
-            <button onClick={() => navigate(-1)} className="p-2 rounded-xl border border-border bg-white text-muted-foreground shrink-0"><ChevronLeft size={18} /></button>
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={15} />
-              <input type="text" placeholder="Tìm kiếm . . ." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-9 pr-8 py-2 bg-muted/20 border border-border/80 rounded-xl text-[13px] focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all font-medium" />
-              {searchTerm && <button onClick={() => setSearchTerm('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"><X size={14} /></button>}
-            </div>
-            <button onClick={openMobileFilter} className={clsx('relative p-2 rounded-xl border shrink-0 transition-all', hasActiveFilters ? 'border-primary bg-primary/5 text-primary' : 'border-border bg-white text-muted-foreground')}><Filter size={18} />{hasActiveFilters && <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-primary text-white text-[9px] font-bold flex items-center justify-center">{totalActiveFilters}</span>}</button>
-            <button onClick={handleExport} className="p-2 rounded-xl bg-emerald-600 text-white shrink-0 shadow-md shadow-emerald-600/20"><Download size={18} /></button>
-          </div>
+          <MobilePageHeader
+              searchTerm={searchTerm}
+              setSearchTerm={setSearchTerm}
+              searchPlaceholder="Tìm kiếm . . ."
+              onFilterClick={openMobileFilter}
+              hasActiveFilters={hasActiveFilters}
+              totalActiveFilters={totalActiveFilters}
+              actions={
+                  <button onClick={handleExport} className="p-2 rounded-xl bg-emerald-600 text-white shrink-0 shadow-md shadow-emerald-600/20 active:scale-95 transition-all">
+                      <Download size={20} />
+                  </button>
+              }
+              selectionBar={
+                  selectedIds.length > 0 ? (
+                      <div className="flex items-center justify-between px-1 mt-3 pt-3 border-t border-slate-100 animate-in slide-in-from-top-2 duration-300">
+                          <span className="text-[13px] font-bold text-slate-600">
+                              Đã chọn <span className="text-primary">{selectedIds.length}</span> bình
+                          </span>
+                          <div className="flex items-center gap-2">
+                              <button onClick={toggleSelectAll} className="text-[12px] font-bold text-primary hover:underline px-2 py-1">
+                                  Bỏ chọn
+                              </button>
+                          </div>
+                      </div>
+                  ) : null
+              }
+          />
 
           {/* DESKTOP TOOLBAR */}
           <div className="hidden md:block p-3 space-y-3">
@@ -360,10 +385,12 @@ const CylinderExpiryReport = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-primary/10">
-                {loading ? (<tr><td colSpan={visibleColumns.length + 1} className="px-4 py-16 text-center text-muted-foreground italic">Đang tải dữ liệu...</td></tr>) : filteredData.length === 0 ? (<tr><td colSpan={visibleColumns.length + 1} className="px-4 py-16 text-center text-muted-foreground italic">Không tìm thấy dữ liệu</td></tr>) : (
-                  filteredData.map((item, index) => (
-                    <tr key={index} className={clsx("group transition-all hover:bg-blue-50/40", selectedIds.includes(index) && "bg-blue-50/60")}>
-                      <td className="px-4 py-4 sticky left-0 bg-white group-hover:bg-blue-50/40 z-10"><div className="flex items-center justify-center"><input type="checkbox" className="w-4 h-4 rounded border-border text-primary focus:ring-primary/20" checked={selectedIds.includes(index)} onChange={() => toggleSelect(index)} /></div></td>
+                {loading ? (<tr><td colSpan={visibleColumns.length + 1} className="px-4 py-16 text-center text-muted-foreground italic">Đang tải dữ liệu...</td></tr>) : paginatedData.length === 0 ? (<tr><td colSpan={visibleColumns.length + 1} className="px-4 py-16 text-center text-muted-foreground italic">Không tìm thấy dữ liệu</td></tr>) : (
+                  paginatedData.map((item, index) => {
+                    const globalIndex = (currentPage - 1) * pageSize + index;
+                    return (
+                    <tr key={globalIndex} className={clsx("group transition-all hover:bg-blue-50/40", selectedIds.includes(globalIndex) && "bg-blue-50/60")}>
+                      <td className="px-4 py-4 sticky left-0 bg-white group-hover:bg-blue-50/40 z-10"><div className="flex items-center justify-center"><input type="checkbox" className="w-4 h-4 rounded border-border text-primary focus:ring-primary/20" checked={selectedIds.includes(globalIndex)} onChange={() => toggleSelect(globalIndex)} /></div></td>
                       {columnOrder.filter(isColumnVisible).map(colKey => {
                         if (colKey === 'ma_binh') return <td key={colKey} className="px-4 py-4"><span className="text-[13px] font-bold text-primary">{item.ma_binh}</span></td>;
                         if (colKey === 'loai_binh') return <td key={colKey} className="px-4 py-4"><span className="text-[13px] text-foreground">{item.loai_binh}</span></td>;
@@ -374,43 +401,109 @@ const CylinderExpiryReport = () => {
                         return null;
                       })}
                     </tr>
-                  ))
+                    );
+                  })
                 )}
               </tbody>
             </table>
           </div>
 
-          <div className="md:hidden flex-1 overflow-y-auto p-3 flex flex-col gap-3 bg-muted/5">
-            {loading ? (<div className="py-16 text-center italic text-muted-foreground">Đang tải...</div>) : filteredData.length === 0 ? (<div className="py-16 text-center italic text-muted-foreground">Không tìm thấy dữ liệu</div>) : (
-              filteredData.map((item, index) => (
-                <div key={index} className="bg-white border border-primary/10 rounded-3xl p-5 shadow-sm flex flex-col items-center text-center">
-                  <div className="flex items-center justify-between w-full mb-3">
-                    <div className="flex items-center gap-2">
-                      <input type="checkbox" className="w-4 h-4 rounded border-border text-primary focus:ring-primary/20" checked={selectedIds.includes(index)} onChange={() => toggleSelect(index)} />
-                      <span className="text-[12px] font-bold text-primary">{item.ma_binh}</span>
+          <div className="md:hidden flex-1 overflow-y-auto p-3 pb-4 flex flex-col gap-3">
+            {loading ? (
+              <div className="py-20 text-center italic text-muted-foreground animate-pulse">Đang tải dữ liệu...</div>
+            ) : paginatedData.length === 0 ? (
+              <div className="py-20 text-center italic text-muted-foreground flex flex-col items-center gap-2">
+                <AlertTriangle size={32} className="text-amber-500 opacity-50" />
+                <span>Không có dữ liệu phù hợp</span>
+              </div>
+            ) : (
+              paginatedData.map((item, index) => {
+                const globalIndex = (currentPage - 1) * pageSize + index;
+                return (
+                  <div key={globalIndex} className={clsx(
+                      "rounded-2xl border shadow-sm p-4 transition-all duration-200",
+                      selectedIds.includes(globalIndex)
+                          ? "border-primary bg-primary/[0.05] ring-1 ring-primary/20"
+                          : "border-primary/15 bg-white"
+                  )}>
+                    <div className="flex items-start justify-between gap-2 mb-2 ml-1">
+                        <div className="flex gap-3">
+                            <div className="pt-1">
+                                <input 
+                                    type="checkbox" 
+                                    className="w-5 h-5 rounded-md border-border text-primary focus:ring-primary/20 transition-all cursor-pointer" 
+                                    checked={selectedIds.includes(globalIndex)} 
+                                    onChange={() => toggleSelect(globalIndex)} 
+                                />
+                            </div>
+                            <div>
+                                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">#{globalIndex + 1}</p>
+                                <h3 className="text-[14px] font-bold text-foreground leading-tight mt-0.5 flex items-center gap-1 font-mono"><Hash size={14} className="text-muted-foreground" />{item.ma_binh}</h3>
+                            </div>
+                        </div>
+                        <span className={clsx(getAgingBadgeClass(item.so_ngay_ton), "px-2")}>
+                            Tồn {item.so_ngay_ton} ngày
+                        </span>
                     </div>
-                    <span className={getAgingBadgeClass(item.so_ngay_ton)}>{item.so_ngay_ton} ngày</span>
+
+                    <div className="grid grid-cols-2 gap-2 mt-3 bg-slate-50 border border-slate-100 rounded-xl p-3">
+                        <div className="col-span-2">
+                            <h3 className="text-[14px] font-bold text-foreground mb-1">{item.khach_hang || 'Chưa có KH'}</h3>
+                        </div>
+                        <div className="flex flex-col justify-center">
+                            <p className="text-[9px] uppercase tracking-wider text-muted-foreground mb-0.5 flex items-center gap-1"><Monitor size={10} /> Loại bình</p>
+                            <p className="text-[12px] font-bold text-slate-700">{item.loai_binh}</p>
+                        </div>
+                        <div className="flex flex-col justify-center">
+                            <p className="text-[9px] uppercase tracking-wider text-muted-foreground mb-0.5 flex items-center gap-1"><Calendar size={10} /> Hết hạn</p>
+                            <p className="text-[12px] font-bold text-slate-700">{item.ngay_het_han}</p>
+                        </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-2 mt-3 pl-1 text-[12px] text-muted-foreground">
+                        <MapPin size={13} className="text-blue-500" />
+                        <span className="font-bold flex-1 text-slate-700">{item.kho || '-'}</span>
+                    </div>
                   </div>
-                  <h3 className="text-[15px] font-bold text-foreground mb-2">{item.khach_hang || 'Chưa có KH'}</h3>
-                  <div className="flex items-center justify-center gap-4 text-[11px] text-muted-foreground w-full py-2 bg-muted/20 rounded-xl mb-3">
-                    <div className="flex items-center gap-1.5"><Monitor size={13} className="text-primary/70" /> {item.loai_binh}</div>
-                    <div className="flex items-center gap-1.5"><Calendar size={13} className="text-primary/70" /> {item.ngay_het_han}</div>
-                  </div>
-                  <div className="flex items-center justify-center gap-1.5 text-[11px] font-bold text-blue-600 bg-blue-50 px-3 py-1.5 rounded-full">
-                    <MapPin size={13} /> {item.kho || '-'}
-                  </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
 
-          {/* FOOTER */}
-          <div className="px-4 py-4 border-t border-border flex items-center justify-between bg-muted/5">
-            <span className="text-[12px] text-muted-foreground font-medium">Tổng: {filteredData.length} bình</span>
+          {/* Sticky Mobile Pagination */}
+          {!loading && (
+              <MobilePagination
+                  currentPage={currentPage}
+                  setCurrentPage={setCurrentPage}
+                  pageSize={pageSize}
+                  setPageSize={setPageSize}
+                  totalRecords={filteredData.length}
+              />
+          )}
+
+          {/* FOOTER Desktop*/}
+          <div className="hidden md:flex px-4 py-4 border-t border-border items-center justify-between bg-muted/5">
+            <div className="flex items-center gap-3 text-[12px] text-muted-foreground font-medium">
+              <span>{filteredData.length > 0 ? `${(currentPage - 1) * pageSize + 1}–${Math.min(currentPage * pageSize, filteredData.length)}` : '0'} / Tổng {filteredData.length}</span>
+            </div>
             <div className="flex items-center gap-1">
-              <button className="p-1.5 rounded-lg text-muted-foreground opacity-20" disabled><ChevronLeft size={16} /></button>
-              <div className="w-8 h-8 rounded-lg bg-primary text-white flex items-center justify-center text-[12px] font-bold">1</div>
-              <button className="p-1.5 rounded-lg text-muted-foreground opacity-20" disabled><ChevronRight size={16} /></button>
+              <button onClick={() => setCurrentPage(1)} className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors disabled:opacity-20" disabled={currentPage === 1} title="Trang đầu">
+                <ChevronLeft size={16} />
+                <ChevronLeft size={16} className="-ml-2.5" />
+              </button>
+              <button onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))} className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors disabled:opacity-20" disabled={currentPage === 1} title="Trang trước">
+                <ChevronLeft size={16} />
+              </button>
+              <div className="w-8 h-8 rounded-lg bg-primary text-white flex items-center justify-center text-[12px] font-bold shadow-md shadow-primary/25">
+                {currentPage}
+              </div>
+              <button onClick={() => setCurrentPage(prev => Math.min(Math.ceil(filteredData.length / pageSize), prev + 1))} className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors disabled:opacity-20" disabled={currentPage >= Math.ceil(filteredData.length / pageSize)} title="Trang sau">
+                <ChevronRight size={16} />
+              </button>
+              <button onClick={() => setCurrentPage(Math.ceil(filteredData.length / pageSize))} className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors disabled:opacity-20" disabled={currentPage >= Math.ceil(filteredData.length / pageSize)} title="Trang cuối">
+                <ChevronRight size={16} />
+                <ChevronRight size={16} className="-ml-2.5" />
+              </button>
             </div>
           </div>
         </div>
@@ -419,28 +512,32 @@ const CylinderExpiryReport = () => {
       {activeView === 'stats' && (
         <div className="bg-white rounded-2xl border border-border shadow-sm flex flex-col w-full">
           {/* Header Parity with List View */}
-          <div className="md:hidden flex items-center gap-2 p-3 border-b border-border">
-            <button onClick={() => navigate(-1)} className="p-2 rounded-xl border border-border bg-white text-muted-foreground shrink-0"><ChevronLeft size={18} /></button>
-            <h2 className="text-base font-bold text-foreground flex-1 text-center">Thống kê báo cáo</h2>
-            <button onClick={openMobileFilter} className={clsx('relative p-2 rounded-xl border shrink-0 transition-all', hasActiveFilters ? 'border-primary bg-primary/5 text-primary' : 'border-border bg-white text-muted-foreground')}><Filter size={18} />{hasActiveFilters && <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-primary text-white text-[9px] font-bold flex items-center justify-center">{totalActiveFilters}</span>}</button>
-          </div>
+          <div className="space-y-0 text-left">
+            {/* Mobile Header */}
+            <div className="md:hidden flex items-center gap-2 p-3 border-b border-border">
+              <button onClick={() => navigate(-1)} className="p-2 rounded-xl border border-border bg-white text-muted-foreground shrink-0"><ChevronLeft size={18} /></button>
+              <h2 className="text-base font-bold text-foreground flex-1 text-center">Thống kê tồn vỏ</h2>
+              <button onClick={openMobileFilter} className={clsx('relative p-2 rounded-xl border shrink-0 transition-all', hasActiveFilters ? 'border-primary bg-primary/5 text-primary' : 'border-border bg-white text-muted-foreground')}><Filter size={18} />{hasActiveFilters && <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-primary text-white text-[9px] font-bold flex items-center justify-center">{totalActiveFilters}</span>}</button>
+            </div>
 
-          <div className="hidden md:block p-4 border-b border-border" ref={statsDropdownRef}>
-            <div className="flex flex-wrap items-center gap-2">
-              <button onClick={() => navigate(-1)} className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-border hover:bg-muted text-muted-foreground text-[12px] font-bold transition-all bg-white shadow-sm shrink-0"><ChevronLeft size={16} /> Quay lại</button>
-              <div className="relative">
-                <button onClick={() => { setActiveDropdown(activeDropdown === 'warehouses_stats' ? null : 'warehouses_stats'); setFilterSearch(''); }} className={clsx("flex items-center gap-2.5 px-4 py-2 rounded-xl border text-[13px] font-bold transition-all", getFilterButtonClass('warehouses', selectedWarehouses.length > 0))}>
-                  <MapPin size={14} className={getFilterIconClass('warehouses', selectedWarehouses.length > 0)} /> Kho {selectedWarehouses.length > 0 && <span className={clsx('px-1.5 py-0.5 rounded-full text-[10px] font-bold', getFilterCountBadgeClass('warehouses'))}>{selectedWarehouses.length}</span>} <ChevronDown size={14} className={clsx("transition-transform", activeDropdown === 'warehouses_stats' ? "rotate-180" : "")} />
-                </button>
-                {activeDropdown === 'warehouses_stats' && <FilterDropdown options={warehouseOptions} selected={selectedWarehouses} setSelected={setSelectedWarehouses} filterSearch={filterSearch} setFilterSearch={setFilterSearch} />}
+            {/* Desktop Header */}
+            <div className="hidden md:block p-4 border-b border-border" ref={statsDropdownRef}>
+              <div className="flex flex-wrap items-center gap-2">
+                <button onClick={() => navigate(-1)} className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-border hover:bg-muted text-muted-foreground text-[12px] font-bold transition-all bg-white shadow-sm shrink-0"><ChevronLeft size={16} /> Quay lại</button>
+                <div className="relative">
+                  <button onClick={() => { setActiveDropdown(activeDropdown === 'warehouses_stats' ? null : 'warehouses_stats'); setFilterSearch(''); }} className={clsx("flex items-center gap-2.5 px-4 py-2 rounded-xl border text-[13px] font-bold transition-all", getFilterButtonClass('warehouses', selectedWarehouses.length > 0))}>
+                    <MapPin size={14} className={getFilterIconClass('warehouses', selectedWarehouses.length > 0)} /> Kho {selectedWarehouses.length > 0 && <span className={clsx('px-1.5 py-0.5 rounded-full text-[10px] font-bold', getFilterCountBadgeClass('warehouses'))}>{selectedWarehouses.length}</span>} <ChevronDown size={14} className={clsx("transition-transform", activeDropdown === 'warehouses_stats' ? "rotate-180" : "")} />
+                  </button>
+                  {activeDropdown === 'warehouses_stats' && <FilterDropdown options={warehouseOptions} selected={selectedWarehouses} setSelected={setSelectedWarehouses} filterSearch={filterSearch} setFilterSearch={setFilterSearch} />}
+                </div>
+                <div className="relative">
+                  <button onClick={() => { setActiveDropdown(activeDropdown === 'minDays_stats' ? null : 'minDays_stats'); setFilterSearch(''); }} className={clsx("flex items-center gap-2.5 px-4 py-2 rounded-xl border text-[13px] font-bold transition-all", getFilterButtonClass('minDays', selectedMinDays.length > 0))}>
+                    <Clock size={14} className={getFilterIconClass('minDays', selectedMinDays.length > 0)} /> Tồn trên {selectedMinDays.length > 0 && <span className={clsx('px-1.5 py-0.5 rounded-full text-[10px] font-bold', getFilterCountBadgeClass('minDays'))}>{selectedMinDays.length}</span>} <ChevronDown size={14} className={clsx("transition-transform", activeDropdown === 'minDays_stats' ? "rotate-180" : "")} />
+                  </button>
+                  {activeDropdown === 'minDays_stats' && <FilterDropdown options={minDaysOptions} selected={selectedMinDays} setSelected={setSelectedMinDays} filterSearch={filterSearch} setFilterSearch={setFilterSearch} />}
+                </div>
+                {hasActiveFilters && <button onClick={() => { setSelectedWarehouses([]); setSelectedMinDays([]); }} className="flex items-center gap-2 px-3 py-2 rounded-xl border border-dashed border-red-300 text-red-500 text-[12px] font-bold hover:bg-red-50 transition-all"><X size={14} /> Xóa bộ lọc</button>}
               </div>
-              <div className="relative">
-                <button onClick={() => { setActiveDropdown(activeDropdown === 'minDays_stats' ? null : 'minDays_stats'); setFilterSearch(''); }} className={clsx("flex items-center gap-2.5 px-4 py-2 rounded-xl border text-[13px] font-bold transition-all", getFilterButtonClass('minDays', selectedMinDays.length > 0))}>
-                  <Clock size={14} className={getFilterIconClass('minDays', selectedMinDays.length > 0)} /> Tồn trên {selectedMinDays.length > 0 && <span className={clsx('px-1.5 py-0.5 rounded-full text-[10px] font-bold', getFilterCountBadgeClass('minDays'))}>{selectedMinDays.length}</span>} <ChevronDown size={14} className={clsx("transition-transform", activeDropdown === 'minDays_stats' ? "rotate-180" : "")} />
-                </button>
-                {activeDropdown === 'minDays_stats' && <FilterDropdown options={minDaysOptions} selected={selectedMinDays} setSelected={setSelectedMinDays} filterSearch={filterSearch} setFilterSearch={setFilterSearch} />}
-              </div>
-              {hasActiveFilters && <button onClick={() => { setSelectedWarehouses([]); setSelectedMinDays([]); }} className="flex items-center gap-2 px-3 py-2 rounded-xl border border-dashed border-red-300 text-red-500 text-[12px] font-bold hover:bg-red-50 transition-all"><X size={14} /> Xóa bộ lọc</button>}
             </div>
           </div>
 

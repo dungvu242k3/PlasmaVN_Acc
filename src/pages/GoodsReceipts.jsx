@@ -17,6 +17,7 @@ import {
     CheckSquare,
     ChevronDown,
     ChevronLeft,
+    ChevronRight,
     Download,
     Edit,
     Filter,
@@ -26,11 +27,15 @@ import {
     Plus,
     Printer,
     Search,
+    PieChart,
     SlidersHorizontal,
     Trash2,
     Upload,
     X,
-    Hash
+    Hash,
+    Calendar,
+    FileText,
+    Warehouse
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Bar as BarChartJS, Pie as PieChartJS } from 'react-chartjs-2';
@@ -43,6 +48,9 @@ import GoodsReceiptFormModal from '../components/GoodsReceipts/GoodsReceiptFormM
 import ColumnPicker from '../components/ui/ColumnPicker';
 import FilterDropdown from '../components/ui/FilterDropdown';
 import MobileFilterSheet from '../components/ui/MobileFilterSheet';
+import MobilePageHeader from '../components/layout/MobilePageHeader';
+import PageViewSwitcher from '../components/layout/PageViewSwitcher';
+import MobilePagination from '../components/layout/MobilePagination';
 import { RECEIPT_STATUSES, TABLE_COLUMNS } from '../constants/goodsReceiptConstants';
 import { supabase } from '../supabase/config';
 import { notificationService } from '../utils/notificationService';
@@ -121,6 +129,15 @@ const GoodsReceipts = () => {
         .filter(Boolean);
     const visibleCount = visibleColumns.length;
     const totalCount = defaultColOrder.length;
+
+    // Pagination state
+    const [currentPage, setCurrentPage] = useState(1);
+    const pageSize = 50;
+
+    // Reset page to 1 when filters change
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchTerm, selectedStatuses, selectedWarehouses, selectedTypes]);
 
     useEffect(() => {
         fetchReceipts();
@@ -675,12 +692,15 @@ const GoodsReceipts = () => {
             r.deliverer_address?.toLowerCase().includes(search);
         const matchesStatus = selectedStatuses.length === 0 || selectedStatuses.includes(r.status);
         const matchesWarehouse = selectedWarehouses.length === 0 || selectedWarehouses.includes(r.warehouse_id);
-        
+
         const receiptType = r.items?.[0]?.item_type || 'MAY';
         const matchesType = selectedTypes.length === 0 || selectedTypes.includes(receiptType);
 
         return matchesSearch && matchesStatus && matchesWarehouse && matchesType;
     });
+
+    const filteredReceiptsCount = filteredReceipts.length;
+    const paginatedReceipts = filteredReceipts.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
     const hasActiveFilters = selectedStatuses.length > 0 || selectedWarehouses.length > 0 || selectedTypes.length > 0;
     const totalActiveFilters = selectedStatuses.length + selectedWarehouses.length + selectedTypes.length;
@@ -786,183 +806,104 @@ const GoodsReceipts = () => {
 
     return (
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 w-full flex-1 flex flex-col mt-1 min-h-0 px-1 md:px-1.5 font-sans">
-            {/* Top View Tabs */}
-            <div className="flex items-center gap-1 mb-3 mt-1">
-                <button
-                    onClick={() => setActiveView('list')}
-                    className={clsx(
-                        "flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-bold transition-all",
-                        activeView === 'list'
-                            ? "bg-white text-primary shadow-sm ring-1 ring-border"
-                            : "text-muted-foreground hover:text-foreground"
-                    )}
-                >
-                    <List size={14} />
-                    Danh sách
-                </button>
-                <button
-                    onClick={() => setActiveView('stats')}
-                    className={clsx(
-                        "flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-bold transition-all",
-                        activeView === 'stats'
-                            ? "bg-white text-primary shadow-sm ring-1 ring-border"
-                            : "text-muted-foreground hover:text-foreground"
-                    )}
-                >
-                    <BarChart2 size={14} />
-                    Thống kê
-                </button>
-            </div>
+            <PageViewSwitcher
+                activeView={activeView}
+                setActiveView={setActiveView}
+                views={[
+                    { id: 'list', label: 'Danh sách', icon: <List size={16} /> },
+                    { id: 'stats', label: 'Thống kê', icon: <BarChart2 size={16} /> },
+                ]}
+            />
 
             {activeView === 'list' && (
-                <div className="bg-white rounded-2xl border border-border shadow-sm flex flex-col flex-1 min-h-0 w-full overflow-hidden">
-                    {/* MOBILE TOOLBAR */}
-                    <div className="md:hidden flex flex-col p-3 border-b border-border bg-white sticky top-0 z-30 shadow-subtle">
-                        {/* Row 1: Back, Title, Plus */}
-                        <div className="flex items-center justify-between mb-3 gap-3">
-                            <div className="flex items-center gap-3">
-                                <button
-                                    onClick={() => navigate(-1)}
-                                    className="p-2.5 rounded-xl border border-border bg-white text-muted-foreground flex items-center justify-center shadow-sm active:scale-95 transition-all"
-                                >
-                                    <ChevronLeft size={20} />
-                                </button>
-                                <h1 className="text-lg font-black text-slate-900 tracking-tight">Phiếu nhập kho</h1>
-                            </div>
-                            <div className="flex items-center gap-2">
+                <div className="bg-white rounded-2xl border border-border shadow-sm flex flex-col flex-1 min-h-0 w-full overflow-hidden text-left">
+                    <MobilePageHeader
+                        searchTerm={searchTerm}
+                        setSearchTerm={setSearchTerm}
+                        searchPlaceholder="Tìm mã phiếu, NCC..."
+                        onFilterClick={openMobileFilter}
+                        hasActiveFilters={hasActiveFilters}
+                        totalActiveFilters={totalActiveFilters}
+                        actions={
+                            <>
+                                <div className="relative">
+                                    <button
+                                        id="more-actions-btn"
+                                        onClick={() => setShowMoreActions(!showMoreActions)}
+                                        className={clsx(
+                                            "p-2 rounded-xl border shrink-0 transition-all active:scale-95 shadow-sm",
+                                            showMoreActions ? "bg-slate-100 border-slate-300" : "bg-white border-slate-200 text-slate-600"
+                                        )}
+                                    >
+                                        <MoreVertical size={20} />
+                                    </button>
+
+                                    {showMoreActions && (
+                                        <div id="more-actions-menu" className="absolute right-0 top-full mt-2 w-48 bg-white rounded-2xl shadow-xl border border-slate-100 py-2 z-[100] animate-in fade-in slide-in-from-top-2 duration-200 origin-top-right">
+                                            <div
+                                                role="button"
+                                                onClick={() => { handleDownloadTemplate(); setShowMoreActions(false); }}
+                                                className="w-full flex items-center justify-start gap-4 px-4 py-2.5 text-[14px] font-bold text-slate-700 hover:bg-slate-50 transition-colors text-left cursor-pointer"
+                                            >
+                                                <div className="w-5 flex justify-center flex-shrink-0">
+                                                    <Download size={18} className="text-slate-400" />
+                                                </div>
+                                                Tải mẫu Excel
+                                            </div>
+
+                                            <label className="w-full flex items-center justify-start gap-4 px-4 py-2.5 text-[14px] font-bold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer text-left">
+                                                <div className="w-5 flex justify-center flex-shrink-0">
+                                                    <Upload size={18} className="text-slate-400" />
+                                                </div>
+                                                Import Excel
+                                                <input
+                                                    type="file"
+                                                    accept=".xlsx, .xls"
+                                                    onChange={(e) => { handleImportExcel(e); setShowMoreActions(false); }}
+                                                    className="hidden"
+                                                    id="excel-import-mobile-sheet"
+                                                />
+                                            </label>
+
+                                            {selectedIds.length > 0 && (
+                                                <div
+                                                    role="button"
+                                                    onClick={() => { handleBulkDelete(); setShowMoreActions(false); }}
+                                                    className="w-full flex items-center justify-start gap-4 px-4 py-2.5 text-[14px] font-bold text-rose-600 hover:bg-rose-50 transition-colors text-left cursor-pointer"
+                                                >
+                                                    <div className="w-5 flex justify-center flex-shrink-0">
+                                                        <Trash2 size={18} />
+                                                    </div>
+                                                    Xóa ({selectedIds.length})
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+
                                 <button
                                     onClick={() => {
                                         setSelectedReceipt(null);
                                         setShowFormModal(true);
                                     }}
-                                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary text-white text-[13px] font-black shadow-lg shadow-primary/20 active:scale-95 transition-all"
+                                    className="p-2 rounded-xl bg-primary text-white shadow-lg shadow-primary/25 active:scale-95 transition-all shrink-0"
+                                    title="Tạo phiếu nhập"
                                 >
-                                    <Plus size={18} />
-                                    <span>Tạo mới</span>
+                                    <Plus size={20} />
                                 </button>
-                            </div>
-                        </div>
+                            </>
+                        }
+                        selectAll={{
+                            isChecked: selectedIds.length === filteredReceiptsCount && filteredReceiptsCount > 0,
+                            onChange: toggleSelectAll,
+                            show: activeView === 'list' && filteredReceiptsCount > 0,
+                            selectedCount: selectedIds.length
+                        }}
+                    />
 
-                        {/* Row 2: Selection, Search, Filter, More Actions */}
-                        <div className="flex items-center gap-2 min-h-[44px]">
-                            {!isSearchExpanded ? (
-                                <>
-                                    <div className="flex items-center gap-2 pr-1">
-                                        <input
-                                            type="checkbox"
-                                            checked={selectedIds.length === filteredReceipts.length && filteredReceipts.length > 0}
-                                            onChange={toggleSelectAll}
-                                            className="w-5 h-5 rounded-md border-border text-primary focus:ring-primary/20 transition-all cursor-pointer"
-                                        />
-                                    </div>
-                                    <div className="flex-1"></div>
-                                    <button
-                                        onClick={() => setIsSearchExpanded(true)}
-                                        className="p-2.5 rounded-xl border border-slate-200 bg-white text-slate-600 flex items-center justify-center shadow-sm active:scale-95 transition-all"
-                                    >
-                                        <Search size={20} />
-                                    </button>
-                                </>
-                            ) : (
-                                <div className="relative flex-1 group animate-in slide-in-from-right-2 duration-200">
-                                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-primary" size={16} />
-                                    <input
-                                        ref={searchInputRef}
-                                        type="text"
-                                        placeholder="Tìm mã phiếu, NCC..."
-                                        value={searchTerm}
-                                        onChange={(e) => setSearchTerm(e.target.value)}
-                                        onBlur={() => { if (!searchTerm) setIsSearchExpanded(false); }}
-                                        className="w-full pl-10 pr-20 py-2.5 bg-white border-2 border-primary/30 rounded-xl text-[14px] text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all font-semibold shadow-sm"
-                                    />
-                                    <div className="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
-                                        {searchTerm && (
-                                            <button
-                                                onClick={() => setSearchTerm('')}
-                                                className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400 hover:text-rose-500 transition-all"
-                                            >
-                                                <X size={15} />
-                                            </button>
-                                        )}
-                                        <button
-                                            onClick={() => setIsSearchExpanded(false)}
-                                            className="px-2 py-1 text-[12px] font-black text-primary hover:bg-primary/5 rounded-lg transition-all"
-                                        >
-                                            Đóng
-                                        </button>
-                                    </div>
-                                </div>
-                            )}
-
-                            {!isSearchExpanded && (
-                                <>
-                                    <button
-                                        onClick={openMobileFilter}
-                                        className={clsx(
-                                            'relative p-2.5 rounded-xl border shrink-0 transition-all active:scale-95 shadow-sm',
-                                            hasActiveFilters ? 'border-primary bg-primary/5 text-primary' : 'border-slate-200 bg-white text-slate-600',
-                                        )}
-                                    >
-                                        <Filter size={20} />
-                                        {hasActiveFilters && (
-                                            <span className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-primary text-white text-[10px] font-black flex items-center justify-center ring-2 ring-white">
-                                                {totalActiveFilters}
-                                            </span>
-                                        )}
-                                    </button>
-
-                                    <div className="relative">
-                                        <button
-                                            id="more-actions-btn"
-                                            onClick={() => setShowMoreActions(!showMoreActions)}
-                                            className={clsx(
-                                                "p-2.5 rounded-xl border shrink-0 transition-all active:scale-95 shadow-sm",
-                                                showMoreActions ? "bg-slate-100 border-slate-300" : "bg-white border-slate-200 text-slate-600"
-                                            )}
-                                        >
-                                            <MoreVertical size={20} />
-                                        </button>
-
-                                        {showMoreActions && (
-                                            <div id="more-actions-menu" className="absolute right-0 top-full mt-2 w-48 bg-white rounded-2xl shadow-xl border border-slate-100 py-2 z-[100] animate-in fade-in slide-in-from-top-2 duration-200 origin-top-right">
-                                                <button
-                                                    onClick={() => { exportToExcel(); setShowMoreActions(false); }}
-                                                    className="w-full flex items-center gap-3 px-4 py-2.5 text-[14px] font-bold text-slate-700 hover:bg-slate-50 transition-colors"
-                                                >
-                                                    <Download size={18} className="text-slate-400" />
-                                                    Xuất Excel
-                                                </button>
-
-                                                <label className="w-full flex items-center gap-3 px-4 py-2.5 text-[14px] font-bold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer">
-                                                    <Upload size={18} className="text-slate-400" />
-                                                    Import Excel
-                                                    <input
-                                                        type="file"
-                                                        accept=".xlsx, .xls"
-                                                        onChange={(e) => { handleImportExcel(e); setShowMoreActions(false); }}
-                                                        className="hidden"
-                                                    />
-                                                </label>
-
-                                                {selectedIds.length > 0 && (
-                                                    <button
-                                                        onClick={() => { handleBulkDelete(); setShowMoreActions(false); }}
-                                                        className="w-full flex items-center gap-3 px-4 py-2.5 text-[14px] font-bold text-rose-600 hover:bg-rose-50 transition-colors"
-                                                    >
-                                                        <Trash2 size={18} />
-                                                        Xóa ({selectedIds.length})
-                                                    </button>
-                                                )}
-                                            </div>
-                                        )}
-                                    </div>
-                                </>
-                            )}
-                        </div>
-                    </div>
 
                     {/* DESKTOP TOOLBAR */}
-                    <div className="hidden md:block p-3 space-y-3 bg-white">
+                    <div className="hidden md:block p-4 space-y-4">
                         <div className="flex items-center justify-between gap-4">
                             <div className="flex items-center gap-2 flex-1">
                                 <button
@@ -1013,34 +954,54 @@ const GoodsReceipts = () => {
                                         />
                                     )}
                                 </div>
-                                <button
-                                    onClick={handleDownloadTemplate}
-                                    className="flex items-center gap-2 px-4 py-1.5 rounded-xl border border-indigo-200 bg-indigo-50 text-indigo-700 text-[13px] font-bold hover:bg-indigo-100 transition-all shadow-sm"
-                                    title="Tải mẫu Excel"
-                                >
-                                    <Download size={16} />
-                                    Tải mẫu
-                                </button>
-                                <label className="flex items-center gap-2 px-4 py-1.5 rounded-xl border border-blue-200 bg-blue-50 text-blue-700 text-[13px] font-bold hover:bg-blue-100 transition-all shadow-sm cursor-pointer" title="Nhập Excel">
-                                    <Upload size={16} />
-                                    Nhập file
-                                    <input
-                                        type="file"
-                                        accept=".xlsx, .xls"
-                                        onChange={handleImportExcel}
-                                        className="hidden"
-                                    />
-                                </label>
+
                                 <button
                                     onClick={() => {
                                         setSelectedReceipt(null);
                                         setShowFormModal(true);
                                     }}
-                                    className="flex items-center gap-2 px-6 py-1.5 rounded-xl bg-primary text-white text-[13px] font-bold hover:bg-primary/90 shadow-md shadow-primary/20 transition-all"
+                                    className="flex items-center gap-2 px-6 py-2 rounded-xl bg-gradient-to-r from-primary to-primary/80 text-white text-[13px] font-black tracking-wider hover:scale-[1.02] active:scale-95 shadow-lg shadow-primary/20 transition-all"
                                 >
                                     <Plus size={18} />
-                                    Tạo phiếu nhập mới
+                                    Thêm phiếu nhập
                                 </button>
+
+                                {selectedIds.length > 0 && (
+                                    <button
+                                        onClick={handleBulkDelete}
+                                        className="flex items-center gap-2 px-4 py-1.5 rounded-xl border border-rose-200 bg-rose-50 text-rose-600 text-[13px] font-bold hover:bg-rose-100 shadow-sm transition-all animate-in slide-in-from-right-4"
+                                    >
+                                        <Trash2 size={16} />
+                                        Xóa ({selectedIds.length})
+                                    </button>
+                                )}
+
+                                <button
+                                    onClick={handleDownloadTemplate}
+                                    className="flex items-center gap-2 px-4 h-10 rounded-lg border border-indigo-200 bg-indigo-50 text-indigo-700 text-[13px] font-bold hover:bg-indigo-100 shadow-sm transition-all active:scale-95"
+                                    title="Tải file Excel mẫu"
+                                >
+                                    <Download size={16} />
+                                    Tải mẫu
+                                </button>
+
+                                <div className="relative">
+                                    <input
+                                        type="file"
+                                        accept=".xlsx, .xls"
+                                        onChange={handleImportExcel}
+                                        className="hidden"
+                                        id="excel-import"
+                                    />
+                                    <label
+                                        htmlFor="excel-import"
+                                        className="flex items-center gap-2 px-4 h-10 rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 text-[13px] font-bold hover:bg-emerald-100 cursor-pointer shadow-sm transition-all active:scale-95 select-none"
+                                        title="Import dữ liệu từ file Excel"
+                                    >
+                                        <Upload size={16} />
+                                        Nhập Excel
+                                    </label>
+                                </div>
                             </div>
                         </div>
 
@@ -1139,16 +1100,18 @@ const GoodsReceipts = () => {
                                 )}
                             </div>
 
-                            {hasActiveFilters && (
+                            {(hasActiveFilters || selectedIds.length > 0) && (
                                 <button
                                     onClick={() => {
                                         setSelectedStatuses([]);
                                         setSelectedWarehouses([]);
+                                        setSelectedTypes([]);
+                                        setSelectedIds([]);
                                     }}
-                                    className="flex items-center gap-2 px-3 py-2 rounded-xl border border-dashed border-red-300 text-red-500 text-[12px] font-bold hover:bg-red-50 transition-all"
+                                    className="flex items-center gap-2 px-3 py-2 rounded-xl border border-dashed border-red-300 text-red-500 text-[12px] font-bold hover:bg-red-50 transition-all font-sans"
                                 >
                                     <X size={14} />
-                                    Xóa bộ lọc
+                                    Xóa bộ lọc {selectedIds.length > 0 && `& Bỏ chọn (${selectedIds.length})`}
                                 </button>
                             )}
                         </div>
@@ -1170,69 +1133,82 @@ const GoodsReceipts = () => {
                         ) : (
                             <>
                                 {/* Mobile View Cards */}
-                                <div className="md:hidden divide-y divide-gray-100">
-                                    {filteredReceipts.map((receipt) => (
-                                        <div key={receipt.id} className="p-4 bg-white border-b border-gray-100">
-                                            <div className="flex justify-between items-start mb-3">
-                                                <div className="flex items-center gap-2">
-                                                    <input
-                                                        type="checkbox"
-                                                        className="w-4 h-4 rounded border-border text-primary focus:ring-primary/20"
-                                                        checked={selectedIds.includes(receipt.id)}
-                                                        onChange={() => toggleSelect(receipt.id)}
-                                                    />
-                                                    <span className="text-sm font-black text-blue-700 bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-100">{receipt.receipt_code}</span>
+                                <div className="md:hidden divide-y divide-slate-100 bg-slate-50/30">
+                                    {paginatedReceipts.map((receipt) => (
+                                        <div key={receipt.id} className="p-3.5 bg-white border-b border-slate-100 flex flex-col gap-2.5 active:bg-slate-50/50 transition-colors">
+                                            <div className="flex justify-between items-start">
+                                                <div className="flex flex-col gap-1.5 flex-1 min-w-0 pr-4">
+                                                    <div className="flex items-center gap-2">
+                                                        <input
+                                                            type="checkbox"
+                                                            className="w-4 h-4 rounded border-slate-300 text-primary focus:ring-primary/20"
+                                                            checked={selectedIds.includes(receipt.id)}
+                                                            onChange={() => toggleSelect(receipt.id)}
+                                                        />
+                                                        <span className="text-[13px] font-black text-blue-700 bg-blue-50/80 px-2.5 py-1 rounded-lg border border-blue-100 leading-none">{receipt.receipt_code}</span>
+                                                    </div>
+                                                    <p className="text-[14px] font-bold text-slate-800 truncate" title={receipt.supplier_name}>{receipt.supplier_name}</p>
                                                 </div>
-                                                {getStatusBadge(receipt.status)}
+                                                <div className="shrink-0 flex items-center justify-end h-7">
+                                                    {getStatusBadge(receipt.status)}
+                                                </div>
                                             </div>
-                                            <div className="grid grid-cols-2 gap-3 mb-4">
-                                                <div>
-                                                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight block mb-0.5">Nhà cung cấp</span>
-                                                    <p className="text-xs font-bold text-slate-800">{receipt.supplier_name}</p>
+
+                                            <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[11px] text-slate-500 font-medium">
+                                                <div className="flex items-center gap-1.5 min-w-[80px]">
+                                                    <Warehouse size={13} className="text-slate-400" />
+                                                    <span className="truncate">{getWarehouseLabel(receipt.warehouse_id)}</span>
                                                 </div>
-                                                <div>
-                                                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight block mb-0.5">Kho nhận</span>
-                                                    <p className="text-xs font-bold text-slate-600">{getWarehouseLabel(receipt.warehouse_id)}</p>
+                                                <div className="flex items-center gap-1.5">
+                                                    <Calendar size={13} className="text-slate-400" />
+                                                    <span>{receipt.receipt_date ? new Date(receipt.receipt_date).toLocaleDateString('vi-VN') : '—'}</span>
                                                 </div>
-                                                <div>
-                                                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight block mb-0.5">Ngày nhập</span>
-                                                    <p className="text-xs font-medium text-slate-600">{receipt.receipt_date ? new Date(receipt.receipt_date).toLocaleDateString('vi-VN') : '—'}</p>
+                                                <div className="flex items-center gap-1.5 text-blue-600 font-bold">
+                                                    <FileText size={13} className="text-blue-400" />
+                                                    <span>{receipt.total_items} dòng hàng</span>
                                                 </div>
-                                                <div>
-                                                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight block mb-0.5">Số dòng</span>
-                                                    <p className="text-xs font-black text-slate-900">{receipt.total_items}</p>
-                                                </div>
-                                                <div className="col-span-2">
-                                                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight block mb-0.5">Mặt hàng</span>
-                                                    <p className="text-[11px] font-bold text-blue-600 line-clamp-2">
-                                                        {receipt.items?.map(i => i.item_name).join(', ') || '—'}
+                                            </div>
+
+                                            {receipt.items?.length > 0 && (
+                                                <div className="px-2.5 py-1.5 bg-slate-50/80 rounded-lg border border-slate-100/50">
+                                                    <p className="text-[10px] font-bold text-blue-600/80 line-clamp-1 italic">
+                                                        {receipt.items?.map(i => i.item_name).join(', ')}
                                                     </p>
                                                 </div>
-                                                <div className="col-span-2">
-                                                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight block mb-0.5">Tổng giá trị</span>
-                                                    <p className="text-sm font-black text-rose-600">{formatNumber(receipt.total_amount || 0)} <small className="text-[10px]">₫</small></p>
+                                            )}
+
+                                            <div className="flex items-center justify-between pt-1 mt-0.5">
+                                                <div className="flex flex-col">
+                                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-tight leading-none mb-1">Tổng giá trị</span>
+                                                    <p className="text-[15px] font-black text-rose-600 leading-none">{formatNumber(receipt.total_amount || 0)} <small className="font-bold">₫</small></p>
                                                 </div>
-                                            </div>
-                                            <div className="flex items-center justify-end gap-3 pt-3 border-t border-gray-50">
-                                                {receipt.status === 'CHO_DUYET' && (
-                                                    <button onClick={() => handleApproveReceipt(receipt)} className="p-2 text-blue-600 bg-blue-50 rounded-lg" title="Duyệt"><CheckSquare className="w-5 h-5" /></button>
-                                                )}
-                                                <button onClick={() => handlePrintReceipt(receipt)} className="p-2 text-slate-400 bg-slate-50 rounded-lg" title="In"><Printer className="w-5 h-5" /></button>
-                                                <button
-                                                    onClick={() => {
-                                                        setSelectedReceipt(receipt);
-                                                        setShowFormModal(true);
-                                                    }}
-                                                    className="p-2 text-slate-400 bg-slate-50 rounded-lg"
-                                                    title="Chi tiết"
-                                                >
-                                                    <Edit className="w-5 h-5" />
-                                                </button>
-                                                <button onClick={() => handleDeleteReceipt(receipt.id, receipt.receipt_code)} className="p-2 text-red-400 bg-red-50 rounded-lg" title="Xóa"><Trash2 className="w-5 h-5" /></button>
+                                                <div className="flex items-center justify-end gap-3">
+                                                    {receipt.status === 'CHO_DUYET' && (
+                                                        <button onClick={() => handleApproveReceipt(receipt)} className="p-2 text-blue-600 bg-blue-50 rounded-lg" title="Duyệt"><CheckSquare className="w-5 h-5" /></button>
+                                                    )}
+                                                    <button onClick={() => handlePrintReceipt(receipt)} className="p-2 text-slate-400 bg-slate-50 rounded-lg" title="In"><Printer className="w-5 h-5" /></button>
+                                                    <button
+                                                        onClick={() => {
+                                                            setSelectedReceipt(receipt);
+                                                            setShowFormModal(true);
+                                                        }}
+                                                        className="p-2 text-slate-400 bg-slate-50 rounded-lg"
+                                                        title="Chi tiết"
+                                                    >
+                                                        <Edit className="w-5 h-5" />
+                                                    </button>
+                                                    <button onClick={() => handleDeleteReceipt(receipt.id, receipt.receipt_code)} className="p-2 text-red-400 bg-red-50 rounded-lg" title="Xóa"><Trash2 className="w-5 h-5" /></button>
+                                                </div>
                                             </div>
                                         </div>
                                     ))}
                                 </div>
+                                <MobilePagination
+                                    currentPage={currentPage}
+                                    setCurrentPage={setCurrentPage}
+                                    totalItems={filteredReceiptsCount}
+                                    pageSize={pageSize}
+                                />
 
 
                                 {/* Desktop View Table */}
@@ -1259,7 +1235,7 @@ const GoodsReceipts = () => {
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-slate-100 bg-white">
-                                            {filteredReceipts.map((receipt) => (
+                                            {paginatedReceipts.map((receipt) => (
                                                 <tr key={receipt.id} className="hover:bg-slate-50/80 transition-colors group">
                                                     <td className="px-4 py-4">
                                                         <div className="flex items-center justify-center">
@@ -1307,11 +1283,58 @@ const GoodsReceipts = () => {
                                         <tfoot className="bg-slate-50 sticky bottom-0 z-10">
                                             <tr>
                                                 <td colSpan={visibleTableColumns.length + 2} className="px-4 py-3 text-[12px] font-bold text-slate-500">
-                                                    Tổng số: {filteredReceipts.length} phiếu | Tổng giá trị: <span className="text-rose-600">{formatNumber(filteredReceipts.reduce((sum, r) => sum + (r.total_amount || 0), 0))} đ</span>
+                                                    Tổng số: {filteredReceiptsCount} phiếu | Tổng giá trị: <span className="text-rose-600">{formatNumber(filteredReceipts.reduce((sum, r) => sum + (r.total_amount || 0), 0))} đ</span>
                                                 </td>
                                             </tr>
                                         </tfoot>
                                     </table>
+
+                                    <div className="hidden md:flex px-4 py-4 border-t border-border items-center justify-between bg-muted/5">
+                                        <div className="flex items-center gap-3 text-[12px] text-muted-foreground font-medium">
+                                            <span>
+                                                {filteredReceiptsCount > 0 ? `${(currentPage - 1) * pageSize + 1}–${Math.min(currentPage * pageSize, filteredReceiptsCount)}` : '0'} / Tổng {filteredReceiptsCount}
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center gap-1">
+                                            <button
+                                                onClick={() => setCurrentPage(1)}
+                                                className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors disabled:opacity-20"
+                                                disabled={currentPage === 1}
+                                                title="Trang đầu"
+                                            >
+                                                <ChevronLeft size={16} />
+                                                <ChevronLeft size={16} className="-ml-2.5" />
+                                            </button>
+                                            <button
+                                                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                                                className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors disabled:opacity-20"
+                                                disabled={currentPage === 1}
+                                                title="Trang trước"
+                                            >
+                                                <ChevronLeft size={16} />
+                                            </button>
+                                            <div className="w-8 h-8 rounded-lg bg-primary text-white flex items-center justify-center text-[12px] font-bold shadow-md shadow-primary/25">
+                                                {currentPage}
+                                            </div>
+                                            <button
+                                                onClick={() => setCurrentPage(prev => Math.min(Math.ceil(filteredReceiptsCount / pageSize), prev + 1))}
+                                                className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors disabled:opacity-20"
+                                                disabled={currentPage >= Math.ceil(filteredReceiptsCount / pageSize)}
+                                                title="Trang sau"
+                                            >
+                                                <ChevronRight size={16} />
+                                            </button>
+                                            <button
+                                                onClick={() => setCurrentPage(Math.ceil(filteredReceiptsCount / pageSize))}
+                                                className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors disabled:opacity-20"
+                                                disabled={currentPage >= Math.ceil(filteredReceiptsCount / pageSize) || filteredReceiptsCount === 0}
+                                                title="Trang cuối"
+                                            >
+                                                <ChevronRight size={16} />
+                                                <ChevronRight size={16} className="-ml-2.5" />
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
                             </>
                         )}
@@ -1320,34 +1343,11 @@ const GoodsReceipts = () => {
             )}
 
             {activeView === 'stats' && (
-                <div className="bg-white rounded-2xl border border-border shadow-sm flex flex-col w-full md:flex-1 md:min-h-0 md:overflow-hidden">
-                    {/* Mobile Header */}
-                    <div className="md:hidden flex items-center gap-2 p-3 border-b border-border">
-                        <button
-                            onClick={() => navigate(-1)}
-                            className="p-2 rounded-xl border border-border bg-white text-muted-foreground shrink-0"
-                        >
-                            <ChevronLeft size={18} />
-                        </button>
-                        <h2 className="text-base font-bold text-foreground flex-1 text-center">Thống kê</h2>
-                        <button
-                            onClick={openMobileFilter}
-                            className={clsx(
-                                'relative p-2 rounded-xl border shrink-0 transition-all',
-                                hasActiveFilters ? 'border-primary bg-primary/5 text-primary' : 'border-border bg-white text-muted-foreground',
-                            )}
-                        >
-                            <Filter size={18} />
-                            {hasActiveFilters && (
-                                <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-primary text-white text-[9px] font-bold flex items-center justify-center">
-                                    {totalActiveFilters}
-                                </span>
-                            )}
-                        </button>
-                    </div>
+                <div className="bg-white rounded-2xl border border-border shadow-sm flex flex-col w-full md:flex-1 md:min-h-0 md:overflow-hidden text-left">
 
-                    {/* Desktop Header */}
-                    <div className="hidden md:block p-4 border-b border-border" ref={statsDropdownRef}>
+
+                    {/* Desktop Header/Toolbar */}
+                    <div className="hidden md:block p-4 space-y-4" ref={statsDropdownRef}>
                         <div className="flex flex-wrap items-center gap-2">
                             <button
                                 onClick={() => navigate(-1)}
@@ -1419,11 +1419,43 @@ const GoodsReceipts = () => {
                                 )}
                             </div>
 
+                            <div className="relative">
+                                <button
+                                    onClick={() => {
+                                        if (activeDropdown !== 'type') setFilterSearch('');
+                                        setActiveDropdown(activeDropdown === 'type' ? null : 'type');
+                                    }}
+                                    className={clsx(
+                                        "flex items-center gap-2.5 px-4 py-2 rounded-xl border text-[13px] font-bold transition-all",
+                                        getFilterButtonClass('type', activeDropdown === 'type' || selectedTypes.length > 0)
+                                    )}
+                                >
+                                    <Hash size={14} className={getFilterIconClass('type', activeDropdown === 'type' || selectedTypes.length > 0)} />
+                                    Loại hàng
+                                    {selectedTypes.length > 0 && (
+                                        <span className={clsx('px-1.5 py-0.5 rounded-full text-[10px] font-bold', getFilterCountBadgeClass('type'))}>
+                                            {selectedTypes.length}
+                                        </span>
+                                    )}
+                                    <ChevronDown size={14} className={clsx("transition-transform", activeDropdown === 'type' ? "rotate-180" : "")} />
+                                </button>
+                                {activeDropdown === 'type' && (
+                                    <FilterDropdown
+                                        options={typeOptions}
+                                        selected={selectedTypes}
+                                        setSelected={setSelectedTypes}
+                                        filterSearch={filterSearch}
+                                        setFilterSearch={setFilterSearch}
+                                    />
+                                )}
+                            </div>
+
                             {hasActiveFilters && (
                                 <button
                                     onClick={() => {
                                         setSelectedStatuses([]);
                                         setSelectedWarehouses([]);
+                                        setSelectedTypes([]);
                                     }}
                                     className="flex items-center gap-2 px-3 py-2 rounded-xl border border-dashed border-red-300 text-red-500 text-[12px] font-bold hover:bg-red-50 transition-all"
                                 >
@@ -1434,7 +1466,7 @@ const GoodsReceipts = () => {
                         </div>
                     </div>
 
-                    <div className="w-full md:flex-1 md:overflow-auto px-3 md:px-4 pt-4 md:pt-5 pb-5 md:pb-6 space-y-5">
+                    <div className="w-full md:flex-1 md:overflow-auto px-3 md:px-6 pt-4 md:pt-6 pb-5 md:pb-6 space-y-6">
                         {/* Stats Summary */}
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                             <div className="bg-blue-50/70 border border-blue-100 rounded-2xl p-5 shadow-sm">

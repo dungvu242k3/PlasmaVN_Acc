@@ -20,6 +20,9 @@ import {
     Eye,
     Filter,
     List,
+    MapPin,
+    MoreVertical,
+    Package,
     Phone,
     Plus,
     Search,
@@ -35,6 +38,9 @@ import * as XLSX from 'xlsx';
 import { Bar as BarChartJS, Pie as PieChartJS } from 'react-chartjs-2';
 import { useNavigate } from 'react-router-dom';
 import { clsx } from 'clsx';
+import MobilePageHeader from '../components/layout/MobilePageHeader';
+import MobilePagination from '../components/layout/MobilePagination';
+import PageViewSwitcher from '../components/layout/PageViewSwitcher';
 import ShipperDetailsModal from '../components/Shippers/ShipperDetailsModal';
 import ShipperFormModal from '../components/Shippers/ShipperFormModal';
 import ColumnPicker from '../components/ui/ColumnPicker';
@@ -77,6 +83,11 @@ const Shippers = () => {
     const [isFormModalOpen, setIsFormModalOpen] = useState(false);
     const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
     const [selectedShipper, setSelectedShipper] = useState(null);
+    const [showMoreActions, setShowMoreActions] = useState(false);
+
+    // Pagination State
+    const [currentPage, setCurrentPage] = useState(1);
+    const [pageSize, setPageSize] = useState(50);
 
     const [selectedStatuses, setSelectedStatuses] = useState([]);
     const [selectedTypes, setSelectedTypes] = useState([]);
@@ -393,6 +404,9 @@ const Shippers = () => {
     });
 
     const filteredShippersCount = filteredShippers.length;
+    const totalRecords = filteredShippers.length;
+    const paginatedShippers = filteredShippers.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
     const activeCount = filteredShippers.filter(s => s.status === 'Đang hoạt động').length;
     const suspendedCount = filteredShippers.filter(s => s.status === 'Tạm ngưng').length;
 
@@ -533,139 +547,109 @@ const Shippers = () => {
 
     return (
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 w-full flex-1 flex flex-col mt-1 min-h-0 px-1 md:px-1.5">
-            <div className="flex items-center gap-1 mb-3 mt-1">
-                <button
-                    onClick={() => setActiveView('list')}
-                    className={clsx(
-                        'flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-bold transition-all',
-                        activeView === 'list'
-                            ? 'bg-white text-primary shadow-sm ring-1 ring-border'
-                            : 'text-muted-foreground hover:text-foreground'
-                    )}
-                >
-                    <List size={14} />
-                    Danh sách
-                </button>
-                <button
-                    onClick={() => setActiveView('stats')}
-                    className={clsx(
-                        'flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-bold transition-all',
-                        activeView === 'stats'
-                            ? 'bg-white text-primary shadow-sm ring-1 ring-border'
-                            : 'text-muted-foreground hover:text-foreground'
-                    )}
-                >
-                    <BarChart2 size={14} />
-                    Thống kê
-                </button>
-            </div>
+            <PageViewSwitcher
+                activeView={activeView}
+                setActiveView={setActiveView}
+                views={[
+                    { id: 'list', label: 'Danh sách', icon: <List size={16} /> },
+                    { id: 'stats', label: 'Thống kê', icon: <BarChart2 size={16} /> },
+                ]}
+            />
 
             {activeView === 'list' && (
                 <div className="bg-white rounded-2xl border border-border shadow-sm flex flex-col flex-1 min-h-0 w-full">
-                    <div className="md:hidden flex items-center gap-2 p-3 border-b border-border">
-                        <div className="flex items-center gap-2 shrink-0 pr-1">
-                            <input
-                                type="checkbox"
-                                checked={selectedIds.length === filteredShippers.length && filteredShippers.length > 0}
-                                onChange={toggleSelectAll}
-                                className="w-5 h-5 rounded-md border-border text-primary focus:ring-primary/20 transition-all cursor-pointer"
-                            />
-                        </div>
-                        <button
-                            onClick={() => navigate(-1)}
-                            className="p-2 rounded-xl border border-border bg-white text-muted-foreground shrink-0"
-                        >
-                            <ChevronLeft size={18} />
-                        </button>
-                        <div className="relative flex-1">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={15} />
-                            <input
-                                type="text"
-                                placeholder="Tìm kiếm . . ."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full pl-9 pr-8 py-2 bg-muted/20 border border-border/80 rounded-xl text-[13px] focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all font-medium"
-                            />
-                            {searchTerm && (
-                                <button onClick={() => setSearchTerm('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                                    <X size={14} />
+                    <MobilePageHeader
+                        searchTerm={searchTerm}
+                        setSearchTerm={setSearchTerm}
+                        searchPlaceholder="Tìm kiếm..."
+                        onFilterClick={openMobileFilter}
+                        hasActiveFilters={hasActiveFilters}
+                        totalActiveFilters={totalActiveFilters}
+                        actions={
+                            <>
+                                <div className="relative">
+                                    <button
+                                        id="more-actions-button-shippers"
+                                        onClick={() => setShowMoreActions(!showMoreActions)}
+                                        className={clsx(
+                                            "p-2 rounded-xl border shrink-0 transition-all active:scale-95 shadow-sm",
+                                            showMoreActions ? "bg-slate-100 border-slate-300" : "bg-white border-slate-200 text-slate-600"
+                                        )}
+                                    >
+                                        <MoreVertical size={20} />
+                                    </button>
+                                    {showMoreActions && (
+                                        <div id="more-actions-menu-shippers" className="absolute right-0 top-full mt-2 w-48 bg-white rounded-2xl shadow-xl border border-slate-100 py-2 z-[100] animate-in fade-in slide-in-from-top-2 duration-200 origin-top-right">
+                                            <div
+                                                role="button"
+                                                onClick={() => { downloadTemplate(); setShowMoreActions(false); }}
+                                                className="w-full flex items-center justify-start gap-4 px-4 py-2.5 text-[14px] font-bold text-slate-700 hover:bg-slate-50 transition-colors text-left cursor-pointer"
+                                            >
+                                                <div className="w-5 flex justify-center flex-shrink-0">
+                                                    <Download size={18} className="text-slate-400" />
+                                                </div>
+                                                Tải mẫu Excel
+                                            </div>
+                                            <label className="w-full flex items-center justify-start gap-4 px-4 py-2.5 text-[14px] font-bold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer text-left">
+                                                <div className="w-5 flex justify-center flex-shrink-0">
+                                                    <Upload size={18} className="text-slate-400" />
+                                                </div>
+                                                Import Excel
+                                                <input type="file" accept=".xlsx, .xls" onChange={(e) => { handleImportExcel(e); setShowMoreActions(false); }} className="hidden" />
+                                            </label>
+                                        </div>
+                                    )}
+                                </div>
+                                <button
+                                    onClick={() => {
+                                        setSelectedShipper(null);
+                                        setIsFormModalOpen(true);
+                                    }}
+                                    className="p-2 rounded-xl bg-primary text-white shadow-lg shadow-primary/30 active:scale-95 transition-all shrink-0"
+                                >
+                                    <Plus size={20} />
                                 </button>
-                            )}
-                        </div>
-                        <button
-                            onClick={downloadTemplate}
-                            className="p-2 rounded-xl border border-indigo-200 bg-indigo-50 text-indigo-700 shrink-0"
-                            title="Tải mẫu Excel"
-                        >
-                            <Download size={18} />
-                        </button>
-                        <div className="relative">
-                            <input
-                                type="file"
-                                accept=".xlsx, .xls"
-                                onChange={handleImportExcel}
-                                className="hidden"
-                                id="shipper-import-mobile"
-                            />
-                            <label
-                                htmlFor="shipper-import-mobile"
-                                className="p-2 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-700 flex items-center justify-center cursor-pointer shadow-sm transition-all"
-                                title="Import Excel"
-                            >
-                                <Upload size={18} />
-                            </label>
-                        </div>
-                        <button
-                            onClick={openMobileFilter}
-                            className={clsx(
-                                'relative p-2 rounded-xl border shrink-0 transition-all',
-                                hasActiveFilters ? getFilterButtonClass('statuses', true) : getFilterButtonClass('statuses', false),
-                            )}
-                        >
-                            <Filter size={18} className={getFilterIconClass('statuses', hasActiveFilters)} />
-                            {hasActiveFilters && (
-                                <span className={clsx(
-                                    'absolute -top-1 -right-1 w-4 h-4 rounded-full text-[9px] font-bold flex items-center justify-center',
-                                    getFilterCountBadgeClass('statuses')
-                                )}>
-                                    {totalActiveFilters}
-                                </span>
-                            )}
-                        </button>
-                        {selectedIds.length > 0 && (
-                            <button
-                                onClick={handleBulkDelete}
-                                className="p-2 rounded-xl bg-rose-50 text-rose-600 border border-rose-200 shrink-0 shadow-sm animate-in zoom-in-95 duration-200"
-                                title="Xóa các mục đã chọn"
-                            >
-                                <Trash2 size={18} />
-                            </button>
-                        )}
-                        <button
-                            onClick={() => {
-                                setSelectedShipper(null);
-                                setIsFormModalOpen(true);
-                            }}
-                            className="p-2 rounded-xl bg-primary text-white shrink-0 shadow-md shadow-primary/20"
-                        >
-                            <Plus size={18} />
-                        </button>
-                    </div>
+                            </>
+                        }
+                        selectionBar={
+                            selectedIds.length > 0 ? (
+                                <div className="flex items-center justify-between px-1 mt-3 pt-3 border-t border-slate-100 animate-in slide-in-from-top-2 duration-300">
+                                    <span className="text-[13px] font-bold text-slate-600">
+                                        Đã chọn <span className="text-primary">{selectedIds.length}</span> ĐVVC
+                                    </span>
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            onClick={toggleSelectAll}
+                                            className="text-[12px] font-bold text-primary hover:underline px-2 py-1"
+                                        >
+                                            Bỏ chọn
+                                        </button>
+                                        <button
+                                            onClick={handleBulkDelete}
+                                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-50 text-rose-600 text-[12px] font-bold border border-rose-100"
+                                        >
+                                            <Trash2 size={14} /> Xóa tất cả
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : null
+                        }
+                    />
 
                     <div className="md:hidden flex-1 overflow-y-auto p-3 flex flex-col gap-3">
                         {isLoading ? (
                             <div className="py-16 text-center text-[13px] text-muted-foreground italic">Đang tải dữ liệu...</div>
-                        ) : filteredShippers.length === 0 ? (
+                        ) : paginatedShippers.length === 0 ? (
                             <div className="py-16 text-center text-[13px] text-muted-foreground italic">Không tìm thấy kết quả phù hợp</div>
                         ) : (
-                            filteredShippers.map((shipper) => (
+                            paginatedShippers.map((shipper, index) => (
                                 <div key={shipper.id} className={clsx(
-                                    "rounded-2xl border bg-gradient-to-br shadow-sm p-4 transition-all duration-200",
-                                    selectedIds.includes(shipper.id) 
-                                        ? "border-primary bg-primary/[0.05] ring-1 ring-primary/20" 
-                                        : "border-primary/20 from-white to-primary/[0.03]"
+                                    "rounded-2xl border shadow-sm p-4 transition-all duration-200",
+                                    selectedIds.includes(shipper.id)
+                                        ? "border-primary bg-primary/[0.05] ring-1 ring-primary/20"
+                                        : "border-primary/15 bg-white"
                                 )}>
-                                    <div className="flex items-start justify-between gap-2 mb-2">
+                                    <div className="flex items-start justify-between gap-2 mb-3">
                                         <div className="flex gap-3">
                                             <div className="pt-1">
                                                 <input
@@ -676,43 +660,60 @@ const Shippers = () => {
                                                 />
                                             </div>
                                             <div>
-                                                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Đơn vị vận chuyển</p>
-                                                <h3 className="text-[15px] font-bold text-foreground leading-tight mt-0.5">{shipper.name}</h3>
+                                                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">#{((currentPage - 1) * pageSize) + index + 1}</p>
+                                                <h3 className="text-[14px] font-bold text-foreground leading-tight mt-0.5">{shipper.name}</h3>
                                             </div>
                                         </div>
-                                        <span className={clsx('inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border', getStatusStyle(shipper.status))}>
-                                            {shipper.status || 'Không xác định'}
+                                        <span className={clsx('inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border whitespace-nowrap', getStatusStyle(shipper.status))}>
+                                            {shipper.status || '—'}
                                         </span>
                                     </div>
 
-                                    <div className="space-y-1.5 mb-3 rounded-xl border border-border/60 bg-muted/10 px-3 py-2.5">
-                                        <div className="flex items-center gap-2 text-[12px] text-muted-foreground">
-                                            <Phone className="w-3.5 h-3.5" />
-                                            <span>{shipper.phone || '—'}</span>
+                                    <div className="grid grid-cols-2 gap-y-2.5 text-xs mb-3 bg-muted/10 rounded-xl p-3 border border-border/60">
+                                        <div className="space-y-1.5 border-r border-border/60 pr-2">
+                                            <div className="flex items-center gap-2 text-muted-foreground">
+                                                <User className="w-3.5 h-3.5 text-blue-500" />
+                                                <span className="font-semibold text-foreground truncate">{shipper.manager_name || '—'}</span>
+                                            </div>
+                                            <div className="flex items-center gap-2 text-muted-foreground">
+                                                <Phone className="w-3.5 h-3.5 text-emerald-500" />
+                                                <span className="font-medium truncate">{shipper.phone || '—'}</span>
+                                            </div>
                                         </div>
-                                        <div className="flex items-center gap-2 text-[12px] text-muted-foreground">
-                                            <User className="w-3.5 h-3.5" />
-                                            <span>{shipper.manager_name || '—'}</span>
+                                        <div className="space-y-1.5 pl-3">
+                                            <div className="flex items-center gap-2 text-muted-foreground">
+                                                <Truck className="w-3.5 h-3.5 text-violet-500" />
+                                                <span className="font-medium truncate">{getLabel(SHIPPING_TYPES, shipper.shipping_type)}</span>
+                                            </div>
+                                            <div className="flex items-center gap-2 text-muted-foreground">
+                                                <MapPin className="w-3.5 h-3.5 text-slate-400" />
+                                                <span className="truncate" title={shipper.address}>{shipper.address || '—'}</span>
+                                            </div>
                                         </div>
-                                        <div className="text-[12px] text-muted-foreground">
-                                            <span className="font-semibold text-foreground/90">Loại hình:</span> {getLabel(SHIPPING_TYPES, shipper.shipping_type)}
-                                        </div>
-                                        <div className="text-[12px] text-muted-foreground line-clamp-2">{shipper.address || '—'}</div>
                                     </div>
 
-                                    <div className="flex items-center justify-end pt-2 border-t border-border/70">
-                                        <div className="flex items-center gap-3">
-                                            <button onClick={() => handleViewShipper(shipper)} className="text-blue-500 hover:text-blue-700 transition-colors"><Eye size={18} /></button>
-                                            <button onClick={() => handleEditShipper(shipper)} className="text-amber-500 hover:text-amber-700 transition-colors"><Edit size={18} /></button>
-                                            {(role === 'admin' || role === 'manager') && (
-                                                <button onClick={() => handleDeleteShipper(shipper.id, shipper.name)} className="text-rose-500 hover:text-rose-700 transition-colors"><Trash2 size={18} /></button>
-                                            )}
-                                        </div>
+                                    <div className="flex items-center justify-end gap-3 pt-3 border-t border-border/70 mt-1">
+                                        <button onClick={() => handleViewShipper(shipper)} className="p-2 text-blue-700 bg-blue-50 border border-blue-100 rounded-lg"><Eye size={16} /></button>
+                                        <button onClick={() => handleEditShipper(shipper)} className="p-2 text-amber-700 bg-amber-50 border border-amber-100 rounded-lg"><Edit size={16} /></button>
+                                        {(role === 'admin' || role === 'manager') && (
+                                            <button onClick={() => handleDeleteShipper(shipper.id, shipper.name)} className="p-2 text-red-700 bg-red-50 border border-red-100 rounded-lg"><Trash2 size={16} /></button>
+                                        )}
                                     </div>
                                 </div>
                             ))
                         )}
                     </div>
+
+                    {/* Sticky Mobile Pagination */}
+                    {!isLoading && (
+                        <MobilePagination
+                            currentPage={currentPage}
+                            setCurrentPage={setCurrentPage}
+                            pageSize={pageSize}
+                            setPageSize={setPageSize}
+                            totalRecords={totalRecords}
+                        />
+                    )}
 
                     <div className="hidden md:block p-4 space-y-4">
                         <div className="flex items-center justify-between gap-4">
@@ -787,9 +788,9 @@ const Shippers = () => {
                                     </button>
                                 )}
 
-                                <button
+                                 <button
                                     onClick={downloadTemplate}
-                                    className="flex items-center gap-2 px-4 py-1.5 rounded-xl border border-indigo-200 bg-indigo-50 text-indigo-700 text-[13px] font-bold hover:bg-indigo-100 shadow-sm transition-all"
+                                    className="flex items-center gap-2 px-4 h-10 rounded-lg border border-indigo-200 bg-indigo-50 text-indigo-700 text-[13px] font-bold hover:bg-indigo-100 shadow-sm transition-all active:scale-95"
                                     title="Tải file Excel mẫu"
                                 >
                                     <Download size={16} />
@@ -806,7 +807,7 @@ const Shippers = () => {
                                     />
                                     <label
                                         htmlFor="excel-import"
-                                        className="flex items-center gap-2 px-4 py-1.5 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-700 text-[13px] font-bold hover:bg-emerald-100 cursor-pointer shadow-sm transition-all"
+                                        className="flex items-center gap-2 px-4 h-10 rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 text-[13px] font-bold hover:bg-emerald-100 cursor-pointer shadow-sm transition-all active:scale-95 select-none"
                                         title="Import dữ liệu từ file Excel"
                                     >
                                         <Upload size={16} />
@@ -940,13 +941,13 @@ const Shippers = () => {
                                             Đang tải dữ liệu...
                                         </td>
                                     </tr>
-                                ) : filteredShippers.length === 0 ? (
+                                ) : paginatedShippers.length === 0 ? (
                                     <tr>
                                         <td colSpan={visibleTableColumns.length + 1} className="px-4 py-16 text-center text-muted-foreground">
                                             Không tìm thấy đơn vị vận chuyển nào
                                         </td>
                                     </tr>
-                                ) : filteredShippers.map((shipper) => (
+                                ) : paginatedShippers.map((shipper) => (
                                     <tr key={shipper.id} className={clsx(
                                         getRowStyle(shipper.status),
                                         selectedIds.includes(shipper.id) && "bg-primary/[0.04]"
@@ -994,7 +995,9 @@ const Shippers = () => {
 
                     <div className="hidden md:flex px-4 py-4 border-t border-border items-center justify-between bg-muted/5">
                         <div className="flex items-center gap-3 text-[12px] text-muted-foreground font-medium">
-                            <span>{filteredShippers.length > 0 ? `1–${filteredShippers.length}` : '0'}/Tổng {filteredShippers.length}</span>
+                            <span>
+                                {totalRecords > 0 ? `${(currentPage - 1) * pageSize + 1}–${Math.min(currentPage * pageSize, totalRecords)}` : '0'} / Tổng {totalRecords}
+                            </span>
                             <div className="flex items-center gap-1 ml-2">
                                 <span className="text-[11px] font-bold">│</span>
                                 <span className="text-primary font-bold">{activeCount} hoạt động</span>
@@ -1003,18 +1006,40 @@ const Shippers = () => {
                             </div>
                         </div>
                         <div className="flex items-center gap-1">
-                            <button className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors disabled:opacity-20" disabled>
+                            <button 
+                                onClick={() => setCurrentPage(1)}
+                                className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors disabled:opacity-20" 
+                                disabled={currentPage === 1}
+                                title="Trang đầu"
+                            >
                                 <ChevronLeft size={16} />
                                 <ChevronLeft size={16} className="-ml-2.5" />
                             </button>
-                            <button className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors disabled:opacity-20" disabled>
+                            <button 
+                                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                                className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors disabled:opacity-20" 
+                                disabled={currentPage === 1}
+                                title="Trang trước"
+                            >
                                 <ChevronLeft size={16} />
                             </button>
-                            <div className="w-8 h-8 rounded-lg bg-primary text-white flex items-center justify-center text-[12px] font-bold shadow-md shadow-primary/25">1</div>
-                            <button className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors disabled:opacity-20" disabled>
+                            <div className="w-8 h-8 rounded-lg bg-primary text-white flex items-center justify-center text-[12px] font-bold shadow-md shadow-primary/25">
+                                {currentPage}
+                            </div>
+                            <button 
+                                onClick={() => setCurrentPage(prev => Math.min(Math.ceil(totalRecords / pageSize), prev + 1))}
+                                className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors disabled:opacity-20" 
+                                disabled={currentPage >= Math.ceil(totalRecords / pageSize) || totalRecords === 0}
+                                title="Trang sau"
+                            >
                                 <ChevronRight size={16} />
                             </button>
-                            <button className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors disabled:opacity-20" disabled>
+                            <button 
+                                onClick={() => setCurrentPage(Math.max(1, Math.ceil(totalRecords / pageSize)))}
+                                className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted transition-colors disabled:opacity-20" 
+                                disabled={currentPage >= Math.ceil(totalRecords / pageSize) || totalRecords === 0}
+                                title="Trang cuối"
+                            >
                                 <ChevronRight size={16} />
                                 <ChevronRight size={16} className="-ml-2.5" />
                             </button>
