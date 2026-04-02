@@ -1,6 +1,20 @@
+import {
+    ArcElement,
+    BarElement,
+    CategoryScale,
+    Chart as ChartJS,
+    Legend as ChartLegend,
+    Tooltip as ChartTooltip,
+    LinearScale,
+    LineElement,
+    PointElement,
+    Title
+} from 'chart.js';
 import { clsx } from 'clsx';
+import { Bar as BarChartJS, Pie as PieChartJS } from 'react-chartjs-2';
 import {
     ChevronLeft,
+    ChevronRight,
     ChevronDown,
     Clock,
     List,
@@ -21,7 +35,8 @@ import {
     Trash2,
     Image as ImageIcon,
     Download,
-    Upload
+    Upload,
+    MoreVertical
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { useEffect, useState, useRef } from 'react';
@@ -30,9 +45,25 @@ import RepairTicketForm from '../components/Repairs/RepairTicketForm';
 import ColumnPicker from '../components/ui/ColumnPicker';
 import FilterDropdown from '../components/ui/FilterDropdown';
 import MobileFilterSheet from '../components/ui/MobileFilterSheet';
+import MobilePageHeader from '../components/layout/MobilePageHeader';
+import MobilePagination from '../components/layout/MobilePagination';
+import PageViewSwitcher from '../components/layout/PageViewSwitcher';
 import { ERROR_LEVELS, getErrorLevelColor } from '../constants/repairConstants';
 import usePermissions from '../hooks/usePermissions';
 import { supabase } from '../supabase/config';
+
+ChartJS.register(
+    CategoryScale,
+    LinearScale,
+    BarElement,
+    ArcElement,
+    PointElement,
+    LineElement,
+    Title,
+    ChartTooltip,
+    ChartLegend
+);
+
 
 const TICKET_COLUMNS = [
     { key: 'stt', label: 'STT' },
@@ -88,9 +119,52 @@ export default function RepairTickets() {
     const [activeDropdown, setActiveDropdown] = useState(null);
     const dropdownRef = useRef(null);
 
+    // Pagination State
+    const [currentPage, setCurrentPage] = useState(1);
+    const [pageSize, setPageSize] = useState(50);
+
     // Mobile specific
     const [showMobileFilter, setShowMobileFilter] = useState(false);
+    const [mobileFilterClosing, setMobileFilterClosing] = useState(false);
     const [filterSearch, setFilterSearch] = useState('');
+    const [showMobileMenu, setShowMobileMenu] = useState(false);
+    const mobileMenuRef = useRef(null);
+    
+    // Pending filters for MobileFilterSheet
+    const [pendingStatuses, setPendingStatuses] = useState([]);
+    const [pendingCustomers, setPendingCustomers] = useState([]);
+    const [pendingErrorTypes, setPendingErrorTypes] = useState([]);
+    const [pendingTechnicians, setPendingTechnicians] = useState([]);
+    const [pendingCskhStaff, setPendingCskhStaff] = useState([]);
+    const [pendingErrorLevels, setPendingErrorLevels] = useState([]);
+
+    const closeMobileFilter = () => {
+        setMobileFilterClosing(true);
+        setTimeout(() => {
+            setShowMobileFilter(false);
+            setMobileFilterClosing(false);
+        }, 280);
+    };
+
+    const applyMobileFilter = () => {
+        setSelectedStatuses(pendingStatuses);
+        setSelectedCustomers(pendingCustomers);
+        setSelectedErrorTypes(pendingErrorTypes);
+        setSelectedTechnicians(pendingTechnicians);
+        setSelectedCskhStaff(pendingCskhStaff);
+        setSelectedErrorLevels(pendingErrorLevels);
+        closeMobileFilter();
+    };
+
+    const openMobileFilter = () => {
+        setPendingStatuses(selectedStatuses);
+        setPendingCustomers(selectedCustomers);
+        setPendingErrorTypes(selectedErrorTypes);
+        setPendingTechnicians(selectedTechnicians);
+        setPendingCskhStaff(selectedCskhStaff);
+        setPendingErrorLevels(selectedErrorLevels);
+        setShowMobileFilter(true);
+    };
     
     // Columns config
     const defaultColOrder = TICKET_COLUMNS.map(c => c.key);
@@ -163,12 +237,17 @@ export default function RepairTickets() {
         const handleClickOutside = (event) => {
             if (activeDropdown && dropdownRef.current && !dropdownRef.current.contains(event.target)) setActiveDropdown(null);
             if (showColumnPicker && columnPickerRef.current && !columnPickerRef.current.contains(event.target)) setShowColumnPicker(false);
+            if (showMobileMenu && mobileMenuRef.current && !mobileMenuRef.current.contains(event.target)) setShowMobileMenu(false);
         };
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, [activeDropdown, showColumnPicker]);
+    }, [activeDropdown, showColumnPicker, showMobileMenu]);
 
     useEffect(() => { fetchData(); }, []);
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchTerm, selectedStatuses, selectedCustomers, selectedErrorTypes, selectedTechnicians, selectedCskhStaff, selectedErrorLevels]);
     
     const fetchData = async () => {
         setIsLoading(true);
@@ -222,6 +301,9 @@ export default function RepairTickets() {
 
         return matchesSearch && matchesStatus && matchesCustomer && matchesErrorType && matchesTech && matchesCskh && matchesErrorLevel;
     });
+
+    const paginatedTickets = filteredTickets.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+    const totalRecords = filteredTickets.length;
 
     const getStatusBadge = (status) => {
         const classes = {
@@ -415,33 +497,67 @@ export default function RepairTickets() {
         reader.readAsBinaryString(file);
     };
 
+    const formatNumber = (num) => new Intl.NumberFormat('vi-VN').format(num);
+
+    const getStatusStats = () => {
+        const counts = {};
+        filteredTickets.forEach(t => {
+            const s = t.status || 'Khác';
+            counts[s] = (counts[s] || 0) + 1;
+        });
+        return Object.entries(counts).map(([name, value]) => ({ name, value })).sort((a,b) => b.value - a.value);
+    };
+
+    const getErrorTypeStats = () => {
+        const counts = {};
+        filteredTickets.forEach(t => {
+            const type = getErrorTypeName(t.error_type_id);
+            counts[type] = (counts[type] || 0) + 1;
+        });
+        return Object.entries(counts).map(([name, value]) => ({ name, value })).sort((a,b) => b.value - a.value).slice(0, 10);
+    };
+
+    const getCustomerStats = () => {
+        const counts = {};
+        filteredTickets.forEach(t => {
+            const cust = getCustomerName(t.customer_id);
+            counts[cust] = (counts[cust] || 0) + 1;
+        });
+        return Object.entries(counts).map(([name, value]) => ({ name, value })).sort((a,b) => b.value - a.value).slice(0, 10);
+    };
+
+    const getErrorLevelStats = () => {
+        const counts = {};
+        filteredTickets.forEach(t => {
+            const level = t.error_level || 'Chưa rõ';
+            counts[level] = (counts[level] || 0) + 1;
+        });
+        return Object.entries(counts).map(([name, value]) => ({ name, value })).sort((a,b) => b.value - a.value);
+    };
+
+    const chartColors = [
+        '#3B82F6', '#10B981', '#F59E0B', '#EF4444',
+        '#8B5CF6', '#EC4899', '#06B6D4', '#EAB308',
+        '#64748B', '#F97316'
+    ];
+
     return (
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 w-full flex-1 flex flex-col mt-1 min-h-0 px-1 md:px-1.5">
-            {/* TABS */}
-            <div className="flex items-center gap-1.5 px-3 py-1.5 mt-[-2px] mb-2 sm:mb-2 border-b border-transparent">
-                <button
-                    onClick={() => setActiveView('list')}
-                    className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-[13px] font-bold transition-all
-                        ${activeView === 'list' ? 'bg-white text-blue-600 shadow-sm border border-slate-200 shadow-blue-500/10' : 'text-slate-500 hover:bg-white/50 hover:text-slate-700'}
-                    `}
-                >
-                    <List size={16} /> <span className="hidden sm:inline">Danh sách</span>
-                </button>
-                <button
-                    onClick={() => setActiveView('stats')}
-                    className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-[13px] font-bold transition-all
-                        ${activeView === 'stats' ? 'bg-white text-amber-600 shadow-sm border border-slate-200 shadow-amber-500/10' : 'text-slate-500 hover:bg-white/50 hover:text-slate-700'}
-                    `}
-                >
-                    <BarChart2 size={16} /> <span className="hidden sm:inline">Thống kê</span>
-                </button>
-            </div>
+            <PageViewSwitcher
+                activeView={activeView}
+                setActiveView={setActiveView}
+                views={[
+                    { id: 'list', label: 'Danh sách', icon: <List size={16} /> },
+                    { id: 'stats', label: 'Thống kê', icon: <BarChart2 size={16} /> },
+                ]}
+            />
 
+            {activeView === 'list' && (
             <div className="bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col flex-1 min-h-0 w-full relative">
                 
                 {/* TOOLBAR */}
                 <div className="flex flex-col gap-2 p-2 sm:p-2 border-b border-slate-100 bg-slate-50/50 rounded-t-2xl z-20">
-                    <div className="flex items-center gap-2">
+                    <div className="hidden md:flex items-center gap-2">
                         <button onClick={() => navigate(-1)} className="p-2 sm:px-3 sm:py-2 rounded-xl text-[13px] font-bold text-slate-600 hover:text-slate-900 border border-slate-200 bg-white hover:bg-slate-50 transition-all flex items-center gap-2 shrink-0 h-[38px]">
                             <ChevronLeft size={16} /> <span className="hidden sm:inline">Quay lại</span>
                         </button>
@@ -464,12 +580,14 @@ export default function RepairTickets() {
                             <button
                                 onClick={() => setShowColumnPicker(!showColumnPicker)}
                                 className={clsx(
-                                    "flex items-center gap-2 h-[38px] px-3 sm:px-3 rounded-xl border transition-all shrink-0",
-                                    showColumnPicker ? "bg-amber-50 border-amber-200 text-amber-700 shadow-sm" : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300 shadow-sm"
+                                    'flex items-center gap-2 px-4 h-10 rounded-lg border text-[13px] font-bold transition-all bg-white shadow-sm shrink-0',
+                                    showColumnPicker
+                                        ? 'border-blue-500 bg-blue-50/50 text-blue-700'
+                                        : 'border-slate-200 text-slate-600 hover:bg-slate-50'
                                 )}
                             >
-                                <SlidersHorizontal size={14} className={showColumnPicker ? "text-amber-600" : "text-slate-500"} />
-                                <span className="text-[12px] font-bold hidden sm:inline">
+                                <SlidersHorizontal size={16} className={showColumnPicker ? "text-blue-600" : "text-slate-500"} />
+                                <span className="hidden sm:inline">
                                     Cột ({visibleColumns.length}/{defaultColOrder.length})
                                 </span>
                             </button>
@@ -485,38 +603,45 @@ export default function RepairTickets() {
                             )}
                         </div>
 
+                        <button onClick={() => { setTicketToEdit(null); setIsFormModalOpen(true); }} className="hidden md:flex items-center gap-2 px-6 h-10 rounded-lg bg-blue-600 text-white text-[13px] font-bold hover:bg-blue-700 shadow-md shadow-blue-500/20 transition-all active:scale-95 shrink-0">
+                            <Plus size={18} />
+                            Thêm
+                        </button>
+
                         {selectedIds.length > 0 && (
                             <button
                                 onClick={handleBulkDelete}
-                                className="h-[38px] px-3 sm:px-4 rounded-xl bg-rose-50 text-rose-600 border border-rose-200 font-bold hover:bg-rose-100 transition-all shadow-sm flex items-center gap-2 shrink-0 animate-in slide-in-from-right-4"
+                                className="hidden md:flex items-center gap-2 px-4 h-10 rounded-lg border border-rose-200 bg-rose-50 text-rose-600 text-[13px] font-bold hover:bg-rose-100 shadow-sm transition-all active:scale-95 animate-in slide-in-from-right-4 shrink-0"
                             >
                                 <Trash2 size={16} />
-                                <span className="text-[13px] hidden sm:inline">Xóa ({selectedIds.length})</span>
+                                Xóa ({selectedIds.length})
                             </button>
                         )}
                         <button
                             onClick={handleDownloadTemplate}
-                            className="h-[38px] px-3 sm:px-4 rounded-xl bg-indigo-50 text-indigo-600 border border-indigo-200 font-bold hover:bg-indigo-100 transition-all shadow-sm flex items-center gap-2 shrink-0"
+                            className="hidden md:flex items-center gap-2 px-4 h-10 rounded-lg border border-indigo-200 bg-indigo-50 text-indigo-700 text-[13px] font-bold hover:bg-indigo-100 shadow-sm transition-all active:scale-95 shrink-0"
                             title="Tải mẫu Excel"
                         >
                             <Download size={16} />
-                            <span className="text-[13px] hidden md:inline">Tải mẫu</span>
+                            Tải mẫu
                         </button>
-                        <label className="h-[38px] px-3 sm:px-4 rounded-xl bg-cyan-50 text-cyan-600 border border-cyan-200 font-bold hover:bg-cyan-100 transition-all shadow-sm flex items-center gap-2 shrink-0 cursor-pointer" title="Nhập Excel">
-                            <Upload size={16} />
-                            <span className="text-[13px] hidden md:inline">Nhập file</span>
+                        <div className="hidden md:block relative shrink-0">
                             <input
                                 type="file"
                                 accept=".xlsx, .xls"
                                 onChange={handleImportExcel}
                                 className="hidden"
+                                id="excel-import-desktop"
                             />
-                        </label>
-
-                        <button onClick={() => { setTicketToEdit(null); setIsFormModalOpen(true); }} className="h-[38px] px-3 sm:px-4 rounded-xl bg-blue-500 text-white font-bold hover:bg-blue-600 transition-all shadow-sm shadow-blue-500/20 flex items-center gap-2 shrink-0">
-                            <Plus size={16} strokeWidth={3} />
-                            <span className="text-[13px] hidden sm:inline">Thêm</span>
-                        </button>
+                            <label
+                                htmlFor="excel-import-desktop"
+                                className="flex items-center gap-2 px-4 h-10 rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 text-[13px] font-bold hover:bg-emerald-100 shadow-sm transition-all cursor-pointer active:scale-95 select-none"
+                                title="Nhập Excel"
+                            >
+                                <Upload size={16} />
+                                Import Excel
+                            </label>
+                        </div>
                     </div>
 
                     {/* DESKTOP FILTERS */}
@@ -571,13 +696,63 @@ export default function RepairTickets() {
                         </div>
                     </div>
 
-                    {/* MOBILE FILTER TRIGGER */}
-                    <div className="md:hidden flex items-center justify-between">
-                        <button onClick={() => setShowMobileFilter(true)} className="flex items-center gap-2 px-3 py-2 bg-white border border-slate-200 rounded-xl text-[13px] font-bold text-slate-600 shadow-sm">
-                            <Filter size={16} className="text-amber-500" />
-                            Bộ lọc {(selectedStatuses.length + selectedCustomers.length + selectedErrorTypes.length + selectedTechnicians.length) > 0 && `(${(selectedStatuses.length + selectedCustomers.length + selectedErrorTypes.length + selectedTechnicians.length)})`}
-                        </button>
-                    </div>
+                    {/* MOBILE FILTER TRIGGER & ACTIONS */}
+                    <MobilePageHeader
+                        searchTerm={searchTerm}
+                        setSearchTerm={setSearchTerm}
+                        searchPlaceholder="Tìm kiếm..."
+                        hasActiveFilters={(selectedStatuses.length + selectedCustomers.length + selectedErrorTypes.length + selectedTechnicians.length + selectedCskhStaff.length + selectedErrorLevels.length) > 0}
+                        totalActiveFilters={selectedStatuses.length + selectedCustomers.length + selectedErrorTypes.length + selectedTechnicians.length + selectedCskhStaff.length + selectedErrorLevels.length}
+                        onFilterClick={openMobileFilter}
+                        actions={
+                            <>
+                                <div className="relative" ref={mobileMenuRef}>
+                                    <button onClick={() => setShowMobileMenu(!showMobileMenu)} className="p-2 rounded-xl bg-white text-slate-600 border border-slate-200 shadow-sm active:scale-95 transition-all">
+                                        <MoreVertical size={20} />
+                                    </button>
+                                    {showMobileMenu && (
+                                        <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-2xl shadow-xl border border-slate-100 py-2 z-[100] animate-in fade-in slide-in-from-top-2 duration-200 origin-top-right">
+                                            <div
+                                                role="button"
+                                                onClick={() => { setShowMobileMenu(false); handleDownloadTemplate(); }}
+                                                className="w-full flex items-center justify-start gap-4 px-4 py-2.5 text-[14px] font-bold text-slate-700 hover:bg-slate-50 transition-colors text-left cursor-pointer"
+                                            >
+                                                <div className="w-5 flex justify-center flex-shrink-0">
+                                                    <Download size={18} className="text-slate-400" />
+                                                </div>
+                                                Tải mẫu Excel
+                                            </div>
+                                            <label className="w-full flex items-center justify-start gap-4 px-4 py-2.5 text-[14px] font-bold text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer text-left">
+                                                <div className="w-5 flex justify-center flex-shrink-0">
+                                                    <Upload size={18} className="text-slate-400" />
+                                                </div>
+                                                Nhập file Excel
+                                                <input type="file" accept=".xlsx, .xls" onChange={(e) => { setShowMobileMenu(false); handleImportExcel(e); }} className="hidden" />
+                                            </label>
+                                        </div>
+                                    )}
+                                </div>
+                                <button onClick={() => { setTicketToEdit(null); setIsFormModalOpen(true); }} className="p-2 rounded-xl bg-blue-500 text-white shrink-0 shadow-lg shadow-blue-500/30 active:scale-95 transition-all">
+                                    <Plus size={20} />
+                                </button>
+                            </>
+                        }
+                        selectionBar={
+                            selectedIds.length > 0 ? (
+                                <div className="flex items-center justify-between px-1 mt-3 pt-3 border-t border-slate-100 animate-in slide-in-from-top-2 duration-300">
+                                    <span className="text-[13px] font-bold text-slate-600">
+                                        Đã chọn <span className="text-blue-500">{selectedIds.length}</span> phiếu
+                                    </span>
+                                    <div className="flex items-center gap-2">
+                                        <button onClick={toggleSelectAll} className="text-[12px] font-bold text-blue-500 hover:underline px-2 py-1">Bỏ chọn</button>
+                                        <button onClick={handleBulkDelete} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-50 text-rose-600 text-[12px] font-bold border border-rose-100">
+                                            <Trash2 size={14} /> <span className="hidden sm:inline">Xóa tất cả</span><span className="sm:hidden">Xóa</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : null
+                        }
+                    />
                 </div>
 
                 {/* TABLE DATA */}
@@ -597,8 +772,10 @@ export default function RepairTickets() {
                             <p className="text-[14px] text-slate-500 font-semibold mb-1">Không tìm thấy phiếu nào</p>
                         </div>
                     ) : (
-                        <div className="min-w-fit">
-                            <table className="w-full text-left border-collapse">
+                        <>
+                            <div className="hidden md:block overflow-x-auto w-full">
+                                <div className="min-w-fit">
+                                    <table className="w-full text-left border-collapse">
                                 <thead>
                                     <tr className="bg-slate-50 border-b border-slate-200 sticky top-0 z-10 shadow-sm">
                                         <th className="py-3 px-4 font-bold text-slate-800 tracking-wide text-[12px] whitespace-nowrap bg-slate-50 w-12 text-center border-r border-slate-200">
@@ -623,7 +800,7 @@ export default function RepairTickets() {
                                     </tr>
                                 </thead>
                                 <tbody className="bg-white">
-                                    {filteredTickets.map((ticket, index) => (
+                                    {paginatedTickets.map((ticket, index) => (
                                         <tr key={ticket.id} className={clsx("border-b border-slate-100 hover:bg-amber-50/30 transition-colors group", selectedIds.includes(ticket.id) && "bg-blue-50/40")}>
                                             <td className="py-2.5 px-4 whitespace-nowrap text-center border-r border-slate-50">
                                                 <input 
@@ -713,17 +890,297 @@ export default function RepairTickets() {
                                     ))}
                                 </tbody>
                             </table>
-                        </div>
+                                </div>
+                            </div>
+                            
+                            {/* Mobile Card List */}
+                            <div className="md:hidden flex-1 overflow-y-auto p-3 flex flex-col gap-3 relative custom-scrollbar">
+                                {paginatedTickets.map((ticket, index) => (
+                                    <div key={ticket.id} className={clsx(
+                                        "rounded-2xl border shadow-sm p-4 transition-all duration-200",
+                                        selectedIds.includes(ticket.id)
+                                            ? "border-amber-500 bg-amber-50/20 ring-1 ring-amber-500/20"
+                                            : "border-slate-200 bg-white"
+                                    )}>
+                                        <div className="flex items-start justify-between gap-2 mb-3">
+                                            <div className="flex gap-3 min-w-0">
+                                                <div className="pt-1 shrink-0">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={selectedIds.includes(ticket.id)}
+                                                        onChange={() => toggleSelect(ticket.id)}
+                                                        className="w-5 h-5 rounded border-slate-300 text-amber-500 focus:ring-amber-500/20 transition-all cursor-pointer"
+                                                    />
+                                                </div>
+                                                <div className="flex flex-col pt-0.5 min-w-0">
+                                                    <div className="flex items-center gap-2">
+                                                        <p className="text-[12px] font-bold text-slate-400 uppercase tracking-wider">#{ticket.stt}</p>
+                                                    </div>
+                                                    <h3 className="text-[15px] font-black text-slate-800 leading-tight mt-0.5 break-words line-clamp-2">
+                                                        {ticket.machine_name || 'Thiết bị không tên'}
+                                                    </h3>
+                                                    {ticket.machine_serial && (
+                                                        <span className="inline-block px-2 py-0.5 mt-1.5 bg-slate-100 text-slate-600 font-mono text-[11px] font-bold rounded-md w-fit">
+                                                            {ticket.machine_serial}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            <div className="shrink-0 flex flex-col items-end gap-1.5">
+                                                {getStatusBadge(ticket.status)}
+                                                {ticket.expected_completion_date && (
+                                                    <div className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100 flex items-center gap-1 shadow-sm whitespace-nowrap">
+                                                        <Clock size={10} />
+                                                        {new Date(ticket.expected_completion_date).toLocaleDateString('vi-VN')}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-2 gap-2 mb-3 rounded-xl bg-slate-50/50 border border-slate-100 p-3">
+                                            <div className="col-span-2 flex flex-col pb-2 mb-1 border-b border-slate-100">
+                                                <span className="text-[10px] font-bold text-slate-400 uppercase mb-0.5 text-left">Khách hàng</span>
+                                                <span className="text-[14px] font-bold text-slate-800 whitespace-normal text-left break-words">{getCustomerName(ticket.customer_id)}</span>
+                                            </div>
+                                            <div className="col-span-2 mt-1 pb-2 border-b border-slate-100">
+                                                <div className="flex items-start gap-1.5 mb-1.5 min-w-0">
+                                                    <span className={clsx(
+                                                        "px-2 py-0.5 rounded text-[10px] font-bold border shrink-0",
+                                                        ticket.loai_loi === 'Máy' ? "bg-blue-50 text-blue-600 border-blue-100" : "bg-purple-50 text-purple-600 border-purple-100"
+                                                    )}>{ticket.loai_loi || '---'}</span>
+                                                    <span className="text-[13px] font-bold text-rose-600 break-words">{getErrorTypeName(ticket.error_type_id)}</span>
+                                                </div>
+                                                <div className="flex items-center justify-between">
+                                                    <span className={clsx("px-2 py-0.5 rounded-full text-[10px] font-bold border shrink-0 text-center", getErrorLevelColor(ticket.error_level))}>
+                                                        {ticket.error_level || 'Trung bình'}
+                                                    </span>
+                                                </div>
+                                                {ticket.error_details && (
+                                                    <p className="text-[12px] text-slate-600 mt-2 bg-white p-2 text-left rounded-lg border border-slate-100 italic line-clamp-3">Mô tả: {ticket.error_details}</p>
+                                                )}
+                                            </div>
+                                            <div className="flex flex-col mt-1">
+                                                <span className="text-[9px] uppercase tracking-wider text-slate-400 font-bold">Người báo</span>
+                                                <span className="text-[12px] text-slate-800 font-semibold truncate">{ticket.created_by ? getUserName(ticket.created_by) : 'Hệ thống'}</span>
+                                                <span className="text-[10px] text-slate-500 mt-0.5">{new Date(ticket.created_at).toLocaleDateString('vi-VN')}</span>
+                                            </div>
+                                            <div className="flex flex-col mt-1 items-end text-right">
+                                                <span className="text-[9px] uppercase tracking-wider text-slate-400 font-bold">Phụ trách</span>
+                                                <span className="text-[12px] text-slate-800 font-semibold truncate">{getUserName(ticket.technician_id)} (KT)</span>
+                                                <span className="text-[10px] text-slate-500 mt-0.5">{getUserName(ticket.sales_id)} (KD)</span>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex items-center justify-between pt-3 border-t border-slate-100/80">
+                                            <div className="flex items-center gap-2">
+                                                {ticket.error_images?.length > 0 && (
+                                                    <span className="flex items-center gap-1 text-[11px] text-rose-600 font-semibold bg-rose-50 px-2 py-1 rounded-lg border border-rose-100">
+                                                        <ImageIcon size={12} /> {ticket.error_images.length}
+                                                    </span>
+                                                )}
+                                                {ticket.technical_images?.length > 0 && (
+                                                    <span className="flex items-center gap-1 text-[11px] text-blue-600 font-semibold bg-blue-50 px-2 py-1 rounded-lg border border-blue-100">
+                                                        <ImageIcon size={12} /> {ticket.technical_images.length}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <button onClick={() => handleDeleteTicket(ticket.id)} className="w-8 h-8 flex items-center justify-center text-slate-400 bg-white border border-slate-200 rounded-lg hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 transition-colors">
+                                                    <Trash2 size={16} />
+                                                </button>
+                                                <button onClick={() => handleEdit(ticket)} className="h-8 px-3 text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 transition-colors flex items-center justify-center gap-1.5 shadow-sm">
+                                                    <Edit size={14} /> <span className="text-[12px] font-bold">Chi tiết</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </>
                     )}
                 </div>
 
-                {/* Footer status / pagination info */}
-                <div className="px-4 py-2 border-t border-slate-200 flex items-center justify-between bg-slate-50 rounded-b-2xl shrink-0">
+                {/* Sticky Mobile Pagination */}
+                {!isLoading && filteredTickets.length > 0 && (
+                    <div className="md:hidden">
+                        <MobilePagination
+                            currentPage={currentPage}
+                            setCurrentPage={setCurrentPage}
+                            pageSize={pageSize}
+                            setPageSize={setPageSize}
+                            totalRecords={totalRecords}
+                        />
+                    </div>
+                )}
+
+                {/* Footer status / pagination info (Desktop) */}
+                <div className="hidden md:flex px-4 py-3 border-t border-slate-200 items-center justify-between bg-slate-50 rounded-b-2xl shrink-0">
                     <span className="text-[12px] text-slate-500 font-semibold z-10">
-                        Hiển thị <span className="font-bold text-slate-800">{filteredTickets.length}</span> phiếu
+                        Hiển thị <span className="font-bold text-slate-800">{totalRecords > 0 ? `${(currentPage - 1) * pageSize + 1}–${Math.min(currentPage * pageSize, totalRecords)}` : '0'}</span> / Tổng <span className="font-bold text-slate-800">{totalRecords}</span> phiếu
                     </span>
+                    <div className="flex items-center gap-1">
+                        <button onClick={() => setCurrentPage(1)} className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-200 transition-colors disabled:opacity-30" disabled={currentPage === 1} title="Trang đầu"><ChevronLeft size={16} /><ChevronLeft size={16} className="-ml-2.5" /></button>
+                        <button onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))} className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-200 transition-colors disabled:opacity-30" disabled={currentPage === 1} title="Trang trước"><ChevronLeft size={16} /></button>
+                        <div className="w-8 h-8 rounded-lg bg-blue-500 text-white flex items-center justify-center text-[12px] font-bold shadow-md shadow-blue-500/20">{currentPage}</div>
+                        <button onClick={() => setCurrentPage(prev => Math.min(Math.ceil(totalRecords / pageSize), prev + 1))} className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-200 transition-colors disabled:opacity-30" disabled={currentPage >= Math.ceil(totalRecords / pageSize)} title="Trang sau"><ChevronRight size={16} /></button>
+                        <button onClick={() => setCurrentPage(Math.ceil(totalRecords / pageSize))} className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-200 transition-colors disabled:opacity-30" disabled={currentPage >= Math.ceil(totalRecords / pageSize)} title="Trang cuối"><ChevronRight size={16} /><ChevronRight size={16} className="-ml-2.5" /></button>
+                    </div>
                 </div>
             </div>
+            )}
+
+            {activeView === 'stats' && (
+                <div className="bg-white rounded-2xl border border-border shadow-sm flex flex-col flex-1 w-full min-h-0 overflow-y-auto custom-scrollbar">
+                    <div className="w-full px-3 md:px-4 pt-4 md:pt-5 pb-5 md:pb-6 space-y-5">
+                        {/* Summary Cards */}
+                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                            <div className="bg-blue-50/70 border border-blue-100 rounded-2xl p-4 shadow-sm">
+                                <div className="flex flex-col md:flex-row items-center md:items-start text-center md:text-left gap-3 md:gap-4">
+                                    <div className="w-10 h-10 md:w-12 md:h-12 bg-blue-100/80 rounded-full flex items-center justify-center shrink-0 ring-1 ring-blue-200/70">
+                                        <Ticket className="w-5 h-5 md:w-6 md:h-6 text-blue-600" />
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] md:text-[11px] font-semibold text-blue-600 uppercase tracking-wider">Tổng phiếu</p>
+                                        <p className="text-2xl md:text-3xl font-bold text-foreground mt-0.5 md:mt-1 leading-none">{formatNumber(filteredTickets.length)}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="bg-orange-50/70 border border-orange-100 rounded-2xl p-4 shadow-sm">
+                                <div className="flex flex-col md:flex-row items-center md:items-start text-center md:text-left gap-3 md:gap-4">
+                                    <div className="w-10 h-10 md:w-12 md:h-12 bg-orange-100/80 rounded-full flex items-center justify-center shrink-0 ring-1 ring-orange-200/70">
+                                        <Clock className="w-5 h-5 md:w-6 md:h-6 text-orange-600" />
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] md:text-[11px] font-semibold text-orange-600 uppercase tracking-wider">Chờ/Đang XL</p>
+                                        <p className="text-2xl md:text-3xl font-bold text-foreground mt-0.5 md:mt-1 leading-none">
+                                            {formatNumber(filteredTickets.filter(t => ['Mới', 'Đang xử lý', 'Chờ linh kiện'].includes(t.status)).length)}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="bg-emerald-50/70 border border-emerald-100 rounded-2xl p-4 shadow-sm">
+                                <div className="flex flex-col md:flex-row items-center md:items-start text-center md:text-left gap-3 md:gap-4">
+                                    <div className="w-10 h-10 md:w-12 md:h-12 bg-emerald-100/80 rounded-full flex items-center justify-center shrink-0 ring-1 ring-emerald-200/70">
+                                        <Package className="w-5 h-5 md:w-6 md:h-6 text-emerald-600" />
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] md:text-[11px] font-semibold text-emerald-600 uppercase tracking-wider">Hoàn thành</p>
+                                        <p className="text-2xl md:text-3xl font-bold text-foreground mt-0.5 md:mt-1 leading-none">
+                                            {formatNumber(filteredTickets.filter(t => t.status === 'Hoàn thành').length)}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="bg-rose-50/70 border border-rose-100 rounded-2xl p-4 shadow-sm">
+                                <div className="flex flex-col md:flex-row items-center md:items-start text-center md:text-left gap-3 md:gap-4">
+                                    <div className="w-10 h-10 md:w-12 md:h-12 bg-rose-100/80 rounded-full flex items-center justify-center shrink-0 ring-1 ring-rose-200/70">
+                                        <AlertCircle className="w-5 h-5 md:w-6 md:h-6 text-rose-600" />
+                                    </div>
+                                    <div>
+                                        <p className="text-[10px] md:text-[11px] font-semibold text-rose-600 uppercase tracking-wider">Nghiêm trọng</p>
+                                        <p className="text-2xl md:text-3xl font-bold text-foreground mt-0.5 md:mt-1 leading-none">
+                                            {formatNumber(filteredTickets.filter(t => t.error_level === 'Nghiêm trọng').length)}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Charts Area */}
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                            <div className="bg-card border border-border rounded-xl p-6 shadow-sm">
+                                <h3 className="text-lg font-bold text-foreground mb-4">Trạng thái phiếu</h3>
+                                <div style={{ height: '300px' }}>
+                                    <PieChartJS
+                                        data={{
+                                            labels: getStatusStats().map(item => item.name),
+                                            datasets: [{
+                                                data: getStatusStats().map(item => item.value),
+                                                backgroundColor: chartColors.slice(0, getStatusStats().length),
+                                                borderColor: '#fff',
+                                                borderWidth: 2
+                                            }]
+                                        }}
+                                        options={{
+                                            responsive: true,
+                                            maintainAspectRatio: false,
+                                            plugins: { legend: { position: 'bottom' } }
+                                        }}
+                                    />
+                                </div>
+                            </div>
+                            <div className="bg-card border border-border rounded-xl p-6 shadow-sm">
+                                <h3 className="text-lg font-bold text-foreground mb-4">Cấp độ lỗi</h3>
+                                <div style={{ height: '300px' }}>
+                                    <PieChartJS
+                                        data={{
+                                            labels: getErrorLevelStats().map(item => item.name),
+                                            datasets: [{
+                                                data: getErrorLevelStats().map(item => item.value),
+                                                backgroundColor: ['#10B981', '#F59E0B', '#EF4444', '#7F1D1D'],
+                                                borderColor: '#fff',
+                                                borderWidth: 2
+                                            }]
+                                        }}
+                                        options={{
+                                            responsive: true,
+                                            maintainAspectRatio: false,
+                                            plugins: { legend: { position: 'bottom' } }
+                                        }}
+                                    />
+                                </div>
+                            </div>
+                            <div className="bg-card border border-border rounded-xl p-6 shadow-sm">
+                                <h3 className="text-lg font-bold text-foreground mb-4">Top 10 Loại lỗi</h3>
+                                <div style={{ height: '300px' }}>
+                                    <BarChartJS
+                                        data={{
+                                            labels: getErrorTypeStats().map(item => item.name.length > 20 ? item.name.substring(0,20)+'...' : item.name),
+                                            datasets: [{
+                                                label: 'Số phiếu',
+                                                data: getErrorTypeStats().map(item => item.value),
+                                                backgroundColor: chartColors[3],
+                                                borderColor: chartColors[3],
+                                                borderWidth: 1
+                                            }]
+                                        }}
+                                        options={{
+                                            responsive: true,
+                                            maintainAspectRatio: false,
+                                            plugins: { legend: { display: false } },
+                                            scales: { y: { beginAtZero: true } }
+                                        }}
+                                    />
+                                </div>
+                            </div>
+                            <div className="bg-card border border-border rounded-xl p-6 shadow-sm">
+                                <h3 className="text-lg font-bold text-foreground mb-4">Top 10 Khách hàng</h3>
+                                <div style={{ height: '300px' }}>
+                                    <BarChartJS
+                                        data={{
+                                            labels: getCustomerStats().map(item => item.name.length > 20 ? item.name.substring(0,20)+'...' : item.name),
+                                            datasets: [{
+                                                label: 'Số phiếu',
+                                                data: getCustomerStats().map(item => item.value),
+                                                backgroundColor: chartColors[0],
+                                                borderColor: chartColors[0],
+                                                borderWidth: 1
+                                            }]
+                                        }}
+                                        options={{
+                                            responsive: true,
+                                            maintainAspectRatio: false,
+                                            indexAxis: 'y',
+                                            plugins: { legend: { display: false } },
+                                            scales: { x: { beginAtZero: true } }
+                                        }}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Modals & Overlays */}
             {isFormModalOpen && (
@@ -734,8 +1191,65 @@ export default function RepairTickets() {
                 />
             )}
             
-            {/* Mobile Filter Sheet Component */}
-            {/* Omitted for brevity, but you get the idea since it relies on the same concepts. We handle desktop filtering nicely. */}
+            {showMobileFilter && (
+                <MobileFilterSheet
+                    isOpen={showMobileFilter}
+                    onClose={closeMobileFilter}
+                    onApply={applyMobileFilter}
+                    isClosing={mobileFilterClosing}
+                    title="Bộ lọc Phiếu sửa chữa"
+                    sections={[
+                        {
+                            id: 'status',
+                            label: 'Trạng thái',
+                            icon: <Filter size={16} />,
+                            options: STATUSES.map(s => ({ id: s, label: s, count: tickets.filter(t => t.status === s).length })),
+                            selectedValues: pendingStatuses,
+                            onSelectionChange: setPendingStatuses,
+                        },
+                        {
+                            id: 'customers',
+                            label: 'Khách hàng',
+                            icon: <User size={16} />,
+                            options: ticketCustomerFilters.map(c => ({ id: c.id, label: c.name, count: tickets.filter(t => t.customer_id === c.id).length })),
+                            selectedValues: pendingCustomers,
+                            onSelectionChange: setPendingCustomers,
+                        },
+                        {
+                            id: 'errorTypes',
+                            label: 'Loại lỗi',
+                            icon: <AlertCircle size={16} />,
+                            options: errorTypes.map(e => ({ id: e.id, label: e.name, count: tickets.filter(t => t.error_type_id === e.id).length })),
+                            selectedValues: pendingErrorTypes,
+                            onSelectionChange: setPendingErrorTypes,
+                        },
+                        {
+                            id: 'techs',
+                            label: 'Kỹ thuật',
+                            icon: <Wrench size={16} />,
+                            options: techUsers.map(u => ({ id: u.id, label: u.name, count: tickets.filter(t => t.technician_id === u.id).length })),
+                            selectedValues: pendingTechnicians,
+                            onSelectionChange: setPendingTechnicians,
+                        },
+                        {
+                            id: 'cskh',
+                            label: 'CSKH',
+                            icon: <User size={16} />,
+                            options: cskhUsers.map(u => ({ id: u.id, label: u.name, count: tickets.filter(t => t.cskh_id === u.id).length })),
+                            selectedValues: pendingCskhStaff,
+                            onSelectionChange: setPendingCskhStaff,
+                        },
+                        {
+                            id: 'errorLevel',
+                            label: 'Cấp độ lỗi',
+                            icon: <AlertCircle size={16} />,
+                            options: ERROR_LEVELS.map(l => ({ id: l.id, label: l.label, count: tickets.filter(t => t.error_level === l.id).length })),
+                            selectedValues: pendingErrorLevels,
+                            onSelectionChange: setPendingErrorLevels,
+                        }
+                    ]}
+                />
+            )}
         </div>
     );
 }
