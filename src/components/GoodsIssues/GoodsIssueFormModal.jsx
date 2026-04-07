@@ -398,6 +398,45 @@ export default function GoodsIssueFormModal({ issue, onClose, onSuccess, forcedT
 
             if (itemsError) throw itemsError;
 
+            // INVENTORY DEDUCTION: Deduct from warehouse inventory when creating a new goods issue
+            if (!isEdit) {
+                // Group items by product type for inventory deduction
+                const itemsByType = {};
+                for (const item of validItems) {
+                    const productLabel = PRODUCT_TYPES.find(p => p.id === item.item_type)?.label || item.item_type;
+                    const itemType = item.item_type?.startsWith('BINH') ? 'BINH' : 'MAY';
+                    const key = `${itemType}::${productLabel}`;
+                    itemsByType[key] = (itemsByType[key] || 0) + (Number(item.quantity) || 1);
+                }
+
+                for (const [key, qty] of Object.entries(itemsByType)) {
+                    const [itemType, itemName] = key.split('::');
+                    const { data: invData } = await supabase
+                        .from('inventory')
+                        .select('id, quantity')
+                        .eq('warehouse_id', formData.warehouse_id)
+                        .eq('item_type', itemType)
+                        .ilike('item_name', itemName.trim())
+                        .maybeSingle();
+
+                    if (invData) {
+                        await supabase
+                            .from('inventory')
+                            .update({ quantity: Math.max(0, invData.quantity - qty) })
+                            .eq('id', invData.id);
+
+                        await supabase.from('inventory_transactions').insert([{
+                            inventory_id: invData.id,
+                            transaction_type: 'OUT',
+                            reference_id: issueId,
+                            reference_code: formData.issue_code,
+                            quantity_changed: qty,
+                            note: `Xuất kho ${qty} ${itemName} - Phiếu ${formData.issue_code}`
+                        }]);
+                    }
+                }
+            }
+
             // Global notification for new goods issue
             if (!isEdit) {
                 const typeLabel = ISSUE_TYPES.find(t => t.id === formData.issue_type)?.label || 'Xuất kho';

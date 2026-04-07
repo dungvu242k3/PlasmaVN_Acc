@@ -526,8 +526,17 @@ export default function CylinderRecoveryFormModal({ recovery, onClose, onSuccess
             }
 
             // Post-save automation: ONLY for HOAN_THANH
-            if (isCompleting) {
+            // Fix: Prevent double-counting if re-editing an already completed recovery
+            const shouldProcessInventory = isCompleting && (!isEdit || recovery?.status !== 'HOAN_THANH');
+            if (shouldProcessInventory) {
                 const serialNumbers = items.map(i => i.serial_number);
+
+                // Fetch cylinder details to determine correct product name (Bình 4L vs 8L)
+                const { data: cylindersData } = await supabase
+                    .from('cylinders')
+                    .select('serial_number, volume')
+                    .in('serial_number', serialNumbers);
+
                 for (const serial of serialNumbers) {
                     await supabase
                         .from('cylinders')
@@ -548,36 +557,53 @@ export default function CylinderRecoveryFormModal({ recovery, onClose, onSuccess
                         .eq('id', formData.customer_id);
                 }
 
-                const { data: invRecord } = await supabase
-                    .from('inventory')
-                    .select('id, quantity')
-                    .eq('warehouse_id', formData.warehouse_id)
-                    .eq('item_type', 'BINH')
-                    .eq('item_name', 'Vỏ bình thu hồi')
-                    .maybeSingle();
-
-                let inventoryId = invRecord?.id;
-                if (!inventoryId) {
-                    const { data: newInv } = await supabase
-                        .from('inventory')
-                        .insert([{ warehouse_id: formData.warehouse_id, item_type: 'BINH', item_name: 'Vỏ bình thu hồi', quantity: 0 }])
-                        .select().single();
-                    inventoryId = newInv?.id;
+                // Group cylinders by volume/type for accurate inventory tracking
+                const cylindersByType = {};
+                for (const item of items) {
+                    const cylInfo = cylindersData?.find(c => c.serial_number === item.serial_number);
+                    // Determine product name based on volume (matching PRODUCT_TYPES labels used in OrderStatusUpdater)
+                    let itemName = 'Bình 4L'; // default
+                    if (cylInfo?.volume) {
+                        const vol = cylInfo.volume.toLowerCase();
+                        if (vol.includes('8l') || vol.includes('8 l')) itemName = 'Bình 8L';
+                        else if (vol.includes('4l') || vol.includes('4 l')) itemName = 'Bình 4L';
+                    }
+                    cylindersByType[itemName] = (cylindersByType[itemName] || 0) + 1;
                 }
 
-                if (inventoryId) {
-                    await supabase.from('inventory_transactions').insert([{
-                        inventory_id: inventoryId,
-                        transaction_type: 'IN',
-                        reference_id: recoveryId,
-                        reference_code: formData.recovery_code,
-                        quantity_changed: items.length,
-                        note: `Thu hồi ${items.length} vỏ bình từ KH`
-                    }]);
-                    await supabase
+                // Update Warehouse Inventory per cylinder type (using original product names)
+                for (const [itemName, qty] of Object.entries(cylindersByType)) {
+                    const { data: invRecord } = await supabase
                         .from('inventory')
-                        .update({ quantity: (invRecord?.quantity || 0) + items.length })
-                        .eq('id', inventoryId);
+                        .select('id, quantity')
+                        .eq('warehouse_id', formData.warehouse_id)
+                        .eq('item_type', 'BINH')
+                        .eq('item_name', itemName)
+                        .maybeSingle();
+
+                    let inventoryId = invRecord?.id;
+                    if (!inventoryId) {
+                        const { data: newInv } = await supabase
+                            .from('inventory')
+                            .insert([{ warehouse_id: formData.warehouse_id, item_type: 'BINH', item_name: itemName, quantity: 0 }])
+                            .select().single();
+                        inventoryId = newInv?.id;
+                    }
+
+                    if (inventoryId) {
+                        await supabase.from('inventory_transactions').insert([{
+                            inventory_id: inventoryId,
+                            transaction_type: 'IN',
+                            reference_id: recoveryId,
+                            reference_code: formData.recovery_code,
+                            quantity_changed: qty,
+                            note: `Thu hồi ${qty} ${itemName} từ KH`
+                        }]);
+                        await supabase
+                            .from('inventory')
+                            .update({ quantity: (invRecord?.quantity || 0) + qty })
+                            .eq('id', inventoryId);
+                    }
                 }
             }
 

@@ -469,8 +469,27 @@ export default function MachineRecoveryFormModal({ recovery, onClose, onSuccess,
             if (itemsError) throw itemsError;
 
             // Automation for inventory and machine status
-            if (!isEdit && dbPayload.status === 'HOAN_THANH') {
-                // Update each machine
+            // Fix: Also run when editing a non-completed recovery to HOAN_THANH
+            const shouldProcessInventory = dbPayload.status === 'HOAN_THANH' && (!isEdit || recovery?.status !== 'HOAN_THANH');
+            if (shouldProcessInventory) {
+                // Mapping machine_type to PRODUCT_TYPES label (must match OrderStatusUpdater export names)
+                const MACHINE_TYPE_TO_LABEL = {
+                    'BV': 'Máy PlasmaMed-BV',
+                    'TM': 'Máy Thẩm Mỹ',
+                    'FM': 'Máy FM',
+                    'ROSY': 'Máy PlasmaRosy',
+                    'MAY_ROSY': 'Máy PlasmaRosy',
+                    'IOT': 'Máy Plasma (Chung)',
+                };
+
+                // Fetch machine details to get their types
+                const serialNumbers = items.map(i => i.serial_number);
+                const { data: machinesData } = await supabase
+                    .from('machines')
+                    .select('serial_number, machine_type')
+                    .in('serial_number', serialNumbers);
+
+                // Update each machine status
                 for (const item of items) {
                     await supabase
                         .from('machines')
@@ -492,37 +511,48 @@ export default function MachineRecoveryFormModal({ recovery, onClose, onSuccess,
                         .eq('id', formData.customer_id);
                 }
 
-                // Update Warehouse Inventory (item_type = 'MAY')
-                const { data: invRecord } = await supabase
-                    .from('inventory')
-                    .select('id, quantity')
-                    .eq('warehouse_id', formData.warehouse_id)
-                    .eq('item_type', 'MAY')
-                    .eq('item_name', 'Máy thu hồi')
-                    .maybeSingle();
-
-                let inventoryId = invRecord?.id;
-                if (!inventoryId) {
-                    const { data: newInv } = await supabase
-                        .from('inventory')
-                        .insert([{ warehouse_id: formData.warehouse_id, item_type: 'MAY', item_name: 'Máy thu hồi', quantity: 0 }])
-                        .select().single();
-                    inventoryId = newInv?.id;
+                // Group machines by type for accurate inventory tracking
+                const machinesByType = {};
+                for (const item of items) {
+                    const machineInfo = machinesData?.find(m => m.serial_number === item.serial_number);
+                    const machineType = machineInfo?.machine_type || 'BV';
+                    const itemName = MACHINE_TYPE_TO_LABEL[machineType] || 'Máy Plasma (Chung)';
+                    machinesByType[itemName] = (machinesByType[itemName] || 0) + 1;
                 }
 
-                if (inventoryId) {
-                    await supabase.from('inventory_transactions').insert([{
-                        inventory_id: inventoryId,
-                        transaction_type: 'IN',
-                        reference_id: recoveryId,
-                        reference_code: formData.recovery_code,
-                        quantity_changed: items.length,
-                        note: `Thu hồi ${items.length} máy từ khách hàng`
-                    }]);
-                    await supabase
+                // Update Warehouse Inventory per machine type (using original product names)
+                for (const [itemName, qty] of Object.entries(machinesByType)) {
+                    const { data: invRecord } = await supabase
                         .from('inventory')
-                        .update({ quantity: (invRecord?.quantity || 0) + items.length })
-                        .eq('id', inventoryId);
+                        .select('id, quantity')
+                        .eq('warehouse_id', formData.warehouse_id)
+                        .eq('item_type', 'MAY')
+                        .eq('item_name', itemName)
+                        .maybeSingle();
+
+                    let inventoryId = invRecord?.id;
+                    if (!inventoryId) {
+                        const { data: newInv } = await supabase
+                            .from('inventory')
+                            .insert([{ warehouse_id: formData.warehouse_id, item_type: 'MAY', item_name: itemName, quantity: 0 }])
+                            .select().single();
+                        inventoryId = newInv?.id;
+                    }
+
+                    if (inventoryId) {
+                        await supabase.from('inventory_transactions').insert([{
+                            inventory_id: inventoryId,
+                            transaction_type: 'IN',
+                            reference_id: recoveryId,
+                            reference_code: formData.recovery_code,
+                            quantity_changed: qty,
+                            note: `Thu hồi ${qty} ${itemName} từ khách hàng`
+                        }]);
+                        await supabase
+                            .from('inventory')
+                            .update({ quantity: (invRecord?.quantity || 0) + qty })
+                            .eq('id', inventoryId);
+                    }
                 }
 
                 // Global notification for every new machine recovery

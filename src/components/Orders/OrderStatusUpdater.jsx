@@ -259,6 +259,61 @@ export default function OrderStatusUpdater({ order, warehouseName, userRole, onC
                 }
             }
 
+            // 2. INVENTORY REFUND ON CANCEL - Auto-refund when cancelling a post-KHO_XU_LY order
+            const POST_INVENTORY_STATUSES = ['DA_DUYET', 'CHO_GIAO_HANG', 'DANG_GIAO_HANG', 'CHO_DOI_SOAT', 'DOI_SOAT_THAT_BAI'];
+            if (transition.nextStatus === 'HUY_DON' && POST_INVENTORY_STATUSES.includes(order.status)) {
+                // Refund inventory for each product
+                for (const item of orderItems) {
+                    if (!item.quantity || item.quantity <= 0) continue;
+
+                    const productLabel = PRODUCT_TYPES.find(p => p.id === item.product_type)?.label || item.product_type;
+
+                    const { data: invData } = await supabase
+                        .from('inventory')
+                        .select('id, quantity')
+                        .eq('warehouse_id', order.warehouse)
+                        .ilike('item_name', productLabel.trim())
+                        .maybeSingle();
+
+                    if (invData) {
+                        await supabase
+                            .from('inventory')
+                            .update({ quantity: invData.quantity + item.quantity })
+                            .eq('id', invData.id);
+
+                        await supabase.from('inventory_transactions').insert([{
+                            inventory_id: invData.id,
+                            transaction_type: 'IN',
+                            reference_id: order.id,
+                            reference_code: order.order_code,
+                            quantity_changed: item.quantity,
+                            note: `Hoàn trả kho ${item.quantity} ${productLabel} - Hủy đơn ${order.order_code}`
+                        }]);
+                    }
+                }
+
+                // Release assigned cylinders back to available
+                if (order.assigned_cylinders?.length > 0) {
+                    await supabase
+                        .from('cylinders')
+                        .update({ status: 'sẵn sàng', customer_name: null, updated_at: new Date().toISOString() })
+                        .in('serial_number', order.assigned_cylinders);
+                }
+
+                // Release any machines assigned to this order back to available
+                const machineItems = orderItems.filter(it => !it.product_type?.startsWith('BINH'));
+                if (machineItems.length > 0 && order.department) {
+                    // If machines were assigned via department/serial, release them
+                    const machineSerials = order.department.split(/[,\n]+/).map(s => s.trim()).filter(Boolean);
+                    if (machineSerials.length > 0) {
+                        await supabase
+                            .from('machines')
+                            .update({ status: 'sẵn sàng', customer_name: null, updated_at: new Date().toISOString() })
+                            .in('serial_number', machineSerials);
+                    }
+                }
+            }
+
             // Upload image if selected
             if (selectedFile) {
                 const fileExt = selectedFile.name.split('.').pop();
